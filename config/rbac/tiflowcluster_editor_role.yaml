@@ -1,0 +1,24 @@
+# permissions for end users to edit tiflowclusters.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: tiflowcluster-editor-role
+rules:
+- apiGroups:
+  - pingcap.com.pingcap.com
+  resources:
+  - tiflowclusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - pingcap.com.pingcap.com
+  resources:
+  - tiflowclusters/status
+  verbs:
+  - get
