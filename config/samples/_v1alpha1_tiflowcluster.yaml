@@ -1,4 +1,4 @@
-apiVersion: pingcap.com.pingcap.com/v1alpha1
+apiVersion: pingcap.com/v1alpha1
 kind: TiflowCluster
 metadata:
   name: tiflowcluster-sample

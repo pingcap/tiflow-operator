@@ -5,9 +5,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.9.0
   creationTimestamp: null
-  name: tiflowclusters.pingcap.com.pingcap.com
+  name: tiflowclusters.pingcap.com
 spec:
-  group: pingcap.com.pingcap.com
+  group: pingcap.com
   names:
     kind: TiflowCluster
     listKind: TiflowClusterList

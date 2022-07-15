@@ -5,7 +5,7 @@ metadata:
   name: tiflowcluster-viewer-role
 rules:
 - apiGroups:
-  - pingcap.com.pingcap.com
+  - pingcap.com
   resources:
   - tiflowclusters
   verbs:
@@ -13,7 +13,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - pingcap.com.pingcap.com
+  - pingcap.com
   resources:
   - tiflowclusters/status
   verbs:
