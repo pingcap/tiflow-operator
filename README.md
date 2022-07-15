@@ -4,6 +4,13 @@
 ## Description
 // TODO(user): An in-depth paragraph about your project and overview of use
 
+## Env
+- go version is 1.18.4
+- kubernetes version is 1.24.0
+- docker version is 20.10.17, docker desktop is 4.10.1
+- kubebuilder version is 3.5.0
+- kustomize version is 4.5.5
+
 ## Getting Started
 You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
 **Note:** Your controller will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
