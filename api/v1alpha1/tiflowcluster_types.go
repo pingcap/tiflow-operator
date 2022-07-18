@@ -17,10 +17,10 @@ limitations under the License.
 package v1alpha1
 
 import (
-	tidbv1 "github.com/pingcap/tidb-operator/pkg/apis/pingcap/v1alpha1"
 	"github.com/pingcap/tidb-operator/pkg/apis/util/config"
 	apps "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -367,7 +367,17 @@ type TiflowClusterSpec struct {
 	PodManagementPolicy apps.PodManagementPolicyType `json:"podManagementPolicy,omitempty"`
 }
 
-type MemberPhase tidbv1.MemberPhase
+// MemberPhase is the current state of member
+type MemberPhase string
+
+const (
+	// NormalPhase represents normal state of TiDB cluster.
+	NormalPhase MemberPhase = "Normal"
+	// UpgradePhase represents the upgrade state of TiDB cluster.
+	UpgradePhase MemberPhase = "Upgrade"
+	// ScalePhase represents the scaling state of TiDB cluster.
+	ScalePhase MemberPhase = "Scale"
+)
 
 // MasterStatus defines the desired state of Tiflow-master
 type MasterStatus struct {
@@ -406,7 +416,33 @@ type ExecutorMember struct {
 	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 }
 
-type StorageVolumeStatus tidbv1.StorageVolumeStatus
+type ObservedStorageVolumeStatus struct {
+	// BoundCount is the count of bound volumes.
+	// +optional
+	BoundCount int `json:"boundCount"`
+	// CurrentCount is the count of volumes whose capacity is equal to `currentCapacity`.
+	// +optional
+	CurrentCount int `json:"currentCount"`
+	// ResizedCount is the count of volumes whose capacity is equal to `resizedCapacity`.
+	// +optional
+	ResizedCount int `json:"resizedCount"`
+	// CurrentCapacity is the current capacity of the volume.
+	// If any volume is resizing, it is the capacity before resizing.
+	// If all volumes are resized, it is the resized capacity and same as desired capacity.
+	CurrentCapacity resource.Quantity `json:"currentCapacity"`
+	// ResizedCapacity is the desired capacity of the volume.
+	ResizedCapacity resource.Quantity `json:"resizedCapacity"`
+}
+
+// StorageVolumeName is the volume name which is same as `volumes.name` in Pod spec.
+type StorageVolumeName string
+
+// StorageVolumeStatus is the actual status for a storage
+type StorageVolumeStatus struct {
+	ObservedStorageVolumeStatus `json:",inline"`
+	// Name is the volume name which is same as `volumes.name` in Pod spec.
+	Name StorageVolumeName `json:"name"`
+}
 
 // ExecutorStatus defines the desired state of Tiflow-executor
 type ExecutorStatus struct {
