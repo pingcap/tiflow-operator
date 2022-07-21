@@ -1,6 +1,6 @@
-# tiflow-operator
+# TiFlow-Operator
 
-TiFlow Operator manages tiflow clusters on Kubernetes and automates tasks related to operating a tiflow cluster. It makes tiflow a truly cloud-native data migration platform.
+TiFlow-Operator manages tiflow clusters on Kubernetes and automates tasks related to operating a tiflow cluster. It makes tiflow a truly cloud-native data migration platform.
 
 ## Description
 // TODO(user): An in-depth paragraph about your project and overview of use
@@ -86,4 +86,4 @@ More information can be found via the [Kubebuilder Documentation](https://book.k
 
 ## License
 
-TiDB is under the Apache 2.0 license. See the [LICENSE](./LICENSE) file for details.
+**TiFlow-Operator** is under the Apache 2.0 license. See the [LICENSE](./LICENSE) file for details.
