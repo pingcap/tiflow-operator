@@ -1,0 +1,39 @@
+// ------------------------------------------------------------------
+// NOTICE file corresponding to the section 4d of The Apache License,
+// Version 2.0, in this case for
+// ------------------------------------------------------------------
+
+ginkgo
+Revision: d38b9d946d52cd175495d30143fbecc5aff98f13
+Address: https://github.com/onsi/ginkgo
+License: https://github.com/onsi/ginkgo/blob/master/LICENSE
+--------------------------------------
+gomega
+Revision: 05f6097dd78c7c5fcdd4dd17896d96ab468fdd63
+Address: https://github.com/onsi/gomega
+License: https://github.com/onsi/gomega/blob/master/LICENSE
+--------------------------------------
+apimachinery
+Revision: 276a8a7530a30f42c82b1f0fa2261a905130bf97
+Address: https://github.com/kubernetes/apimachinery
+License: https://github.com/kubernetes/apimachinery/blob/master/LICENSE
+--------------------------------------
+client-go
+Revision: 97582f25c9fa57d5a0e7a5537a29a3134af2e9f0
+Address: https://github.com/kubernetes/client-go
+License: https://github.com/kubernetes/client-go/blob/master/LICENSE
+--------------------------------------
+controller-runtime
+Revision: bf71fc56485f6bf03e95ef6b0233ff36c695d4c9
+Address: https://github.com/kubernetes-sigs/controller-runtime
+License: https://github.com/kubernetes-sigs/controller-runtime/blob/master/LICENSE
+--------------------------------------
+kubebuilder
+Revision: d59d7882ce95ce5de10238e135ddff31d8ede026
+Address: https://github.com/kubernetes-sigs/kubebuilder
+License: https://github.com/kubernetes-sigs/kubebuilder/blob/master/LICENSE
+--------------------------------------
+kustomize
+Revision: daa3e5e2c2d3a4b8c94021a7384bfb06734bcd26
+Address: https://github.com/kubernetes-sigs/kustomize
+License: https://github.com/kubernetes-sigs/kustomize/blob/master/LICENSE
