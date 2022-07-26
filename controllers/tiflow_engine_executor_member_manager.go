@@ -6,6 +6,7 @@ import (
 	apps "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	appslisters "k8s.io/client-go/listers/apps/v1"
 	corelisterv1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/klog/v2"
@@ -44,6 +45,27 @@ func (m *ExecutorMemberManager) Sync(cluster *v1alpha1.TiflowCluster) error {
 }
 
 func (m *ExecutorMemberManager) syncExecutorConfigMap(cluster *v1alpha1.TiflowCluster, sts *apps.StatefulSet) (*corev1.ConfigMap, error) {
+	if cluster.Spec.Executor.Config == nil {
+		return nil, nil
+	}
+
+	// todo: Need to finish the getExecutorConfigMap logic
+	newCfgMap, err := m.getExecutorConfigMap(cluster)
+	if err != nil {
+		return nil, err
+	}
+
+	var inUseName string
+	// todo: Need to finish the FindConfigMapVolume logic
+	klog.V(3).Info("get executor in use config mao name: ", inUseName)
+
+	// todo: Need to finish the UpdateConfigMapIfNeed Logic
+	err = UpdateConfigMapIfNeed(m.ConfigMapLister, v1alpha1.ConfigUpdateStrategyInPlace, inUseName, newCfgMap)
+	if err != nil {
+		return nil, err
+	}
+
+	// todo: Need to finish Control.CreateOrUpdateConfigMap
 	return nil, nil
 }
 
@@ -89,6 +111,7 @@ func (m *ExecutorMemberManager) syncStatefulSet(cluster *v1alpha1.TiflowCluster)
 	clusterNamespace := cluster.GetNamespace()
 	clusterName := cluster.GetName()
 
+	// todo: something may be modify about StatefulSetLister
 	oldStsTmp, err := m.StatefulSetLister.StatefulSets(clusterNamespace).Get(clusterName)
 	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("syncStatefulSet: failed to get sts %s for cluster %s/%s, error: %s", "executor statefulSet", clusterNamespace, clusterName, err)
@@ -97,12 +120,13 @@ func (m *ExecutorMemberManager) syncStatefulSet(cluster *v1alpha1.TiflowCluster)
 	stsNotExist := errors.IsNotFound(err)
 	oldSts := oldStsTmp.DeepCopy()
 
+	// failed to sync executor status will not affect subsequent logic, just print the errors.
 	if err := m.syncExecutorStatus(cluster, oldSts); err != nil {
-		klog.Errorf("failed to sync executor stsus: [%s/%s]'s ticdc status, error: %v",
+		klog.Errorf("failed to sync TiflowCluster : [%s/%s]'s executor status, error: %v",
 			clusterNamespace, clusterName, err)
 	}
 
-	// todo: Paused
+	// todo: Paused if need
 
 	cfgMap, err := m.syncExecutorConfigMap(cluster, oldSts)
 	if err != nil {
@@ -125,8 +149,32 @@ func (m *ExecutorMemberManager) syncStatefulSet(cluster *v1alpha1.TiflowCluster)
 }
 
 func (m *ExecutorMemberManager) getExecutorConfigMap(cluster *v1alpha1.TiflowCluster) (*corev1.ConfigMap, error) {
+	if cluster.Spec.Executor.Config == nil {
+		return nil, nil
+	}
 
-	return nil, nil
+	config := cluster.Spec.Executor.Config.DeepCopy()
+	configText, err := config.MarshalTOML()
+	if err != nil {
+		return nil, err
+	}
+
+	data := make(map[string]string)
+	data["config-file"] = string(configText)
+
+	name := fmt.Sprintf("%s-tiflow-executor", cluster.Name)
+
+	// todo: How to get InstanceName、Labels and OwnerReferences
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            name,
+			Namespace:       cluster.Namespace,
+			OwnerReferences: []metav1.OwnerReference{},
+		},
+		Data: data,
+	}
+
+	return cm, nil
 }
 
 func (m *ExecutorMemberManager) getNewExecutorHeadlessService(cluster *v1alpha1.TiflowCluster) *corev1.Service {
@@ -138,5 +186,31 @@ func (m *ExecutorMemberManager) getNewExecutorStatefulSet(cluster *v1alpha1.Tifl
 }
 
 func (m *ExecutorMemberManager) syncExecutorStatus(cluster *v1alpha1.TiflowCluster, sts *apps.StatefulSet) error {
+
+	// skip if not created yet
+	if sts == nil {
+		return nil
+	}
+
+	// nn old statefulSet exists
+	//clusterNameSpace := cluster.GetNamespace()
+	//clusterName := cluster.GetName()
+
+	// update the status of statefulSet which created by executor in the cluster
+	cluster.Status.Executor.StatefulSet = &sts.Status
+
+	// todo: How to get Synced info
+	// todo: Need to check if the current sts are updating
+	cluster.Status.Executor.Phase = v1alpha1.NormalPhase
+
+	// todo: Get information about the Executor Members, FailureMembers and FailoverUID through the Master API
+	// todo: Or may be get info through the Sts Status
+	// TOBE
+
+	// todo: Need to get the info of the running version image in the cluster
+	cluster.Status.Executor.Image = ""
+
+	// todo: Need to get the info of volumes which running container has bound
+	cluster.Status.Executor.Volumes = nil
 	return nil
 }
