@@ -1,8 +1,11 @@
-package controllers
+package member
 
 import (
 	"fmt"
 	"github.com/StepOnce7/tiflow-operator/api/v1alpha1"
+	"github.com/StepOnce7/tiflow-operator/controllers"
+	"github.com/StepOnce7/tiflow-operator/controllers/resources"
+	"github.com/StepOnce7/tiflow-operator/controllers/utils"
 	apps "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -24,7 +27,7 @@ type ExecutorMemberManager struct {
 	executorFailover  Failover
 }
 
-func NewExecutorMemberManager() Manager {
+func NewExecutorMemberManager() controllers.Manager {
 
 	// todo: need a new think about how to access the main logic, and what is needed
 	return nil
@@ -60,7 +63,7 @@ func (m *ExecutorMemberManager) syncExecutorConfigMap(cluster *v1alpha1.TiflowCl
 	klog.V(3).Info("get executor in use config mao name: ", inUseName)
 
 	// todo: Need to finish the UpdateConfigMapIfNeed Logic
-	err = UpdateConfigMapIfNeed(m.ConfigMapLister, v1alpha1.ConfigUpdateStrategyInPlace, inUseName, newCfgMap)
+	err = resources.UpdateConfigMapIfNeed(m.ConfigMapLister, v1alpha1.ConfigUpdateStrategyInPlace, inUseName, newCfgMap)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +81,7 @@ func (m *ExecutorMemberManager) syncExecutorHeadlessService(cluster *v1alpha1.Ti
 	// todo: something may be modify about serviceLister
 	oldSvcTmp, err := m.ServiceLister().Services(clusterNameSpace).Get(clusterName)
 	if errors.IsNotFound(err) {
-		err = SetServiceLastAppliedConfigAnnotation(newSvc)
+		err = utils.SetServiceLastAppliedConfigAnnotation(newSvc)
 		if err != nil {
 			return err
 		}
@@ -91,11 +94,11 @@ func (m *ExecutorMemberManager) syncExecutorHeadlessService(cluster *v1alpha1.Ti
 	}
 
 	oldSvc := oldSvcTmp.DeepCopy()
-	equal, err := ServiceEqual(newSvc, oldSvc)
+	equal, err := utils.ServiceEqual(newSvc, oldSvc)
 	if !equal {
 		svc := *oldSvc
 		svc.Spec = newSvc.Spec
-		err = SetServiceLastAppliedConfigAnnotation(&svc)
+		err = utils.SetServiceLastAppliedConfigAnnotation(&svc)
 		if err != nil {
 			return err
 		}
@@ -145,7 +148,7 @@ func (m *ExecutorMemberManager) syncStatefulSet(cluster *v1alpha1.TiflowCluster)
 	}
 
 	// todo: update new statefulSet
-	return UpdateStatefulSetWithPreCheck(cluster, "todo", newSts, oldSts)
+	return resources.UpdateStatefulSetWithPreCheck(cluster, "todo", newSts, oldSts)
 }
 
 func (m *ExecutorMemberManager) getExecutorConfigMap(cluster *v1alpha1.TiflowCluster) (*corev1.ConfigMap, error) {

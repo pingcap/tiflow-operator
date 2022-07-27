@@ -1,4 +1,4 @@
-package controllers
+package resources
 
 import (
 	"github.com/StepOnce7/tiflow-operator/api/v1alpha1"

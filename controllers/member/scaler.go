@@ -1,4 +1,4 @@
-package controllers
+package member
 
 import (
 	apps "k8s.io/api/apps/v1"
