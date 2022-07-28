@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 
-	"github.com/StepOnce7/tiflow-operator/pkg/controller"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -27,20 +26,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	pingcapcomv1alpha1 "github.com/StepOnce7/tiflow-operator/api/v1alpha1"
+	"github.com/StepOnce7/tiflow-operator/pkg/controller/tiflowcluster"
 )
 
 // TiflowClusterReconciler reconciles a TiflowCluster object
 type TiflowClusterReconciler struct {
 	client.Client
 	Scheme  *runtime.Scheme
-	Control controller.ControlInterface
+	Control tiflowcluster.ControlInterface
 }
 
 func NewTiflowClusterReconciler(cli client.Client, scheme *runtime.Scheme) *TiflowClusterReconciler {
 	return &TiflowClusterReconciler{
 		Client:  cli,
 		Scheme:  scheme,
-		Control: controller.NewDefaultTiflowClusterControl(cli),
+		Control: tiflowcluster.NewDefaultTiflowClusterControl(cli),
 	}
 }
 

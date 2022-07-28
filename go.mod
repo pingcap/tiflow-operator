@@ -6,6 +6,7 @@ require (
 	github.com/google/go-cmp v0.5.5
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.18.1
+	github.com/pingcap/errors v0.11.0
 	github.com/pingcap/tidb-operator/pkg/apis v1.3.6
 	k8s.io/api v0.24.0
 	k8s.io/apimachinery v0.24.0
@@ -57,7 +58,6 @@ require (
 	github.com/mohae/deepcopy v0.0.0-20170603005431-491d3605edfb // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
-	github.com/pingcap/errors v0.11.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_golang v1.12.1 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect

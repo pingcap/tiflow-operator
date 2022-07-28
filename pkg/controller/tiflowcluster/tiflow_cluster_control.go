@@ -1,4 +1,4 @@
-package controller
+package tiflowcluster
 
 import (
 	"context"
