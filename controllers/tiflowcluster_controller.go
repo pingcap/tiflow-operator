@@ -50,7 +50,6 @@ func (r *TiflowClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	_ = log.FromContext(ctx)
 
 	// TODO(user): your logic here
-
 	return ctrl.Result{}, nil
 }
 

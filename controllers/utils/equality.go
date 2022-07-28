@@ -28,6 +28,7 @@ func SetServiceLastAppliedConfigAnnotation(svc *corev1.Service) error {
 	return nil
 }
 
+// ServiceEqual compares the new Service's spec with old Service's last applied config
 func ServiceEqual(newSvc, oldSvc *corev1.Service) (bool, error) {
 	oldSpec := corev1.Service{}
 
