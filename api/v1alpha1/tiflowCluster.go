@@ -50,3 +50,16 @@ func (tc *TiflowCluster) ExecutorStsDesiredReplicas() int32 {
 
 	return tc.Spec.Executor.Replicas + int32(len(tc.Status.Executor.FailureMembers))
 }
+
+func (mt MemberType) String() string {
+	return string(mt)
+}
+
+func (tc *TiflowCluster) BaseExecutorSpec() ComponentAccessor {
+	var spec *ComponentSpec
+	if tc.Spec.Executor != nil {
+		spec = &tc.Spec.Executor.ComponentSpec
+	}
+
+	return buildTiFLowClusterComponentAccessor(TiFlowExecutorMemberType, tc, spec)
+}

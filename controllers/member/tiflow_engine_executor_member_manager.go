@@ -10,10 +10,12 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/pointer"
 	"path/filepath"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
@@ -26,6 +28,8 @@ const (
 	tiflowExecutorDataVolumeMountPath = "/tmp/tiflow-executor"
 	// tiflowExecutorClusterVCertPath it where the cert for inter-cluster communication stored (if any)
 	tiflowExecutorClusterVCertPath = ""
+	// DefaultStorageSize is the default pvc request storage size for dm
+	DefaultStorageSize = "10Gi"
 )
 
 // ExecutorMemberManager implements interface of Manager.
@@ -46,6 +50,7 @@ func NewExecutorMemberManager(client client.Client) controllers.Manager {
 	}
 }
 
+// Sync implements the logic for syncing tiflowCluster executor member.
 func (m *ExecutorMemberManager) Sync(ctx context.Context, tc *v1alpha1.TiflowCluster) error {
 
 	ns := tc.GetNamespace()
@@ -68,6 +73,7 @@ func (m *ExecutorMemberManager) Sync(ctx context.Context, tc *v1alpha1.TiflowClu
 	return m.syncStatefulSet(ctx, tc)
 }
 
+// syncExecutorConfigMap implements the logic for syncing configMap of executor.
 func (m *ExecutorMemberManager) syncExecutorConfigMap(ctx context.Context, tc *v1alpha1.TiflowCluster, sts *appsv1.StatefulSet) (*corev1.ConfigMap, error) {
 
 	newCfgMap, err := m.getExecutorConfigMap(tc)
@@ -96,6 +102,7 @@ func (m *ExecutorMemberManager) syncExecutorConfigMap(ctx context.Context, tc *v
 	return newCfgMap, nil
 }
 
+// syncExecutorHeadlessService implements the logic for syncing headlessService of executor.
 func (m *ExecutorMemberManager) syncExecutorHeadlessService(ctx context.Context, tc *v1alpha1.TiflowCluster) error {
 
 	ns := tc.GetNamespace()
@@ -146,6 +153,7 @@ func (m *ExecutorMemberManager) syncExecutorHeadlessService(ctx context.Context,
 	return nil
 }
 
+// syncStatefulSet implements the logic for syncing statefulSet of executor.
 func (m *ExecutorMemberManager) syncStatefulSet(ctx context.Context, tc *v1alpha1.TiflowCluster) error {
 
 	ns := tc.GetNamespace()
@@ -172,14 +180,20 @@ func (m *ExecutorMemberManager) syncStatefulSet(ctx context.Context, tc *v1alpha
 			ns, tcName, err)
 	}
 
-	// todo: Paused if need
+	// todo: Paused if need, this situation should be handled
+	// TOBE
 
+	// Get old configMap if it is existed, and then we will fix it. Instead, we will create a new one.
 	cfgMap, err := m.syncExecutorConfigMap(ctx, tc, oldSts)
 	if err != nil {
 		return err
 	}
 
-	newSts, err := m.getNewExecutorStatefulSet(tc, cfgMap)
+	// todo: need to handle the failure executor members
+	// TOBE
+
+	// Get old statefulSet if it is existed. Instead, we will create a new one.
+	newSts, err := m.getNewExecutorStatefulSet(ctx, tc, cfgMap)
 	if err != nil {
 		return err
 	}
@@ -194,6 +208,8 @@ func (m *ExecutorMemberManager) syncStatefulSet(ctx context.Context, tc *v1alpha
 	return resources.UpdateStatefulSetWithPreCheck(tc, "todo", newSts, oldSts)
 }
 
+// getExecutorConfigMap returns a new ConfigMap of executor by tiflowCluster Spec.
+// Or return a corrected ConfigMap.
 func (m *ExecutorMemberManager) getExecutorConfigMap(tc *v1alpha1.TiflowCluster) (*corev1.ConfigMap, error) {
 
 	if tc.Spec.Executor.Config == nil {
@@ -238,6 +254,7 @@ func (m *ExecutorMemberManager) getExecutorConfigMap(tc *v1alpha1.TiflowCluster)
 	return cm, nil
 }
 
+// getNewExecutorHeadlessService returns a new headless service of executor by tiflowCluster Spec.
 func (m *ExecutorMemberManager) getNewExecutorHeadlessService(tc *v1alpha1.TiflowCluster) *corev1.Service {
 	ns := tc.Namespace
 	tcName := tc.Name
@@ -272,8 +289,180 @@ func (m *ExecutorMemberManager) getNewExecutorHeadlessService(tc *v1alpha1.Tiflo
 	return &svc
 }
 
-func (m *ExecutorMemberManager) getNewExecutorStatefulSet(tc *v1alpha1.TiflowCluster, cfgMap *corev1.ConfigMap) (*appsv1.StatefulSet, error) {
-	return nil, nil
+// getNewExecutorStatefulSet returns a new statefulSet of executor by tiflowCluster Spec.
+func (m *ExecutorMemberManager) getNewExecutorStatefulSet(ctx context.Context, tc *v1alpha1.TiflowCluster, cfgMap *corev1.ConfigMap) (*appsv1.StatefulSet, error) {
+	ns := tc.GetNamespace()
+	tcName := tc.GetName()
+
+	// todo: Need to get the baseExecutorSpec
+	baseExecutorSpec := tc.BaseExecutorSpec()
+	instanceName := tc.GetInstanceName()
+	if cfgMap == nil {
+		return nil, fmt.Errorf("config-map for tiflow-exeutor is not found, tifloeCluster %s/%s", tc.Namespace, tc.Name)
+	}
+
+	executorConfigMap := cfgMap.Name
+
+	annoMout, annoVolume := resources.AnnotationsMountVolume()
+	dataVolumeName := string(resources.GetStorageVolumeName("", v1alpha1.TiFlowExecutorMemberType))
+
+	// todo: Need to set MountPath
+	volMounts := []corev1.VolumeMount{
+		annoMout,
+		{Name: "config", ReadOnly: true, MountPath: ""},
+		{Name: "startup-script", ReadOnly: true, MountPath: ""},
+		{Name: dataVolumeName, ReadOnly: true, MountPath: tiflowExecutorDataVolumeMountPath},
+	}
+
+	volMounts = append(volMounts, tc.Spec.Executor.AdditionalVolumeMounts...)
+
+	// todo: will append TLS volume if need
+
+	// todo: Need to modify
+	vols := []corev1.Volume{
+		annoVolume,
+		{
+			Name: "config",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: executorConfigMap,
+					},
+					Items: []corev1.KeyToPath{
+						{
+							Key:  "config-file",
+							Path: "tiflow-executor.toml",
+						},
+					},
+				},
+			},
+		},
+		{
+			Name: "startup-script",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: executorConfigMap,
+					},
+					Items: []corev1.KeyToPath{
+						{
+							Key:  "startup-script",
+							Path: "tiflow-executor-start-script.sh",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// todo: Need to handle the secret if it is existed
+
+	storageSize := DefaultStorageSize
+	if tc.Spec.Executor.StorageSize != "" {
+		storageSize = tc.Spec.Executor.StorageSize
+	}
+
+	rs, err := resource.ParseQuantity(storageSize)
+	if err != nil {
+		return nil, fmt.Errorf("connot parse storage request for tiflow-executor, tiflowCluster %s/%s, error: %v",
+			tc.Namespace,
+			tc.Namespace, err)
+	}
+
+	storageRequest := corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceStorage: rs,
+		},
+	}
+
+	stsName := utils.TiFlowExecutorMemberName(tcName)
+	stsLables := utils.NewTiflowCluster().Instance(instanceName).Executor()
+	podLabels := utils.CombineStringMap(stsLables, baseExecutorSpec.Labels())
+	// todo: Need to set port
+	podAnnotations := utils.CombineStringMap(utils.AnnProm(0), baseExecutorSpec.Annotations())
+	stsAnnotations := utils.GetStsAnnotations(tc.Annotations, utils.ExecutorLabelVal)
+
+	executorContainer := corev1.Container{
+		Name:            v1alpha1.TiFlowExecutorMemberType.String(),
+		Image:           tc.ExecutorImage(),
+		ImagePullPolicy: baseExecutorSpec.ImagePullPolicy(),
+		Command:         []string{"TODO"},
+		Ports: []corev1.ContainerPort{
+			{
+				Name:          "worker",
+				ContainerPort: int32(10240),
+				Protocol:      corev1.ProtocolTCP,
+			},
+		},
+		VolumeMounts: volMounts,
+		Resources:    resources.ContainerResource(tc.Spec.Executor.ResourceRequirements),
+	}
+
+	// todo: Need to modify it
+	env := []corev1.EnvVar{
+		{
+			Name: "NAMESPACE",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "metadata.namespace",
+				},
+			},
+		},
+	}
+
+	podSpec := baseExecutorSpec.BuildPodSpec()
+	if baseExecutorSpec.HostNetwork() {
+		// todo: Need to add POD_NAME info
+	}
+
+	executorContainer.Env = utils.AppendEnv(env, baseExecutorSpec.Env())
+	executorContainer.EnvFrom = baseExecutorSpec.EnvFrom()
+	podSpec.Volumes = append(vols, baseExecutorSpec.AdditionalVolumes()...)
+	podSpec.Containers = append([]corev1.Container{executorContainer}, baseExecutorSpec.AdditionalContainers()...)
+	var initContainers []corev1.Container
+	podSpec.InitContainers = append(initContainers, baseExecutorSpec.InitContainers()...)
+
+	executorSts := &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            stsName,
+			Namespace:       ns,
+			Labels:          stsLables,
+			Annotations:     stsAnnotations,
+			OwnerReferences: []metav1.OwnerReference{utils.GetTiFlowOwnerRef(tc)},
+		},
+		Spec: appsv1.StatefulSetSpec{
+			Replicas: pointer.Int32Ptr(tc.ExecutorStsDesiredReplicas()),
+			Selector: stsLables.LabelSelector(),
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels:      podLabels,
+					Annotations: podAnnotations,
+				},
+				Spec: podSpec,
+			},
+			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: dataVolumeName,
+					},
+					Spec: corev1.PersistentVolumeClaimSpec{
+						AccessModes: []corev1.PersistentVolumeAccessMode{
+							corev1.ReadWriteOnce,
+						},
+						StorageClassName: tc.Spec.Executor.StorageClassName,
+						Resources:        storageRequest,
+					},
+				},
+			},
+			ServiceName:         utils.TiFlowExecutorPeerMemberName(tcName),
+			PodManagementPolicy: baseExecutorSpec.PodManagementPolicy(),
+			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
+				Type: baseExecutorSpec.StatefulSetUpdateStrategy(),
+			},
+		},
+	}
+
+	return executorSts, nil
 }
 
 func (m *ExecutorMemberManager) syncExecutorStatus(tc *v1alpha1.TiflowCluster, sts *appsv1.StatefulSet) error {

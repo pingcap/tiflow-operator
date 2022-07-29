@@ -52,3 +52,8 @@ func ServiceEqual(newSvc, oldSvc *corev1.Service) (bool, error) {
 
 	return false, nil
 }
+
+func GetStsAnnotations(tcAnns map[string]string, component string) map[string]string {
+	//TODO implement me
+	panic("implement me")
+}

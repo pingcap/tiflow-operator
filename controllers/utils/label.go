@@ -1,5 +1,10 @@
 package utils
 
+import (
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
 const (
 	// The following labels are recommended by kubernetes https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/
 
@@ -58,4 +63,42 @@ func (l Label) Executor() Label {
 
 func (l Label) Labels() map[string]string {
 	return l
+}
+
+// LabelSelector gets LabelSelector from label
+func (l Label) LabelSelector() *metav1.LabelSelector {
+	return &metav1.LabelSelector{MatchLabels: l}
+}
+
+func CombineStringMap(maps ...map[string]string) map[string]string {
+	r := make(map[string]string)
+	for _, m := range maps {
+		for k, v := range m {
+			if _, ok := r[k]; !ok {
+				r[k] = v
+			}
+		}
+	}
+	return r
+}
+
+func AnnProm(port int32) map[string]string {
+	//TODO implement me
+	panic("implement me")
+}
+
+// AppendEnv appends envs `b` into `a` ignoring envs whose names already exist
+// in `b`.
+// Note that this will not change relative order of envs.
+func AppendEnv(a []corev1.EnvVar, b []corev1.EnvVar) []corev1.EnvVar {
+	aMap := make(map[string]corev1.EnvVar)
+	for _, e := range a {
+		aMap[e.Name] = e
+	}
+	for _, e := range b {
+		if _, ok := aMap[e.Name]; !ok {
+			a = append(a, e)
+		}
+	}
+	return a
 }
