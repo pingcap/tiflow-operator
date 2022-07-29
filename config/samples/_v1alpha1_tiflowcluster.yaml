@@ -1,25 +1,6 @@
 apiVersion: pingcap.com/v1alpha1
 kind: TiflowCluster
 metadata:
-  name: basic
+  name: tiflowcluster-sample
 spec:
-  version: latest
-  configUpdateStrategy: RollingUpdate
-  master:
-    baseImage: chunzhuli/dataflow
-    maxFailoverCount: 0
-    replicas: 3
-    # if storageClassName is not set, the default Storage Class of the Kubernetes cluster will be used
-    # storageClassName: local-storage
-    requests:
-      storage: "1Gi"
-    config: |
-      etcd-endpoints = ["etcd.default.svc:2379"]
-      [frame-metastore-conf]
-        endpoints = ["mysql:3306"]
-      [frame-metastore-conf.auth]
-        user = "root"
-        passwd = "123456"
-      [business-metastore-conf]
-        store-type = "etcd"
-        endpoints = ["etcd.default.svc:2379"]
+  # TODO(user): Add fields here

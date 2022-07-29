@@ -89,8 +89,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	reconciler := controllers.NewTiflowClusterReconciler(mgr.GetClient(), mgr.GetScheme())
-	if err = reconciler.SetupWithManager(mgr); err != nil {
+	if err = (&controllers.TiflowClusterReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "TiflowCluster")
 		os.Exit(1)
 	}

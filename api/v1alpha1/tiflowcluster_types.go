@@ -59,11 +59,6 @@ type ComponentSpec struct {
 	// +optional
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
-	// Whether Hostnetwork of the component is enabled. Override the cluster-level setting if present
-	// Optional: Defaults to cluster-level setting
-	// +optional
-	HostNetwork *bool `json:"hostNetwork,omitempty"`
-
 	// Affinity of the component. Override the cluster-level setting if present.
 	// Optional: Defaults to cluster-level setting
 	// +optional
@@ -323,11 +318,6 @@ type TiflowClusterSpec struct {
 	// Optional: Defaults to nil
 	// +optional
 	TLSCluster bool `json:"tlsCluster,omitempty"`
-
-	// Whether Hostnetwork is enabled for Tiflow cluster Pods
-	// Optional: Defaults to false
-	// +optional
-	HostNetwork *bool `json:"hostNetwork,omitempty"`
 
 	// Affinity of Tiflow cluster Pods
 	// +optional

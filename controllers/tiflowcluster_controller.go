@@ -19,29 +19,18 @@ package controllers
 import (
 	"context"
 
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	pingcapcomv1alpha1 "github.com/StepOnce7/tiflow-operator/api/v1alpha1"
-	"github.com/StepOnce7/tiflow-operator/pkg/controller/tiflowcluster"
 )
 
 // TiflowClusterReconciler reconciles a TiflowCluster object
 type TiflowClusterReconciler struct {
 	client.Client
-	Scheme  *runtime.Scheme
-	Control tiflowcluster.ControlInterface
-}
-
-func NewTiflowClusterReconciler(cli client.Client, scheme *runtime.Scheme) *TiflowClusterReconciler {
-	return &TiflowClusterReconciler{
-		Client:  cli,
-		Scheme:  scheme,
-		Control: tiflowcluster.NewDefaultTiflowClusterControl(cli),
-	}
+	Scheme *runtime.Scheme
 }
 
 //+kubebuilder:rbac:groups=pingcap.com,resources=tiflowclusters,verbs=get;list;watch;create;update;patch;delete
@@ -60,18 +49,7 @@ func NewTiflowClusterReconciler(cli client.Client, scheme *runtime.Scheme) *Tifl
 func (r *TiflowClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
-	tc := &pingcapcomv1alpha1.TiflowCluster{}
-
-	if err := r.Get(ctx, req.NamespacedName, tc); err != nil {
-		if errors.IsNotFound(err) {
-			return ctrl.Result{}, nil
-		}
-
-		return ctrl.Result{}, err
-	}
-	if err := r.Control.UpdateTiflowCluster(ctx, tc); err != nil {
-		return ctrl.Result{}, err
-	}
+	// TODO(user): your logic here
 
 	return ctrl.Result{}, nil
 }
