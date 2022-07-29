@@ -265,6 +265,17 @@ type ExecutorSpec struct {
 	// +optional
 	StorageSize string `json:"storageSize,omitempty"`
 
+	// Subdirectory within the volume to store tiflow-executor Data. By default, the data
+	// is stored in the root directory of volume which is mounted at
+	// /tmp/tiflow-executor.
+	// Specifying this will change the data directory to a subdirectory, e.g.
+	// /tmp/tiflow-executor/data if you set the value to "data".
+	// It's dangerous to change this value for a running cluster as it will
+	// upgrade your cluster to use a new storage directory.
+	// Defaults to "" (volume's root).
+	// +optional
+	DataSubDir string `json:"dataSubDir,omitempty"`
+
 	// Persistent volume reclaim policy applied to the PVs that consumed by TiDB cluster
 	// +kubebuilder:default=Retain
 	PVReclaimPolicy *corev1.PersistentVolumeReclaimPolicy `json:"pvReclaimPolicy,omitempty"`

@@ -11,6 +11,11 @@ var (
 	ControllerKind = schema.GroupVersion{Group: "pingcap.com", Version: "v1alpha1"}.WithKind("TiflowCluster")
 )
 
+// TiFLowMasterMemberName returns tiflow-engine-master member name
+func TiFLowMasterMemberName(clusterName string) string {
+	return fmt.Sprintf("%s-tiflow-master", clusterName)
+}
+
 // TiFlowExecutorMemberName returns tiflow-engine-executor member name
 func TiFlowExecutorMemberName(clusterName string) string {
 	return fmt.Sprintf("%s-tiflow-executor", clusterName)

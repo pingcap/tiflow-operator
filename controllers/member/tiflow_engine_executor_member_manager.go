@@ -14,9 +14,18 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/klog/v2"
+	"path/filepath"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"strings"
 
 	_ "sigs.k8s.io/controller-runtime/pkg/controller"
+)
+
+const (
+	// tiflowExecutorDataVolumeMountPath is the mount path for tiflow-executor data volume
+	tiflowExecutorDataVolumeMountPath = "/tmp/tiflow-executor"
+	// tiflowExecutorClusterVCertPath it where the cert for inter-cluster communication stored (if any)
+	tiflowExecutorClusterVCertPath = ""
 )
 
 // ExecutorMemberManager implements interface of Manager.
@@ -59,29 +68,32 @@ func (m *ExecutorMemberManager) Sync(ctx context.Context, tc *v1alpha1.TiflowClu
 	return m.syncStatefulSet(ctx, tc)
 }
 
-func (m *ExecutorMemberManager) syncExecutorConfigMap(cluster *v1alpha1.TiflowCluster, sts *appsv1.StatefulSet) (*corev1.ConfigMap, error) {
-	if cluster.Spec.Executor.Config == nil {
-		return nil, nil
-	}
+func (m *ExecutorMemberManager) syncExecutorConfigMap(ctx context.Context, tc *v1alpha1.TiflowCluster, sts *appsv1.StatefulSet) (*corev1.ConfigMap, error) {
 
-	// todo: Need to finish the getExecutorConfigMap logic
-	_, err := m.getExecutorConfigMap(cluster)
+	newCfgMap, err := m.getExecutorConfigMap(tc)
 	if err != nil {
 		return nil, err
 	}
 
 	var inUseName string
-	// todo: Need to finish the FindConfigMapVolume logic
-	klog.V(3).Info("get executor in use config mao name: ", inUseName)
+	if sts != nil {
+		inUseName = resources.FindConfigMaoVolume(&sts.Spec.Template.Spec, func(name string) bool {
+			return strings.HasPrefix(name, utils.TiFlowExecutorMemberName(tc.Name))
+		})
+	}
+	klog.Info("get executor in use config map name: ", inUseName)
 
 	// todo: Need to finish the UpdateConfigMapIfNeed Logic
-	// err = resources.UpdateConfigMapIfNeed(m.ConfigMapLister, v1alpha1.ConfigUpdateStrategyInPlace, inUseName, newCfgMap)
+	err = resources.UpdateConfigMapIfNeed(ctx, m.Client, v1alpha1.ConfigUpdateStrategyInPlace, inUseName, newCfgMap)
 	if err != nil {
 		return nil, err
 	}
 
-	// todo: Need to finish Control.CreateOrUpdateConfigMap
-	return nil, nil
+	if err = m.Client.Update(ctx, newCfgMap); err != nil {
+		return nil, err
+	}
+
+	return newCfgMap, nil
 }
 
 func (m *ExecutorMemberManager) syncExecutorHeadlessService(ctx context.Context, tc *v1alpha1.TiflowCluster) error {
@@ -162,7 +174,7 @@ func (m *ExecutorMemberManager) syncStatefulSet(ctx context.Context, tc *v1alpha
 
 	// todo: Paused if need
 
-	cfgMap, err := m.syncExecutorConfigMap(tc, oldSts)
+	cfgMap, err := m.syncExecutorConfigMap(ctx, tc, oldSts)
 	if err != nil {
 		return err
 	}
@@ -183,27 +195,42 @@ func (m *ExecutorMemberManager) syncStatefulSet(ctx context.Context, tc *v1alpha
 }
 
 func (m *ExecutorMemberManager) getExecutorConfigMap(tc *v1alpha1.TiflowCluster) (*corev1.ConfigMap, error) {
+
 	if tc.Spec.Executor.Config == nil {
 		return nil, nil
 	}
 
 	config := tc.Spec.Executor.Config.DeepCopy()
+
 	configText, err := config.MarshalTOML()
 	if err != nil {
 		return nil, err
 	}
 
-	data := make(map[string]string)
+	startScript, err := utils.RenderExecutorStartScript(&utils.ExecutorStartScriptModel{
+		DataDir:       filepath.Join(tiflowExecutorDataVolumeMountPath, tc.Spec.Executor.DataSubDir),
+		MasterAddress: utils.TiFLowMasterMemberName(tc.Name) + ":10240",
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	instanceName := tc.GetInstanceName()
+	executorLabel := utils.NewTiflowCluster().Instance(instanceName).Executor().Labels()
+
+	data := map[string]string{
+		"config-file":    string(configText),
+		"startup-script": startScript,
+	}
 	data["config-file"] = string(configText)
 
-	name := fmt.Sprintf("%s-tiflow-executor", tc.Name)
-
-	// todo: How to get InstanceName、Labels and OwnerReferences
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            name,
+			Name:            utils.TiFlowExecutorMemberName(tc.Name),
 			Namespace:       tc.Namespace,
-			OwnerReferences: []metav1.OwnerReference{},
+			Labels:          executorLabel,
+			OwnerReferences: []metav1.OwnerReference{utils.GetTiFlowOwnerRef(tc)},
 		},
 		Data: data,
 	}
