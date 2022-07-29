@@ -4809,6 +4809,11 @@ spec:
                           type: object
                       type: object
                     type: array
+                  hostNetwork:
+                    description: 'Whether Hostnetwork of the component is enabled.
+                      Override the cluster-level setting if present Optional: Defaults
+                      to cluster-level setting'
+                    type: boolean
                   imagePullPolicy:
                     description: 'ImagePullPolicy of the component. Override the cluster-level
                       imagePullPolicy if present Optional: Defaults to cluster-level
@@ -6526,6 +6531,10 @@ spec:
                 required:
                 - replicas
                 type: object
+              hostNetwork:
+                description: 'Whether Hostnetwork is enabled for Tiflow cluster Pods
+                  Optional: Defaults to false'
+                type: boolean
               imagePullPolicy:
                 default: IfNotPresent
                 description: ImagePullPolicy of Tiflow cluster Pods
@@ -10453,6 +10462,11 @@ spec:
                           type: object
                       type: object
                     type: array
+                  hostNetwork:
+                    description: 'Whether Hostnetwork of the component is enabled.
+                      Override the cluster-level setting if present Optional: Defaults
+                      to cluster-level setting'
+                    type: boolean
                   imagePullPolicy:
                     description: 'ImagePullPolicy of the component. Override the cluster-level
                       imagePullPolicy if present Optional: Defaults to cluster-level

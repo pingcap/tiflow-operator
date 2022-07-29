@@ -45,6 +45,11 @@ func (in *ComponentSpec) DeepCopyInto(out *ComponentSpec) {
 		*out = make([]v1.LocalObjectReference, len(*in))
 		copy(*out, *in)
 	}
+	if in.HostNetwork != nil {
+		in, out := &in.HostNetwork, &out.HostNetwork
+		*out = new(bool)
+		**out = **in
+	}
 	if in.Affinity != nil {
 		in, out := &in.Affinity, &out.Affinity
 		*out = new(v1.Affinity)
@@ -512,6 +517,11 @@ func (in *TiflowClusterSpec) DeepCopyInto(out *TiflowClusterSpec) {
 		in, out := &in.ImagePullSecrets, &out.ImagePullSecrets
 		*out = make([]v1.LocalObjectReference, len(*in))
 		copy(*out, *in)
+	}
+	if in.HostNetwork != nil {
+		in, out := &in.HostNetwork, &out.HostNetwork
+		*out = new(bool)
+		**out = **in
 	}
 	if in.Affinity != nil {
 		in, out := &in.Affinity, &out.Affinity
