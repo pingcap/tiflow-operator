@@ -2,7 +2,6 @@ package v1alpha1
 
 import (
 	"fmt"
-
 	"github.com/StepOnce7/tiflow-operator/pkg/label"
 	"github.com/pingcap/tidb-operator/pkg/apis/util/config"
 )
@@ -34,13 +33,13 @@ func (tc *TiflowCluster) MasterImage() string {
 	}
 	return image
 }
-
 func (tc *TiflowCluster) ExecutorImage() string {
 	image := tc.Spec.Executor.BaseImage
 	version := tc.Spec.Executor.Version
 	if version == nil {
 		version = &tc.Spec.Version
 	}
+
 	if *version != "" {
 		image = fmt.Sprintf("%s:%s", image, *version)
 	}
@@ -57,8 +56,6 @@ func (tc *TiflowCluster) ExecutorAllMembersReady() bool {
 	//
 	//	}
 	//}
-	// TODO
-
 	return true
 }
 
