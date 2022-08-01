@@ -80,15 +80,6 @@ func (mt MemberType) String() string {
 	return string(mt)
 }
 
-func (tc *TiflowCluster) BaseExecutorSpec() ComponentAccessor {
-	var spec *ComponentSpec
-	if tc.Spec.Executor != nil {
-		spec = &tc.Spec.Executor.ComponentSpec
-	}
-
-	return buildTiFLowClusterComponentAccessor(TiFlowExecutorMemberType, tc, spec)
-}
-
 func NewGenericConfig() *config.GenericConfig {
 	return config.New(map[string]interface{}{})
 }

@@ -19,18 +19,20 @@ type ControlInterface interface {
 	UpdateTiflowCluster(ctx context.Context, cluster *v1alpha1.TiflowCluster) error
 }
 
-// NewDefaultTiflowClusterControl returns a new instance of the default implementation DMClusterControlInterface that
-// implements the documented semantics for DMClusters.
+// NewDefaultTiflowClusterControl returns a new instance of the default implementation tiflowClusterControlInterface that
+// implements the documented semantics for tiflowClusters.
 func NewDefaultTiflowClusterControl(cli client.Client) ControlInterface {
 	return &defaultTiflowClusterControl{
 		cli,
 		member.NewMasterMemberManager(cli),
+		member.NewExecutorMemberManager(cli),
 	}
 }
 
 type defaultTiflowClusterControl struct {
-	cli                 client.Client
-	masterMemberManager manager.TiflowManager
+	cli                   client.Client
+	masterMemberManager   manager.TiflowManager
+	executorMemberManager manager.TiflowManager
 }
 
 // UpdateTiflowCluster executes the core logic loop for a tiflowcluster.
@@ -58,18 +60,30 @@ func (c *defaultTiflowClusterControl) UpdateTiflowCluster(ctx context.Context, t
 func (c *defaultTiflowClusterControl) updateTiflowCluster(ctx context.Context, tc *v1alpha1.TiflowCluster) error {
 	var errs []error
 
-	// works that should be done to make the dm-master cluster current state match the desired state:
-	//   - create or update the dm-master service
-	//   - create or update the dm-master headless service
-	//   - create the dm-master statefulset
-	//   - sync dm-master cluster status from dm-master to DMCluster object
-	//   - set two annotations to the first dm-master member:
+	// works that should be done to make the tiflow-master cluster current state match the desired state:
+	//   - create or update the tiflow-master service
+	//   - create or update the tiflow-master headless service
+	//   - create the tiflow-master statefulset
+	//   - sync tiflow-master cluster status from tiflow-master to tiflowCluster object
+	//   - set two annotations to the first tiflow-master member:
 	// 	   - label.Bootstrapping
 	// 	   - label.Replicas
-	//   - upgrade the dm-master cluster
-	//   - scale out/in the dm-master cluster
-	//   - failover the dm-master cluster
+	//   - upgrade the tiflow-master cluster
+	//   - scale out/in the tiflow-master cluster
+	//   - failover the tiflow-master cluster
 	if err := c.masterMemberManager.Sync(ctx, tc); err != nil {
+		errs = append(errs, err)
+	}
+
+	// works that should be done to make the tiflow-executor cluster current state match the desired state:
+	//   - waiting for the tiflow-executor cluster available(tiflow-executor cluster is in quorum)
+	//   - create or update tiflow-executor headless service
+	//   - create the tiflow-executor statefulset
+	//   - sync tiflow-executor status from tiflow-master to tiflowCluster object s
+	//   - upgrade the tiflow-executor cluster
+	//   - scale out/in the tiflow-executor cluster
+	//   - failover the tiflow-executor cluster
+	if err := c.executorMemberManager.Sync(ctx, tc); err != nil {
 		errs = append(errs, err)
 	}
 

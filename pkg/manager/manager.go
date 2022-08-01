@@ -7,6 +7,6 @@ import (
 )
 
 type TiflowManager interface {
-	// Sync implements the logic for syncing tiflowcluster.
+	// Sync implements the logic for syncing tiflowCluster.
 	Sync(context.Context, *pingcapcomv1alpha1.TiflowCluster) error
 }
