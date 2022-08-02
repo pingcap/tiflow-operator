@@ -22,4 +22,12 @@ spec:
         passwd = "123456"
       [business-metastore-conf]
         store-type = "etcd"
-        endpoints = ["etcd.default.svc:2379"]
+        endpoints = ["etcd:2379"]
+  executor:
+    baseImage: chunzhuli/dataflow
+    maxFailoverCount: 0
+    replicas: 3
+    config: |
+      keepalive-ttl = "20s"
+      keepalive-interval = "500ms"
+      session-ttl = 20
