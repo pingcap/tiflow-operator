@@ -83,9 +83,9 @@ func (c *defaultTiflowClusterControl) updateTiflowCluster(ctx context.Context, t
 	//   - upgrade the tiflow-executor cluster
 	//   - scale out/in the tiflow-executor cluster
 	//   - failover the tiflow-executor cluster
-	if err := c.executorMemberManager.Sync(ctx, tc); err != nil {
-		errs = append(errs, err)
-	}
+	//if err := c.executorMemberManager.Sync(ctx, tc); err != nil {
+	//	errs = append(errs, err)
+	//}
 
 	return errorutils.NewAggregate(errs)
 }

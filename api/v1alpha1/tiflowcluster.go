@@ -51,6 +51,7 @@ func (tc *TiflowCluster) ExecutorAllMembersReady() bool {
 		return false
 	}
 
+	// todo:
 	//for _, member := range tc.Status.Executor.Members {
 	//	if member {
 	//

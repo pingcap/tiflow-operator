@@ -14,7 +14,7 @@ spec:
     requests:
       storage: "1Gi"
     config: |
-      etcd-endpoints = ["etcd.default.svc:2379"]
+      etcd-endpoints = ["etcd:2379"]
       [frame-metastore-conf]
         endpoints = ["mysql:3306"]
       [frame-metastore-conf.auth]

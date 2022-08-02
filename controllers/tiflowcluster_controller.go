@@ -60,7 +60,7 @@ func NewTiflowClusterReconciler(cli client.Client, scheme *runtime.Scheme) *Tifl
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.1/pkg/reconcile
 func (r *TiflowClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	logg := log.FromContext(ctx)
 
 	tc := &pingcapcomv1alpha1.TiflowCluster{}
 
@@ -71,6 +71,22 @@ func (r *TiflowClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 		return ctrl.Result{}, err
 	}
+
+	// frame standalone and user standalone for tiflow-operator testing
+	result, err := r.ReconcileFrameStandalone(ctx, tc, req)
+
+	if err != nil {
+		logg.Error(err, "frame standalone reconcile error")
+		return result, err
+	}
+
+	result, err = r.ReconcileUserStandalone(ctx, tc, req)
+
+	if err != nil {
+		logg.Error(err, "user standalone reconcile error")
+		return result, err
+	}
+
 	if err := r.Control.UpdateTiflowCluster(ctx, tc); err != nil {
 		return ctrl.Result{}, err
 	}
