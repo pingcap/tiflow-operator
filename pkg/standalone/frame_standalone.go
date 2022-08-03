@@ -1,4 +1,4 @@
-package controllers
+package standalone
 
 import (
 	"context"
@@ -8,8 +8,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -20,89 +22,101 @@ const (
 	CONTAINER_PORT   = 3306
 )
 
-func (r *TiflowClusterReconciler) ReconcileFrameStandalone(ctx context.Context, instance *v1alpha1.TiflowCluster, req ctrl.Request) (ctrl.Result, error) {
+type frameManager struct {
+	client.Client
+	Scheme *runtime.Scheme
+}
 
-	logg := log.FromContext(ctx)
+func NewFrameManager(cli client.Client, Scheme *runtime.Scheme) StandaloneManager {
+	return &frameManager{
+		cli,
+		Scheme,
+	}
+}
+
+func (m *frameManager) Sync(ctx context.Context, instance *v1alpha1.Standalone) (ctrl.Result, error) {
+
+	logger := log.FromContext(ctx)
 
 	var pv corev1.PersistentVolume
 	pv.Name = "mysql-pv-volume"
 	createPVIfNotExists(&pv)
-	err := r.Create(ctx, &pv)
+	err := m.Create(ctx, &pv)
 	if err != nil {
 		if errors.IsAlreadyExists(err) {
 			err = nil
 		} else {
-			logg.Error(err, "create mysql pv error")
+			logger.Error(err, "create mysql pv error")
 			return ctrl.Result{}, err
 		}
 	}
 
-	logg.Info("Create", "Mysql PV", "success")
+	logger.Info("Create", "Mysql PV", "success")
 
 	var cfm corev1.ConfigMap
 	cfm.Name = "mysqlcfm"
 	cfm.Namespace = instance.Namespace
 
-	or, err := ctrl.CreateOrUpdate(ctx, r.Client, &cfm, func() error {
+	or, err := ctrl.CreateOrUpdate(ctx, m.Client, &cfm, func() error {
 		createConfigMapIfNotExists(&cfm)
-		return controllerutil.SetControllerReference(instance, &cfm, r.Scheme)
+		return controllerutil.SetControllerReference(instance, &cfm, m.Scheme)
 	})
 
 	if err != nil {
-		logg.Error(err, "create mysql configMap error")
+		logger.Error(err, "create mysql configMap error")
 		return ctrl.Result{}, err
 	}
-	logg.Info("CreateOrUpdate", "Mysql ConfigMap", or)
+	logger.Info("CreateOrUpdate", "Mysql ConfigMap", or)
 
 	var pvc corev1.PersistentVolumeClaim
 	pvc.Name = "mysql-pv-claim"
 	pvc.Namespace = instance.Namespace
 	createPVCIfNotExists(&pvc)
-	controllerutil.SetControllerReference(instance, &pvc, r.Scheme)
-	err = r.Create(ctx, &pvc)
+	controllerutil.SetControllerReference(instance, &pvc, m.Scheme)
+	err = m.Create(ctx, &pvc)
 	if err != nil {
 		if errors.IsAlreadyExists(err) {
 			err = nil
 		} else {
-			logg.Error(err, "create mysql pv error")
+			logger.Error(err, "create mysql pv error")
 			return ctrl.Result{}, err
 		}
 	}
 
-	logg.Info("Create", "Mysql PVC", "success")
+	logger.Info("Create", "Mysql PVC", "success")
 
 	var svc corev1.Service
-	svc.Name = FRAME_STANDALONE
+	svc.Name = instance.Spec.FrameStandalone.Name
 	svc.Namespace = instance.Namespace
 
-	or, err = ctrl.CreateOrUpdate(ctx, r.Client, &svc, func() error {
+	or, err = ctrl.CreateOrUpdate(ctx, m.Client, &svc, func() error {
 		createServiceIfNotExists(instance, &svc)
-		return controllerutil.SetControllerReference(instance, &svc, r.Scheme)
+		return controllerutil.SetControllerReference(instance, &svc, m.Scheme)
 	})
 
 	if err != nil {
-		logg.Error(err, "create mysql service error")
+		logger.Error(err, "create mysql service error")
 		return ctrl.Result{}, err
 	}
 
-	logg.Info("CreateOrUpdate", "Mysql Service", or)
+	logger.Info("CreateOrUpdate", "Mysql Service", or)
 
 	var deploy appsv1.Deployment
-	deploy.Name = FRAME_STANDALONE
+	deploy.Name = instance.Spec.FrameStandalone.Name
 	deploy.Namespace = instance.Namespace
-	or, err = ctrl.CreateOrUpdate(ctx, r.Client, &deploy, func() error {
+	or, err = ctrl.CreateOrUpdate(ctx, m.Client, &deploy, func() error {
 		createDeploymentIfNotExists(instance, &deploy)
-		return controllerutil.SetControllerReference(instance, &deploy, r.Scheme)
+		return controllerutil.SetControllerReference(instance, &deploy, m.Scheme)
 	})
 
 	if err != nil {
-		logg.Error(err, "create mysql deployment error")
+		logger.Error(err, "create mysql deployment error")
 		return ctrl.Result{}, err
 	}
 
-	logg.Info("CreateOrUpdate", "Mysql Deployment", or)
+	logger.Info("CreateOrUpdate", "Mysql Deployment", or)
 
-	logg.Info("frame standalone reconcile end", "reconcile", "success")
+	logger.Info("frame standalone reconcile end", "reconcile", "success")
 
 	return ctrl.Result{}, nil
 }
@@ -142,7 +156,7 @@ func createPVCIfNotExists(pvc *corev1.PersistentVolumeClaim) {
 
 }
 
-func createServiceIfNotExists(de *v1alpha1.TiflowCluster, svc *corev1.Service) {
+func createServiceIfNotExists(de *v1alpha1.Standalone, svc *corev1.Service) {
 
 	svc.Labels = map[string]string{
 		FRAME_STANDALONE: "mysql-standalone",
@@ -161,7 +175,7 @@ func createServiceIfNotExists(de *v1alpha1.TiflowCluster, svc *corev1.Service) {
 	}
 }
 
-func createDeploymentIfNotExists(de *v1alpha1.TiflowCluster, deploy *appsv1.Deployment) {
+func createDeploymentIfNotExists(instance *v1alpha1.Standalone, deploy *appsv1.Deployment) {
 
 	deploy.Labels = map[string]string{
 		FRAME_STANDALONE: "mysql-standalone",
@@ -186,8 +200,8 @@ func createDeploymentIfNotExists(de *v1alpha1.TiflowCluster, deploy *appsv1.Depl
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{
 					{
-						Name:            "frame-mysql-standalone",
-						Image:           "mysql:latest",
+						Name:            instance.Spec.FrameStandalone.Name,
+						Image:           instance.Spec.FrameStandalone.Image,
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						Env: []corev1.EnvVar{
 							{
@@ -198,7 +212,7 @@ func createDeploymentIfNotExists(de *v1alpha1.TiflowCluster, deploy *appsv1.Depl
 						Ports: []corev1.ContainerPort{
 							{
 								Name:          "mysql",
-								ContainerPort: CONTAINER_PORT,
+								ContainerPort: instance.Spec.FrameStandalone.Port,
 								Protocol:      corev1.ProtocolTCP,
 							},
 						},

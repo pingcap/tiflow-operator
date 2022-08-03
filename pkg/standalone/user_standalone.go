@@ -1,4 +1,4 @@
-package controllers
+package standalone
 
 import (
 	"context"
@@ -6,61 +6,75 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-func (r *TiflowClusterReconciler) ReconcileUserStandalone(ctx context.Context, instance *v1alpha1.TiflowCluster, req ctrl.Request) (ctrl.Result, error) {
+type userManager struct {
+	client.Client
+	Scheme *runtime.Scheme
+}
 
-	logg := log.FromContext(ctx)
+func NewUserManager(cli client.Client, Scheme *runtime.Scheme) StandaloneManager {
+	return &userManager{
+		cli,
+		Scheme,
+	}
+}
+
+func (m *userManager) Sync(ctx context.Context, instance *v1alpha1.Standalone) (ctrl.Result, error) {
+
+	logger := log.FromContext(ctx)
 
 	var cfm corev1.ConfigMap
 	cfm.Name = "etcdcfm"
 	cfm.Namespace = instance.Namespace
 
-	or, err := ctrl.CreateOrUpdate(ctx, r.Client, &cfm, func() error {
+	or, err := ctrl.CreateOrUpdate(ctx, m.Client, &cfm, func() error {
 		MakeConfigMapIfNotExists(&cfm)
-		return controllerutil.SetControllerReference(instance, &cfm, r.Scheme)
+		return controllerutil.SetControllerReference(instance, &cfm, m.Scheme)
 	})
 
 	if err != nil {
-		logg.Error(err, "create etcd configMap error")
+		logger.Error(err, "create etcd configMap error")
 		return ctrl.Result{}, err
 	}
-	logg.Info("CreateOrUpdate", "Etcd ConfigMap", or)
+	logger.Info("CreateOrUpdate", "Etcd ConfigMap", or)
 
 	var svc corev1.Service
-	svc.Name = USER_STANDALONE
+	svc.Name = instance.Spec.UserStandalone.Name
 	svc.Namespace = instance.Namespace
 
-	or, err = ctrl.CreateOrUpdate(ctx, r.Client, &svc, func() error {
+	or, err = ctrl.CreateOrUpdate(ctx, m.Client, &svc, func() error {
 		MakeServiceIfNotExists(instance, &svc)
-		return controllerutil.SetControllerReference(instance, &svc, r.Scheme)
+		return controllerutil.SetControllerReference(instance, &svc, m.Scheme)
 	})
 
 	if err != nil {
-		logg.Error(err, "create etcd service error")
+		logger.Error(err, "create etcd service error")
 		return ctrl.Result{}, err
 	}
 
-	logg.Info("CreateOrUpdate", "Etcd Service", or)
+	logger.Info("CreateOrUpdate", "Etcd Service", or)
 
 	var deploy appsv1.Deployment
-	deploy.Name = USER_STANDALONE
+	deploy.Name = instance.Spec.UserStandalone.Name
 	deploy.Namespace = instance.Namespace
-	or, err = ctrl.CreateOrUpdate(ctx, r.Client, &deploy, func() error {
+	or, err = ctrl.CreateOrUpdate(ctx, m.Client, &deploy, func() error {
 		MakeDeploymentIfNotExists(instance, &deploy)
-		return controllerutil.SetControllerReference(instance, &deploy, r.Scheme)
+		return controllerutil.SetControllerReference(instance, &deploy, m.Scheme)
 	})
 
 	if err != nil {
-		logg.Error(err, "create etcd deployment error")
+		logger.Error(err, "create etcd deployment error")
 	}
 
-	logg.Info("CreateOrUpdate", "Etcd Deployment", or)
+	logger.Info("CreateOrUpdate", "Etcd Deployment", or)
 
-	logg.Info("user standalone reconcile end", "reconcile", "success")
+	logger.Info("user standalone reconcile end", "reconcile", "success")
 
 	return ctrl.Result{}, nil
 }
@@ -167,7 +181,7 @@ force-new-cluster: false`,
 	}
 }
 
-func MakeServiceIfNotExists(de *v1alpha1.TiflowCluster, svc *corev1.Service) {
+func MakeServiceIfNotExists(instance *v1alpha1.Standalone, svc *corev1.Service) {
 
 	svc.Labels = map[string]string{
 		USER_STANDALONE: "etcd-standalone",
@@ -181,19 +195,19 @@ func MakeServiceIfNotExists(de *v1alpha1.TiflowCluster, svc *corev1.Service) {
 		Ports: []corev1.ServicePort{
 			{
 				Name:     "peer",
-				Port:     2380,
+				Port:     instance.Spec.UserStandalone.Ports[1],
 				Protocol: corev1.ProtocolTCP,
 			},
 			{
 				Name:     "client",
-				Port:     2379,
+				Port:     instance.Spec.UserStandalone.Ports[0],
 				Protocol: corev1.ProtocolTCP,
 			},
 		},
 	}
 }
 
-func MakeDeploymentIfNotExists(de *v1alpha1.TiflowCluster, deploy *appsv1.Deployment) {
+func MakeDeploymentIfNotExists(instance *v1alpha1.Standalone, deploy *appsv1.Deployment) {
 	deploy.Labels = map[string]string{
 		USER_STANDALONE: "etcd-standalone",
 	}
@@ -220,8 +234,8 @@ func MakeDeploymentIfNotExists(de *v1alpha1.TiflowCluster, deploy *appsv1.Deploy
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{
 					{
-						Name:            "user-etcd-standalone",
-						Image:           "quay.io/coreos/etcd",
+						Name:            instance.Spec.UserStandalone.Name,
+						Image:           instance.Spec.UserStandalone.Image,
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						Command: []string{
 							"etcd", "--config-file",

@@ -8,6 +8,32 @@ rules:
 - apiGroups:
   - pingcap.com
   resources:
+  - standalones
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - pingcap.com
+  resources:
+  - standalones/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - pingcap.com
+  resources:
+  - standalones/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - pingcap.com
+  resources:
   - tiflowclusters
   verbs:
   - create
