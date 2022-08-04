@@ -3,9 +3,9 @@ package tiflowcluster
 import (
 	"context"
 
-	"github.com/StepOnce7/tiflow-operator/api/v1alpha1"
-	"github.com/StepOnce7/tiflow-operator/pkg/manager"
-	"github.com/StepOnce7/tiflow-operator/pkg/manager/member"
+	"github.com/pingcap/tiflow-operator/api/v1alpha1"
+	"github.com/pingcap/tiflow-operator/pkg/manager"
+	"github.com/pingcap/tiflow-operator/pkg/manager/member"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	errorutils "k8s.io/apimachinery/pkg/util/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"

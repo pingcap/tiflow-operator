@@ -2,8 +2,9 @@ package v1alpha1
 
 import (
 	"fmt"
-	"github.com/StepOnce7/tiflow-operator/pkg/label"
+
 	"github.com/pingcap/tidb-operator/pkg/apis/util/config"
+	"github.com/pingcap/tiflow-operator/pkg/label"
 )
 
 func (tc *TiflowCluster) GetInstanceName() string {

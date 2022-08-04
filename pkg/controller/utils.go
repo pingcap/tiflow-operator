@@ -3,7 +3,7 @@ package controller
 import (
 	"fmt"
 
-	pingcapcomv1alpha1 "github.com/StepOnce7/tiflow-operator/api/v1alpha1"
+	pingcapcomv1alpha1 "github.com/pingcap/tiflow-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

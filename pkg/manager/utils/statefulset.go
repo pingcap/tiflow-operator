@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"github.com/StepOnce7/tiflow-operator/api/v1alpha1"
 
-	"github.com/StepOnce7/tiflow-operator/pkg/util"
 	"github.com/pingcap/tidb-operator/pkg/apis/label"
+	"github.com/pingcap/tiflow-operator/pkg/util"
 	apps "k8s.io/api/apps/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

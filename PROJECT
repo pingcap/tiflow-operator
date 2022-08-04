@@ -3,7 +3,7 @@ layout:
 - kustomize.common.kubebuilder.io/v2-alpha
 - base.go.kubebuilder.io/v3
 projectName: tiflow-operator
-repo: github.com/StepOnce7/tiflow-operator
+repo: github.com/pingcap/tiflow-operator
 resources:
 - api:
     crdVersion: v1
@@ -11,7 +11,7 @@ resources:
   controller: true
   domain: pingcap.com
   kind: TiflowCluster
-  path: github.com/StepOnce7/tiflow-operator/api/v1alpha1
+  path: github.com/pingcap/tiflow-operator/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
