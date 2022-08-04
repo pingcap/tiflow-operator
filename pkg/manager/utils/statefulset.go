@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"encoding/json"
+	"github.com/StepOnce7/tiflow-operator/api/v1alpha1"
 
 	"github.com/StepOnce7/tiflow-operator/pkg/util"
 	"github.com/pingcap/tidb-operator/pkg/apis/label"
@@ -17,6 +18,11 @@ const (
 	// LastAppliedConfigAnnotation is annotation key of last applied configuration
 	LastAppliedConfigAnnotation = "pingcap.com/last-applied-configuration"
 )
+
+// UpdateStatefulSetWithPreCheck todo: impl this logic
+func UpdateStatefulSetWithPreCheck(tc *v1alpha1.TiflowCluster, resaon string, newSts, oldSts *apps.StatefulSet) error {
+	return nil
+}
 
 // SetStatefulSetLastAppliedConfigAnnotation set last applied config to Statefulset's annotation
 func SetStatefulSetLastAppliedConfigAnnotation(set *apps.StatefulSet) error {

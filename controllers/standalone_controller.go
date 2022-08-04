@@ -20,69 +20,76 @@ import (
 	"context"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-
 	"k8s.io/apimachinery/pkg/api/errors"
+
+	"github.com/StepOnce7/tiflow-operator/pkg/standalone"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	pingcapcomv1alpha1 "github.com/StepOnce7/tiflow-operator/api/v1alpha1"
-	"github.com/StepOnce7/tiflow-operator/pkg/controller/tiflowcluster"
 )
 
-// TiflowClusterReconciler reconciles a TiflowCluster object
-type TiflowClusterReconciler struct {
+// StandaloneReconciler reconciles a Standalone object
+// Notes: For test use only
+type StandaloneReconciler struct {
 	client.Client
 	Scheme  *runtime.Scheme
-	Control tiflowcluster.ControlInterface
+	Control standalone.ControlInterface
 }
 
-func NewTiflowClusterReconciler(cli client.Client, scheme *runtime.Scheme) *TiflowClusterReconciler {
-	return &TiflowClusterReconciler{
+// NewStandaloneReconciler Notes: For test use only
+func NewStandaloneReconciler(cli client.Client, scheme *runtime.Scheme) *StandaloneReconciler {
+	return &StandaloneReconciler{
 		Client:  cli,
 		Scheme:  scheme,
-		Control: tiflowcluster.NewDefaultTiflowClusterControl(cli),
+		Control: standalone.NewDefaultStandaloneControl(cli, scheme),
 	}
 }
 
-//+kubebuilder:rbac:groups=pingcap.com,resources=tiflowclusters,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=pingcap.com,resources=tiflowclusters/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=pingcap.com,resources=tiflowclusters/finalizers,verbs=update
+//+kubebuilder:rbac:groups=pingcap.com,resources=standalones,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=pingcap.com,resources=standalones/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=pingcap.com,resources=standalones/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 // TODO(user): Modify the Reconcile function to compare the state specified by
-// the TiflowCluster object against the actual cluster state, and then
+// the Standalone object against the actual cluster state, and then
 // perform operations to make the cluster state reflect the state specified by
 // the user.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.1/pkg/reconcile
-func (r *TiflowClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+// Notes: For test use only
+func (r *StandaloneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	logger := log.FromContext(ctx)
 
-	tc := &pingcapcomv1alpha1.TiflowCluster{}
+	logger.Info("start standalone reconcile logic")
 
-	if err := r.Get(ctx, req.NamespacedName, tc); err != nil {
+	instance := &pingcapcomv1alpha1.Standalone{}
+	if err := r.Get(ctx, req.NamespacedName, instance); err != nil {
 		if errors.IsNotFound(err) {
+			logger.Info("standalone instance is not found")
 			return ctrl.Result{}, nil
 		}
-
+		logger.Info("find standalone instance error")
 		return ctrl.Result{}, err
 	}
 
-	if err := r.Control.UpdateTiflowCluster(ctx, tc); err != nil {
-		return ctrl.Result{}, err
+	logger.Info("start frame standalone reconcile logic", "reconcile", "init")
+	if result, err := r.Control.UpdateStandalone(ctx, instance); err != nil {
+		return result, err
 	}
 
+	logger.Info("standalone reconcile success")
 	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *TiflowClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *StandaloneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&pingcapcomv1alpha1.TiflowCluster{}).
+		For(&pingcapcomv1alpha1.Standalone{}).
 		Owns(&appsv1.StatefulSet{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).

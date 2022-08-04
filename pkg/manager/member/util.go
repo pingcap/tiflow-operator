@@ -152,3 +152,8 @@ func mergeConfigMapFunc(existing, desired client.Object) error {
 	}
 	return nil
 }
+
+func getStsAnnotations(tcAnns map[string]string, component string) map[string]string {
+	//TODO implement me
+	panic("implement me")
+}

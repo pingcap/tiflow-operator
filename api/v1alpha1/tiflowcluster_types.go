@@ -28,6 +28,13 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+type MemberType string
+
+const (
+	TiFlowMasterMemberType   MemberType = "tiflow-master"
+	TiFlowExecutorMemberType MemberType = "tiflow-executor"
+)
+
 // ConfigUpdateStrategy represents the strategy to update configuration
 type ConfigUpdateStrategy string
 
@@ -269,6 +276,17 @@ type ExecutorSpec struct {
 	// Defaults to "10Gi".
 	// +optional
 	StorageSize string `json:"storageSize,omitempty"`
+
+	// Subdirectory within the volume to store tiflow-executor Data. By default, the data
+	// is stored in the root directory of volume which is mounted at
+	// /tmp/tiflow-executor.
+	// Specifying this will change the data directory to a subdirectory, e.g.
+	// /tmp/tiflow-executor/data if you set the value to "data".
+	// It's dangerous to change this value for a running cluster as it will
+	// upgrade your cluster to use a new storage directory.
+	// Defaults to "" (volume's root).
+	// +optional
+	DataSubDir string `json:"dataSubDir,omitempty"`
 
 	// Persistent volume reclaim policy applied to the PVs that consumed by TiDB cluster
 	// +kubebuilder:default=Retain
