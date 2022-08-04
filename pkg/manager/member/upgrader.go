@@ -1,7 +1,7 @@
 package member
 
 import (
-	"github.com/StepOnce7/tiflow-operator/api/v1alpha1"
+	"github.com/pingcap/tiflow-operator/api/v1alpha1"
 	apps "k8s.io/api/apps/v1"
 )
 

@@ -1,6 +1,6 @@
 package member
 
-import "github.com/StepOnce7/tiflow-operator/api/v1alpha1"
+import "github.com/pingcap/tiflow-operator/api/v1alpha1"
 
 // Since the "Unhealthy" is a very universal event reason string, which could apply to all the tiflow cluster components,
 // we should make a global event module, and put event related constants there.

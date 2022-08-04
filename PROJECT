@@ -19,6 +19,6 @@ resources:
   controller: true
   domain: pingcap.com
   kind: Standalone
-  path: github.com/StepOnce7/tiflow-operator/api/v1alpha1
+  path: github.com/pingcap/tiflow-operator/api/v1alpha1
   version: v1alpha1
 version: "3"

@@ -2,7 +2,8 @@ package utils
 
 import (
 	"fmt"
-	"github.com/StepOnce7/tiflow-operator/api/v1alpha1"
+
+	"github.com/pingcap/tiflow-operator/api/v1alpha1"
 )
 
 func GetStorageVolumeName(storageVolumeName string, memberType v1alpha1.MemberType) v1alpha1.StorageVolumeName {

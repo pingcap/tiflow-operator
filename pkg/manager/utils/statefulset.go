@@ -3,7 +3,8 @@ package utils
 import (
 	"context"
 	"encoding/json"
-	"github.com/StepOnce7/tiflow-operator/api/v1alpha1"
+
+	"github.com/pingcap/tiflow-operator/api/v1alpha1"
 
 	"github.com/pingcap/tidb-operator/pkg/apis/label"
 	"github.com/pingcap/tiflow-operator/pkg/util"
