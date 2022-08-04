@@ -4,9 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/pingcap/tiflow-operator/api/v1alpha1"
-
 	"github.com/pingcap/tidb-operator/pkg/apis/label"
+	"github.com/pingcap/tiflow-operator/api/v1alpha1"
 	"github.com/pingcap/tiflow-operator/pkg/util"
 	apps "k8s.io/api/apps/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
