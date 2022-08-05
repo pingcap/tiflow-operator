@@ -17,7 +17,7 @@ spec:
       etcd-endpoints = ["etcd:2379"]
       [frame-metastore-conf]
         endpoints = ["mysql:3306"]
-      [frame-metastore-conf.auth]
+      [framework-metastore-conf.auth]
         user = "root"
         passwd = "123456"
       [business-metastore-conf]
