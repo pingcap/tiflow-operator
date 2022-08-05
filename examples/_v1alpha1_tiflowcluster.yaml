@@ -15,7 +15,7 @@ spec:
       storage: "1Gi"
     config: |
       etcd-endpoints = ["etcd:2379"]
-      [frame-metastore-conf]
+      [framework-metastore-conf]
         endpoints = ["mysql:3306"]
       [framework-metastore-conf.auth]
         user = "root"
