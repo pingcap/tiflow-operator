@@ -23,7 +23,6 @@ spec:
         passwd = "123456"
       [business-metastore-conf]
         schema = "example_business"
-        store-type = "sql"
         endpoints = ["mysql:3306"]
       [business-metastore-conf.auth]
         user = "root"
