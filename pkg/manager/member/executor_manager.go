@@ -57,7 +57,7 @@ func (m *executorMemberManager) Sync(ctx context.Context, tc *v1alpha1.TiflowClu
 	ns := tc.GetNamespace()
 	tcName := tc.GetName()
 
-	klog.Info("start to sync tiflowCluster %s:%s ", ns, tcName)
+	klog.Infof("start to sync tiflowCluster %s:%s ", ns, tcName)
 
 	if tc.Spec.Executor == nil {
 		return nil
@@ -88,7 +88,7 @@ func (m *executorMemberManager) syncExecutorConfigMap(ctx context.Context, tc *v
 			return strings.HasPrefix(name, controller.TiflowExecutorMemberName(tc.Name))
 		})
 	}
-	klog.Info("get executor in use config map name: ", inUseName)
+	klog.Infof("get executor in use config map name: %s", inUseName)
 
 	// todo: Need to finish the UpdateConfigMapIfNeed Logic
 	err = mngerutils.UpdateConfigMapIfNeed(ctx, m.Client, component.BuildExecutorSpec(tc).ConfigUpdateStrategy(), inUseName, newCfgMap)
@@ -115,13 +115,13 @@ func (m *executorMemberManager) syncExecutorHeadlessServiceForTiflowCluster(ctx 
 
 	newSvc := m.getNewExecutorHeadlessService(tc)
 	oldSvcTmp := &corev1.Service{}
-	klog.Info("start to get svc %s.%s", ns, controller.TiflowExecutorPeerMemberName(tcName))
+	klog.Infof("start to get svc %s.%s", ns, controller.TiflowExecutorPeerMemberName(tcName))
 	err := m.Client.Get(ctx, types.NamespacedName{
 		Namespace: ns,
 		Name:      controller.TiflowExecutorPeerMemberName(tcName),
 	}, oldSvcTmp)
 
-	klog.Info("get svc %s.%s finished, error: %s, notFound: %v",
+	klog.Infof("get svc %s.%s finished, error: %v, notFound: %v",
 		ns, controller.TiflowExecutorPeerMemberName(tcName), err, errors.IsNotFound(err))
 
 	if errors.IsNotFound(err) {
@@ -164,7 +164,7 @@ func (m *executorMemberManager) syncExecutorStatefulSetForTiflowCluster(ctx cont
 	ns := tc.GetNamespace()
 	tcName := tc.GetName()
 
-	klog.Info("start to get sts %s.%s", ns, controller.TiflowExecutorMemberName(tcName))
+	klog.Infof("start to get sts %s.%s", ns, controller.TiflowExecutorMemberName(tcName))
 	oldStsTmp := &appsv1.StatefulSet{}
 	err := m.Client.Get(ctx, types.NamespacedName{
 		Namespace: ns,
@@ -532,10 +532,10 @@ func loadExecutorInitContainerCommand(tc *v1alpha1.TiflowCluster) []string {
 
 	listenStr := masterSvcName + "-0" + "." + masterSvcName
 
-	origin := `until nslookup tmp; 
-do 
-	echo waiting for tmp; 
-	sleep 2; 
+	origin := `until nslookup tmp;
+do
+	echo waiting for tmp;
+	sleep 2;
 done;`
 
 	currentStr := strings.Replace(origin, "tmp", listenStr, -1)
