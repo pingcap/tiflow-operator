@@ -11,4 +11,4 @@ Before asking a question, make sure you have:
 - Reviewed relevant Kubernetes information: Google your error messages and look at K8s docs.
 - Searched open and closed [GitHub issues](https://github.com/pingcap/tiflow-operator/issues)
 - Read the documentation:
-    - [TiFlow Operator ReadME](https://github.com/pingcap/tiflow-operator)
+    - [TiFlow Operator Readme](https://github.com/pingcap/tiflow-operator)
