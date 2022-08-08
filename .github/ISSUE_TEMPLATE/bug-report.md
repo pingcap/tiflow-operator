@@ -11,11 +11,7 @@ about: Something isn't working as expected
 
 **What version of TiFlow Operator are you using?**
 
-
-**What storage classes exist in the Kubernetes cluster and what are used for PD/TiKV pods?**
-<!-- You can run `kubectl get sc` and `kubectl get pvc -n {tidb-cluster-namespace}` -->
-
-**What's the status of the TiDB cluster pods?**
+**What's the status of the TiFlow Cluster pods?**
 <!-- You can run `kubectl get po -n {tiflow-cluster-namespace} -o wide` -->
 
 **What did you do?**
