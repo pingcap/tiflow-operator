@@ -18,17 +18,17 @@ package controllers
 
 import (
 	"context"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	pingcapcomv1alpha1 "github.com/StepOnce7/tiflow-operator/api/v1alpha1"
-	"github.com/StepOnce7/tiflow-operator/pkg/controller/tiflowcluster"
+	pingcapcomv1alpha1 "github.com/pingcap/tiflow-operator/api/v1alpha1"
+	"github.com/pingcap/tiflow-operator/pkg/controller/tiflowcluster"
 )
 
 // TiflowClusterReconciler reconciles a TiflowCluster object
@@ -49,6 +49,11 @@ func NewTiflowClusterReconciler(cli client.Client, scheme *runtime.Scheme) *Tifl
 //+kubebuilder:rbac:groups=pingcap.com,resources=tiflowclusters,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=pingcap.com,resources=tiflowclusters/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=pingcap.com,resources=tiflowclusters/finalizers,verbs=update
+//+kubebuilder:rbac:groups="",resources=configmaps;secrets;services;persistentvolumeclaims;persistentvolumes,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;update;delete
+//+kubebuilder:rbac:groups=apps,resources=statefulsets;deployments,verbs=*
+//+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=*
+//+kubebuilder:rbac:groups=storage.k8s.io,resources=storageclasses,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

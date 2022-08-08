@@ -1,4 +1,4 @@
-module github.com/StepOnce7/tiflow-operator
+module github.com/pingcap/tiflow-operator
 
 go 1.18
 

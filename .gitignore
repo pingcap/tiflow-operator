@@ -20,6 +20,9 @@ testbin/*
 
 # editor and IDE paraphernalia
 .idea
+.DS_Store
 *.swp
 *.swo
 *~
+.vscode
+vendor
