@@ -4,7 +4,7 @@ Thank you for contributing to TiFlow Operator!
 
 ### What problem does this PR solve?
 
-Add corresponding issue link with summary if exists -->
+<!-- Add corresponding issue link with summary if exists -->
 
 Issue link:
 
