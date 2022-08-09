@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/pingcap/tidb-operator/pkg/apis/util/config"
+
 	"github.com/pingcap/tiflow-operator/pkg/label"
 )
 
@@ -76,6 +77,39 @@ func (tc *TiflowCluster) ExecutorStsDesiredReplicas() int32 {
 	}
 
 	return tc.Spec.Executor.Replicas + int32(len(tc.Status.Executor.FailureMembers))
+}
+
+func (tc *TiflowCluster) MasterUpgrading() bool {
+	return tc.Status.Master.Phase == UpgradePhase
+}
+
+func (tc *TiflowCluster) MasterScaling() bool {
+	return tc.Status.Master.Phase == ScalePhase
+}
+
+func (tc *TiflowCluster) MasterStsActualReplicas() int32 {
+	stsStatus := tc.Status.Master.StatefulSet
+	if stsStatus == nil {
+		return 0
+	}
+	return stsStatus.Replicas
+}
+
+func (tc *TiflowCluster) MasterStsDesiredReplicas() int32 {
+	return tc.Spec.Master.Replicas + int32(len(tc.Status.Master.FailureMembers))
+}
+
+func (tc *TiflowCluster) MasterAllMembersReady() bool {
+	if int(tc.MasterStsDesiredReplicas()) != len(tc.Status.Master.Members) {
+		return false
+	}
+
+	for _, member := range tc.Status.Master.Members {
+		if !member.Health {
+			return false
+		}
+	}
+	return true
 }
 
 func (mt MemberType) String() string {

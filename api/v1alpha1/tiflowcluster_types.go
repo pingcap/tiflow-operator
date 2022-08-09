@@ -485,12 +485,38 @@ type ExecutorStatus struct {
 	Volumes map[string]*StorageVolumeStatus `json:"volumes,omitempty"`
 }
 
+// TiflowClusterCondition is tiflow cluster condition
+type TiflowClusterCondition struct {
+	// Type of the condition.
+	Type string `json:"type"`
+	// Status of the condition, one of True, False, Unknown.
+	Status corev1.ConditionStatus `json:"status"`
+	// The last time this condition was updated.
+	// +nullable
+	LastUpdateTime metav1.Time `json:"lastUpdateTime,omitempty"`
+	// Last time the condition transitioned from one status to another.
+	// +nullable
+	// +optional
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
+	// The reason for the condition's last transition.
+	// +optional
+	Reason string `json:"reason,omitempty"`
+	// A human readable message indicating details about the transition.
+	// +optional
+	Message string `json:"message,omitempty"`
+}
+
 // TiflowClusterStatus defines the observed state of TiflowCluster
 type TiflowClusterStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 	Master   MasterStatus   `json:"master,omitempty"`
 	Executor ExecutorStatus `json:"executor,omitempty"`
+
+	// Represents the latest available observations of a tiflow cluster's state.
+	// +optional
+	// +nullable
+	Conditions []TiflowClusterCondition `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true

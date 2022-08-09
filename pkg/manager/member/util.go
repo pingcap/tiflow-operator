@@ -4,10 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/pingcap/tiflow-operator/pkg/controller"
 
-	"github.com/pingcap/tiflow-operator/api/v1alpha1"
-	"github.com/pingcap/tiflow-operator/pkg/label"
 	apps "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -15,6 +12,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/pingcap/tiflow-operator/api/v1alpha1"
+	"github.com/pingcap/tiflow-operator/pkg/controller"
+	"github.com/pingcap/tiflow-operator/pkg/label"
 )
 
 const (
@@ -107,6 +108,10 @@ func DeepCopyClientObject(input client.Object) client.Object {
 	return cobj
 }
 
+func TiflowMasterPodName(tcName string, ordinal int32) string {
+	return fmt.Sprintf("%s-%d", controller.TiflowMasterMemberName(tcName), ordinal)
+}
+
 func createOrUpdateObject(ctx context.Context, cli client.Client, obj client.Object, mergeFn MergeFn) (runtime.Object, error) {
 	// controller-runtime/client will mutate the object pointer in-place,
 	// to be consistent with other methods in our controller, we copy the object
@@ -160,6 +165,17 @@ func getStsAnnotations(tcAnns map[string]string, component string) map[string]st
 	panic("implement me")
 }
 
-func ExecutorPodName(tcName string, ordinal int32) string {
-	return fmt.Sprintf("%s-%d", controller.TiflowExecutorPeerMemberName(tcName), ordinal)
+// GetLastAppliedConfig get last applied config info from Statefulset's annotation and the podTemplate's annotation
+func GetLastAppliedConfig(set *apps.StatefulSet) (*apps.StatefulSetSpec, *corev1.PodSpec, error) {
+	specAppliedConfig, ok := set.Annotations[LastAppliedConfigAnnotation]
+	if !ok {
+		return nil, nil, fmt.Errorf("statefulset:[%s/%s] not found spec's apply config", set.GetNamespace(), set.GetName())
+	}
+	spec := &apps.StatefulSetSpec{}
+	err := json.Unmarshal([]byte(specAppliedConfig), spec)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return spec, &spec.Template.Spec, nil
 }
