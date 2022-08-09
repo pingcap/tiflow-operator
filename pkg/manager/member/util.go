@@ -3,6 +3,8 @@ package member
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"github.com/pingcap/tiflow-operator/pkg/controller"
 
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
 	"github.com/pingcap/tiflow-operator/pkg/label"
@@ -156,4 +158,8 @@ func mergeConfigMapFunc(existing, desired client.Object) error {
 func getStsAnnotations(tcAnns map[string]string, component string) map[string]string {
 	//TODO implement me
 	panic("implement me")
+}
+
+func ExecutorPodName(tcName string, ordinal int32) string {
+	return fmt.Sprintf("%s-%d", controller.TiflowExecutorPeerMemberName(tcName), ordinal)
 }
