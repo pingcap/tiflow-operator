@@ -5,6 +5,7 @@ metadata:
 spec:
   version: latest
   configUpdateStrategy: RollingUpdate
+  imagePullPolicy: Always
   master:
     baseImage: chunzhuli/dataflow
     maxFailoverCount: 0
@@ -16,6 +17,7 @@ spec:
     config: |
       etcd-endpoints = ["etcd:2379"]
       [framework-metastore-conf]
+        schema = "framework"
         endpoints = ["mysql:3306"]
       [framework-metastore-conf.auth]
         user = "root"

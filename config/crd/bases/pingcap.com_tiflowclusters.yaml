@@ -12453,6 +12453,42 @@ spec:
           status:
             description: TiflowClusterStatus defines the observed state of TiflowCluster
             properties:
+              conditions:
+                description: Represents the latest available observations of a tiflow
+                  cluster's state.
+                items:
+                  description: TiflowClusterCondition is tiflow cluster condition
+                  properties:
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another.
+                      format: date-time
+                      nullable: true
+                      type: string
+                    lastUpdateTime:
+                      description: The last time this condition was updated.
+                      format: date-time
+                      nullable: true
+                      type: string
+                    message:
+                      description: A human readable message indicating details about
+                        the transition.
+                      type: string
+                    reason:
+                      description: The reason for the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type of the condition.
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                nullable: true
+                type: array
               executor:
                 description: ExecutorStatus defines the desired state of Tiflow-executor
                 properties:
