@@ -192,7 +192,7 @@ func (m *masterMemberManager) syncMasterHeadlessServiceForTiflowCluster(ctx cont
 		return m.cli.Create(ctx, newSvc)
 	}
 	if err != nil {
-		return fmt.Errorf("syncMasterHeadlessServiceForTiflowCluster: failed to get svc %s for cluster %s/%s, error: %s", controller.TiflowMasterPeerMemberName(tcName), ns, tcName, err)
+		return fmt.Errorf("syncMasterHeadlessServiceForTiflowCluster: failed to get svc %s for cluster %s/%s, error: %v", controller.TiflowMasterPeerMemberName(tcName), ns, tcName, err)
 	}
 
 	equal, err := controller.ServiceEqual(newSvc, oldSvc)
@@ -223,7 +223,7 @@ func (m *masterMemberManager) syncMasterStatefulSetForTiflowCluster(ctx context.
 	}, oldMasterSetTmp)
 	if err != nil {
 		if !errors.IsNotFound(err) {
-			return fmt.Errorf("syncMasterStatefulSetForTiflowCluster: fail to get sts %s for cluster %s/%s, error: %s", controller.TiflowMasterMemberName(tcName), ns, tcName, err)
+			return fmt.Errorf("syncMasterStatefulSetForTiflowCluster: fail to get sts %s for cluster %s/%s, error: %v", controller.TiflowMasterMemberName(tcName), ns, tcName, err)
 		} else {
 			oldMasterSetTmp = nil
 		}
@@ -233,7 +233,7 @@ func (m *masterMemberManager) syncMasterStatefulSetForTiflowCluster(ctx context.
 	oldMasterSet := oldMasterSetTmp.DeepCopy()
 
 	if err = m.syncTiflowClusterStatus(tc, oldMasterSet); err != nil {
-		klog.Errorf("failed to sync DMCluster: [%s/%s]'s status, error: %v", ns, tcName, err)
+		klog.Errorf("failed to sync Tiflow Cluster: [%s/%s]'s status, error: %v", ns, tcName, err)
 	}
 
 	cm, err := m.syncMasterConfigMap(ctx, tc, oldMasterSet)
@@ -303,7 +303,7 @@ func getNewMasterSetForTiflowCluster(tc *pingcapcomv1alpha1.TiflowCluster, cm *c
 	baseMasterSpec := component.BuildMasterSpec(tc)
 	instanceName := tc.GetInstanceName()
 	if cm == nil {
-		return nil, fmt.Errorf("config map for tiflow-master is not found, tiflowcluster %s/%s", tc.Namespace, tc.Name)
+		return nil, fmt.Errorf("config map for tiflow-master is not found, tiflow cluster %s/%s", tc.Namespace, tc.Name)
 	}
 	masterConfigMap := cm.Name
 
@@ -340,7 +340,7 @@ func getNewMasterSetForTiflowCluster(tc *pingcapcomv1alpha1.TiflowCluster, cm *c
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: masterConfigMap,
 					},
-					Items: []corev1.KeyToPath{{Key: "startup-script", Path: "dm_master_start_script.sh"}},
+					Items: []corev1.KeyToPath{{Key: "startup-script", Path: "tiflow_master_start_script.sh"}},
 				},
 			},
 		},
@@ -381,7 +381,7 @@ func getNewMasterSetForTiflowCluster(tc *pingcapcomv1alpha1.TiflowCluster, cm *c
 		Name:            label.TiflowMasterLabelVal,
 		Image:           tc.MasterImage(),
 		ImagePullPolicy: baseMasterSpec.ImagePullPolicy(),
-		Command:         []string{"/bin/sh", "/usr/local/bin/dm_master_start_script.sh"},
+		Command:         []string{"/bin/sh", "/usr/local/bin/tiflow_master_start_script.sh"},
 		Ports: []corev1.ContainerPort{
 			{
 				Name:          "peer",
