@@ -14,8 +14,8 @@ func renderTemplateFunc(tpl *template.Template, model interface{}) (string, erro
 	return buff.String(), nil
 }
 
-// tiflowMasterStartScriptTpl is the dm-master start script
-// Note: changing this will cause a rolling-update of dm-master cluster
+// tiflowMasterStartScriptTpl is the tiflow-master start script
+// Note: changing this will cause a rolling-update of tiflow-master cluster
 var tiflowMasterStartScriptTpl = template.Must(template.New("tiflow-master-start-script").Parse(`#!/bin/sh
 
 # This script is used to start tiflow-master containers in kubernetes cluster

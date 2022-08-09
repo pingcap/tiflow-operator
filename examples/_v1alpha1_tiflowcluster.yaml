@@ -5,6 +5,7 @@ metadata:
 spec:
   version: latest
   configUpdateStrategy: RollingUpdate
+  imagePullPolicy: Always
   master:
     baseImage: chunzhuli/dataflow
     maxFailoverCount: 0

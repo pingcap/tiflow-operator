@@ -3,12 +3,13 @@ package tiflowcluster
 import (
 	"context"
 
-	"github.com/pingcap/tiflow-operator/api/v1alpha1"
-	"github.com/pingcap/tiflow-operator/pkg/manager"
-	"github.com/pingcap/tiflow-operator/pkg/manager/member"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	errorutils "k8s.io/apimachinery/pkg/util/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/pingcap/tiflow-operator/api/v1alpha1"
+	"github.com/pingcap/tiflow-operator/pkg/manager"
+	"github.com/pingcap/tiflow-operator/pkg/manager/member"
 )
 
 // ControlInterface implements the control logic for updating TiflowClusters and their children StatefulSets.
@@ -26,6 +27,7 @@ func NewDefaultTiflowClusterControl(cli client.Client) ControlInterface {
 		cli,
 		member.NewMasterMemberManager(cli),
 		member.NewExecutorMemberManager(cli),
+		&tiflowClusterConditionUpdater{},
 	}
 }
 
@@ -33,26 +35,30 @@ type defaultTiflowClusterControl struct {
 	cli                   client.Client
 	masterMemberManager   manager.TiflowManager
 	executorMemberManager manager.TiflowManager
+	conditionUpdater      TiflowClusterConditionUpdater
 }
 
 // UpdateTiflowCluster executes the core logic loop for a tiflowcluster.
-func (c *defaultTiflowClusterControl) UpdateTiflowCluster(ctx context.Context, t *v1alpha1.TiflowCluster) error {
-	//c.defaulting(t)
-	//if !c.validate(t) {
+func (c *defaultTiflowClusterControl) UpdateTiflowCluster(ctx context.Context, tc *v1alpha1.TiflowCluster) error {
+	//c.defaulting(tc)
+	//if !c.validate(tc) {
 	//	return nil // fatal error, no need to retry on invalid object
 	//}
 
 	var errs []error
-	oldStatus := t.Status.DeepCopy()
+	oldStatus := tc.Status.DeepCopy()
 
-	if err := c.updateTiflowCluster(ctx, t); err != nil {
+	if err := c.updateTiflowCluster(ctx, tc); err != nil {
 		errs = append(errs, err)
 	}
 
-	if apiequality.Semantic.DeepEqual(&t.Status, oldStatus) {
+	if err := c.conditionUpdater.Update(tc); err != nil {
+		errs = append(errs, err)
+	}
+
+	if apiequality.Semantic.DeepEqual(&tc.Status, oldStatus) {
 		return errorutils.NewAggregate(errs)
 	}
-	// TODO: add status updater
 
 	return errorutils.NewAggregate(errs)
 }

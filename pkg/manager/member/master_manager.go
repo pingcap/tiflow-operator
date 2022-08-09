@@ -5,13 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	pingcapcomv1alpha1 "github.com/pingcap/tiflow-operator/api/v1alpha1"
-	"github.com/pingcap/tiflow-operator/pkg/component"
-	"github.com/pingcap/tiflow-operator/pkg/controller"
-	"github.com/pingcap/tiflow-operator/pkg/label"
-	"github.com/pingcap/tiflow-operator/pkg/manager"
-	mngerutils "github.com/pingcap/tiflow-operator/pkg/manager/utils"
-	"github.com/pingcap/tiflow-operator/pkg/util"
 	apps "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -21,6 +14,14 @@ import (
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	pingcapcomv1alpha1 "github.com/pingcap/tiflow-operator/api/v1alpha1"
+	"github.com/pingcap/tiflow-operator/pkg/component"
+	"github.com/pingcap/tiflow-operator/pkg/controller"
+	"github.com/pingcap/tiflow-operator/pkg/label"
+	"github.com/pingcap/tiflow-operator/pkg/manager"
+	mngerutils "github.com/pingcap/tiflow-operator/pkg/manager/utils"
+	"github.com/pingcap/tiflow-operator/pkg/util"
 )
 
 const (
@@ -29,11 +30,15 @@ const (
 )
 
 type masterMemberManager struct {
-	client.Client
+	cli      client.Client
+	upgrader Upgrader
 }
 
 func NewMasterMemberManager(cli client.Client) manager.TiflowManager {
-	return &masterMemberManager{cli}
+	return &masterMemberManager{
+		cli:      cli,
+		upgrader: NewMasterUpgrader(cli),
+	}
 }
 
 func (m *masterMemberManager) Sync(ctx context.Context, tc *pingcapcomv1alpha1.TiflowCluster) error {
@@ -111,11 +116,11 @@ func (m *masterMemberManager) syncMasterConfigMap(ctx context.Context, tc *pingc
 		})
 	}
 
-	err = mngerutils.UpdateConfigMapIfNeed(ctx, m.Client, component.BuildMasterSpec(tc).ConfigUpdateStrategy(), inUseName, newCm)
+	err = mngerutils.UpdateConfigMapIfNeed(ctx, m.cli, component.BuildMasterSpec(tc).ConfigUpdateStrategy(), inUseName, newCm)
 	if err != nil {
 		return nil, err
 	}
-	result, err := createOrUpdateObject(ctx, m.Client, newCm, mergeConfigMapFunc)
+	result, err := createOrUpdateObject(ctx, m.cli, newCm, mergeConfigMapFunc)
 	if err != nil {
 		return nil, err
 	}
@@ -129,17 +134,16 @@ func (m *masterMemberManager) syncMasterServiceForTiflowCluster(ctx context.Cont
 	newSvc := m.getNewMasterServiceForTiflowCluster(tc)
 	oldSvcTmp := &corev1.Service{}
 	klog.Infof("start to get svc %s.%s", ns, controller.TiflowMasterMemberName(tcName))
-	err := m.Client.Get(ctx, types.NamespacedName{
+	err := m.cli.Get(ctx, types.NamespacedName{
 		Namespace: ns,
 		Name:      controller.TiflowMasterMemberName(tcName),
 	}, oldSvcTmp)
-	klog.Infof("get svc %s.%s finish, error: %v, notFound: %v, content: %s", ns, controller.TiflowMasterMemberName(tcName), err, errors.IsNotFound(err), oldSvcTmp)
 	if errors.IsNotFound(err) {
 		err = controller.SetServiceLastAppliedConfigAnnotation(newSvc)
 		if err != nil {
 			return err
 		}
-		return m.Client.Create(ctx, newSvc)
+		return m.cli.Create(ctx, newSvc)
 	}
 	if err != nil {
 		return fmt.Errorf("syncMasterServiceForTiflowCluster: failed to get svc %s for cluster %s/%s, error: %s", controller.TiflowMasterMemberName(tcName), ns, tcName, err)
@@ -149,7 +153,6 @@ func (m *masterMemberManager) syncMasterServiceForTiflowCluster(ctx context.Cont
 	util.RetainManagedFields(newSvc, oldSvc)
 
 	equal, err := controller.ServiceEqual(newSvc, oldSvc)
-	klog.Infof("check svc result, equal: %v, error: %v, newSvc: %s", equal, err, newSvc)
 	if err != nil {
 		return err
 	}
@@ -164,7 +167,7 @@ func (m *masterMemberManager) syncMasterServiceForTiflowCluster(ctx context.Cont
 		for k, v := range newSvc.Annotations {
 			svc.Annotations[k] = v
 		}
-		err = m.Client.Update(ctx, &svc)
+		err = m.cli.Update(ctx, &svc)
 		return err
 	}
 
@@ -177,7 +180,7 @@ func (m *masterMemberManager) syncMasterHeadlessServiceForTiflowCluster(ctx cont
 
 	newSvc := getNewMasterHeadlessServiceForTiflowCluster(tc)
 	oldSvc := &corev1.Service{}
-	err := m.Client.Get(ctx, types.NamespacedName{
+	err := m.cli.Get(ctx, types.NamespacedName{
 		Namespace: ns,
 		Name:      controller.TiflowMasterPeerMemberName(tcName),
 	}, oldSvc)
@@ -186,7 +189,7 @@ func (m *masterMemberManager) syncMasterHeadlessServiceForTiflowCluster(ctx cont
 		if err != nil {
 			return err
 		}
-		return m.Client.Create(ctx, newSvc)
+		return m.cli.Create(ctx, newSvc)
 	}
 	if err != nil {
 		return fmt.Errorf("syncMasterHeadlessServiceForTiflowCluster: failed to get svc %s for cluster %s/%s, error: %v", controller.TiflowMasterPeerMemberName(tcName), ns, tcName, err)
@@ -203,7 +206,7 @@ func (m *masterMemberManager) syncMasterHeadlessServiceForTiflowCluster(ctx cont
 		if err != nil {
 			return err
 		}
-		return m.Client.Update(ctx, &svc)
+		return m.cli.Update(ctx, &svc)
 	}
 
 	return nil
@@ -214,12 +217,16 @@ func (m *masterMemberManager) syncMasterStatefulSetForTiflowCluster(ctx context.
 	tcName := tc.GetName()
 
 	oldMasterSetTmp := &apps.StatefulSet{}
-	err := m.Client.Get(ctx, types.NamespacedName{
+	err := m.cli.Get(ctx, types.NamespacedName{
 		Namespace: ns,
 		Name:      controller.TiflowMasterMemberName(tcName),
 	}, oldMasterSetTmp)
-	if err != nil && !errors.IsNotFound(err) {
-		return fmt.Errorf("syncMasterStatefulSetForTiflowCluster: fail to get sts %s for cluster %s/%s, error: %v", controller.TiflowMasterMemberName(tcName), ns, tcName, err)
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			return fmt.Errorf("syncMasterStatefulSetForTiflowCluster: fail to get sts %s for cluster %s/%s, error: %v", controller.TiflowMasterMemberName(tcName), ns, tcName, err)
+		} else {
+			oldMasterSetTmp = nil
+		}
 	}
 
 	setNotExist := errors.IsNotFound(err)
@@ -242,7 +249,7 @@ func (m *masterMemberManager) syncMasterStatefulSetForTiflowCluster(ctx context.
 		if err != nil {
 			return err
 		}
-		if err := m.Client.Create(ctx, newMasterSet); err != nil {
+		if err := m.cli.Create(ctx, newMasterSet); err != nil {
 			return err
 		}
 		tc.Status.Master.StatefulSet = &apps.StatefulSetStatus{}
@@ -253,7 +260,7 @@ func (m *masterMemberManager) syncMasterStatefulSetForTiflowCluster(ctx context.
 	if !tc.Status.Master.Synced && NeedForceUpgrade(tc.Annotations) {
 		tc.Status.Master.Phase = pingcapcomv1alpha1.UpgradePhase
 		mngerutils.SetUpgradePartition(newMasterSet, 0)
-		errSTS := mngerutils.UpdateStatefulSet(ctx, m.Client, newMasterSet, oldMasterSet)
+		errSTS := mngerutils.UpdateStatefulSet(ctx, m.cli, newMasterSet, oldMasterSet)
 		return controller.RequeueErrorf("tiflowcluster: [%s/%s]'s tiflow-master needs force upgrade, %v", ns, tcName, errSTS)
 	}
 
@@ -281,14 +288,13 @@ func (m *masterMemberManager) syncMasterStatefulSetForTiflowCluster(ctx context.
 	//	}
 	//}
 
-	// TODO: support upgrader
-	//if !templateEqual(newMasterSet, oldMasterSet) || tc.Status.Master.Phase == pingcapcomv1alpha1.UpgradePhase {
-	//	if err := m.upgrader.Upgrade(tc, oldMasterSet, newMasterSet); err != nil {
-	//		return err
-	//	}
-	//}
+	if !templateEqual(newMasterSet, oldMasterSet) || tc.Status.Master.Phase == pingcapcomv1alpha1.UpgradePhase {
+		if err := m.upgrader.Upgrade(tc, oldMasterSet, newMasterSet); err != nil {
+			return err
+		}
+	}
 
-	return mngerutils.UpdateStatefulSet(ctx, m.Client, newMasterSet, oldMasterSet)
+	return mngerutils.UpdateStatefulSet(ctx, m.cli, newMasterSet, oldMasterSet)
 }
 
 func getNewMasterSetForTiflowCluster(tc *pingcapcomv1alpha1.TiflowCluster, cm *corev1.ConfigMap) (*apps.StatefulSet, error) {
@@ -564,11 +570,59 @@ func getNewMasterHeadlessServiceForTiflowCluster(tc *pingcapcomv1alpha1.TiflowCl
 	}
 }
 
+func (m *masterMemberManager) masterStatefulSetIsUpgrading(set *apps.StatefulSet, tc *pingcapcomv1alpha1.TiflowCluster) (bool, error) {
+	if mngerutils.StatefulSetIsUpgrading(set) {
+		return true, nil
+	}
+	instanceName := tc.GetInstanceName()
+	selector, err := label.New().
+		Instance(instanceName).
+		TiflowMaster().
+		Selector()
+	if err != nil {
+		return false, err
+	}
+	masterPods := &corev1.PodList{}
+	err = m.cli.List(context.TODO(), masterPods, client.InNamespace(tc.GetNamespace()), client.MatchingLabelsSelector{Selector: selector})
+	if err != nil {
+		return false, fmt.Errorf("masterStatefulSetIsUpgrading: failed to list pods for cluster %s/%s, selector %s, error: %v", tc.GetNamespace(), instanceName, selector, err)
+	}
+	for _, pod := range masterPods.Items {
+		revisionHash, exist := pod.Labels[apps.ControllerRevisionHashLabelKey]
+		if !exist {
+			return false, nil
+		}
+		if revisionHash != tc.Status.Master.StatefulSet.UpdateRevision {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func (m *masterMemberManager) syncTiflowClusterStatus(tc *pingcapcomv1alpha1.TiflowCluster, set *apps.StatefulSet) error {
 	if set == nil {
 		// skip if not created yet
 		return nil
 	}
+
+	tc.Status.Master.StatefulSet = &set.Status
+
+	upgrading, err := m.masterStatefulSetIsUpgrading(set, tc)
+	if err != nil {
+		return err
+	}
+
+	// Scaling takes precedence over upgrading.
+	if tc.MasterStsDesiredReplicas() != *set.Spec.Replicas {
+		tc.Status.Master.Phase = pingcapcomv1alpha1.ScalePhase
+	} else if upgrading {
+		tc.Status.Master.Phase = pingcapcomv1alpha1.UpgradePhase
+	} else {
+		tc.Status.Master.Phase = pingcapcomv1alpha1.NormalPhase
+	}
+
 	// TODO: add status info after tiflow master interface stable
+
+	tc.Status.Master.Synced = true
 	return nil
 }

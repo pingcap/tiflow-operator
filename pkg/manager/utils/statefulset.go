@@ -5,19 +5,31 @@ import (
 	"encoding/json"
 
 	"github.com/pingcap/tidb-operator/pkg/apis/label"
-	"github.com/pingcap/tiflow-operator/api/v1alpha1"
-	"github.com/pingcap/tiflow-operator/pkg/util"
 	apps "k8s.io/api/apps/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/pingcap/tiflow-operator/api/v1alpha1"
+	"github.com/pingcap/tiflow-operator/pkg/util"
 )
 
 const (
 	// LastAppliedConfigAnnotation is annotation key of last applied configuration
 	LastAppliedConfigAnnotation = "pingcap.com/last-applied-configuration"
 )
+
+// StatefulSetIsUpgrading confirms whether the statefulSet is upgrading phase
+func StatefulSetIsUpgrading(set *apps.StatefulSet) bool {
+	if set.Status.CurrentRevision != set.Status.UpdateRevision {
+		return true
+	}
+	if set.Generation > set.Status.ObservedGeneration && *set.Spec.Replicas == set.Status.Replicas {
+		return true
+	}
+	return false
+}
 
 // UpdateStatefulSetWithPreCheck todo: impl this logic
 func UpdateStatefulSetWithPreCheck(tc *v1alpha1.TiflowCluster, resaon string, newSts, oldSts *apps.StatefulSet) error {
