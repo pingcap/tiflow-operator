@@ -5,13 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pingcap/tiflow-operator/api/v1alpha1"
-	"github.com/pingcap/tiflow-operator/pkg/component"
-	"github.com/pingcap/tiflow-operator/pkg/controller"
-	"github.com/pingcap/tiflow-operator/pkg/label"
-	"github.com/pingcap/tiflow-operator/pkg/manager"
-	mngerutils "github.com/pingcap/tiflow-operator/pkg/manager/utils"
-	"github.com/pingcap/tiflow-operator/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -21,6 +14,14 @@ import (
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/pingcap/tiflow-operator/api/v1alpha1"
+	"github.com/pingcap/tiflow-operator/pkg/component"
+	"github.com/pingcap/tiflow-operator/pkg/controller"
+	"github.com/pingcap/tiflow-operator/pkg/label"
+	"github.com/pingcap/tiflow-operator/pkg/manager"
+	mngerutils "github.com/pingcap/tiflow-operator/pkg/manager/utils"
+	"github.com/pingcap/tiflow-operator/pkg/util"
 )
 
 const (
@@ -407,7 +408,7 @@ func (m *executorMemberManager) getNewExecutorStatefulSetForTiflowCluster(ctx co
 		Command:         []string{"/bin/sh", "/usr/local/bin/tiflow_executor_start_script.sh"},
 		Ports: []corev1.ContainerPort{
 			{
-				Name:          "worker",
+				Name:          "executor",
 				ContainerPort: int32(10241),
 				Protocol:      corev1.ProtocolTCP,
 			},
