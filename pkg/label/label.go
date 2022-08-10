@@ -38,6 +38,9 @@ const (
 	// TiflowExecutorLabelVal is tiflow-executor label value
 	TiflowExecutorLabelVal string = "tiflow-executor"
 
+	// AnnStsLastSyncTimestamp is sts annotation key to indicate the last timestamp the operator sync the sts
+	AnnStsLastSyncTimestamp = "tidb.pingcap.com/sync-timestamp"
+
 	// AnnTiflowMasterDeleteSlots is annotation key of tiflow-master delete slots.
 	AnnTiflowMasterDeleteSlots = "tiflow-master.tidb.pingcap.com/delete-slots"
 	// AnnTiflowExecutorDeleteSlots is annotation key of tiflow-executor delete slots.

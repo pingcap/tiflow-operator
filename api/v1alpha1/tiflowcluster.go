@@ -48,7 +48,7 @@ func (tc *TiflowCluster) ExecutorImage() string {
 	return image
 }
 
-func (tc *TiflowCluster) ExecutorAllMembersReady() bool {
+func (tc *TiflowCluster) AllExecutorMembersReady() bool {
 	if int(tc.ExecutorStsDesiredReplicas()) != len(tc.Status.Executor.Members) {
 		return false
 	}
@@ -99,7 +99,7 @@ func (tc *TiflowCluster) MasterStsDesiredReplicas() int32 {
 	return tc.Spec.Master.Replicas + int32(len(tc.Status.Master.FailureMembers))
 }
 
-func (tc *TiflowCluster) MasterAllMembersReady() bool {
+func (tc *TiflowCluster) AllMasterMembersReady() bool {
 	if int(tc.MasterStsDesiredReplicas()) != len(tc.Status.Master.Members) {
 		return false
 	}

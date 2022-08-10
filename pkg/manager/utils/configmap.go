@@ -8,10 +8,11 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tidb-operator/pkg/apis/util/toml"
-	pingcapcomv1alpha1 "github.com/pingcap/tiflow-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	pingcapcomv1alpha1 "github.com/pingcap/tiflow-operator/api/v1alpha1"
 )
 
 func AddConfigMapDigestSuffix(cm *corev1.ConfigMap) error {
@@ -48,10 +49,7 @@ func updateConfigMap(old, new *corev1.ConfigMap) (bool, error) {
 
 	// check config
 	tomlField := []string{
-		"config-file",       // pd,dm,tikv,tidb,ng-monitoring
-		"pump-config",       // pump
-		"config_templ.toml", // tiflash
-		"proxy_templ.toml",  // tiflash
+		"config-file", // tiflow
 	}
 	for _, k := range tomlField {
 		oldData, oldOK := old.Data[k]

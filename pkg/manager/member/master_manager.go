@@ -281,7 +281,7 @@ func (m *masterMemberManager) syncMasterStatefulSetForTiflowCluster(ctx context.
 	//if m.deps.CLIConfig.AutoFailover {
 	//	if m.shouldRecover(tc) {
 	//		m.failover.Recover(tc)
-	//	} else if tc.MasterAllPodsStarted() && !tc.MasterAllMembersReady() || tc.MasterAutoFailovering() {
+	//	} else if tc.MasterAllPodsStarted() && !tc.AllMasterMembersReady() || tc.MasterAutoFailovering() {
 	//		if err := m.failover.Failover(tc); err != nil {
 	//			return err
 	//		}

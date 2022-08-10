@@ -361,7 +361,7 @@ type TiflowClusterSpec struct {
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
 	// Additional annotations for the dm cluster
-	// Can be overrode by annotations in master spec or worker spec
+	// Can be overrode by annotations in master spec or executor spec
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty"`
 
