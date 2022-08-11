@@ -29,7 +29,7 @@ const (
 	executorPort = 10241
 	// tiflowExecutorDataVolumeMountPath is the mount path for tiflow-executor data volume
 	tiflowExecutorDataVolumeMountPath = "/etc/tiflow-executor"
-	// // tiflowExecutorStorageVolumeMountPath is the mount path for tiflow-executor storage volume
+	// tiflowExecutorStorageVolumeMountPath is the mount path for tiflow-executor storage volume
 	tiflowExecutorStorageVolumeMountPath = "/tmp/tiflow-executor"
 	// tiflowExecutorClusterVCertPath it where the cert for inter-cluster communication stored (if any)
 	tiflowExecutorClusterVCertPath = ""
@@ -113,7 +113,7 @@ func (m *executorMemberManager) syncExecutorConfigMap(ctx context.Context, tc *v
 	return result.(*corev1.ConfigMap), nil
 }
 
-// syncExecutorHeadlessService implements the logic for syncing headlessService of executor.
+// syncExecutorHeadlessServiceForTiflowCluster implements the logic for syncing headlessService of executor.
 func (m *executorMemberManager) syncExecutorHeadlessServiceForTiflowCluster(ctx context.Context, tc *v1alpha1.TiflowCluster) error {
 
 	ns := tc.GetNamespace()
@@ -164,7 +164,7 @@ func (m *executorMemberManager) syncExecutorHeadlessServiceForTiflowCluster(ctx 
 	return nil
 }
 
-// syncStatefulSet implements the logic for syncing statefulSet of executor.
+// syncExecutorStatefulSetForTiflowCluster implements the logic for syncing statefulSet of executor.
 func (m *executorMemberManager) syncExecutorStatefulSetForTiflowCluster(ctx context.Context, tc *v1alpha1.TiflowCluster) error {
 
 	ns := tc.GetNamespace()
@@ -368,7 +368,7 @@ func (m *executorMemberManager) getNewExecutorPodTemp(tc *v1alpha1.TiflowCluster
 	var initContainers []corev1.Container
 	podSpec.InitContainers = append(initContainers, baseExecutorSpec.InitContainers()...)
 
-	// todo: More information about PosSpec will be modified in the near future
+	// todo: More information about PodSpec will be modified in the near future
 
 	instanceName := tc.GetInstanceName()
 	podLabels := util.CombineStringMap(label.New().Instance(instanceName).TiflowExecutor(), baseExecutorSpec.Labels())
