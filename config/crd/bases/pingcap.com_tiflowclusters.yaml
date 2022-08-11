@@ -856,7 +856,7 @@ spec:
                 additionalProperties:
                   type: string
                 description: Additional annotations for the dm cluster Can be overrode
-                  by annotations in master spec or worker spec
+                  by annotations in master spec or executor spec
                 type: object
               configUpdateStrategy:
                 description: ConfigUpdateStrategy determines how the configuration
