@@ -45,16 +45,16 @@ func (u *tiflowClusterConditionUpdater) updateReadyCondition(tc *v1alpha1.Tiflow
 	case !allStatefulSetsAreUpToDate(tc):
 		reason = utiltiflowcluster.StatfulSetNotUpToDate
 		message = "Statefulset(s) are in progress"
-	case !tc.MasterAllMembersReady():
+	case !tc.AllMasterMembersReady():
 		reason = utiltiflowcluster.MasterUnhealthy
 		message = "tiflow-master(s) are not healthy"
-	case !tc.ExecutorAllMembersReady():
+	case !tc.AllExecutorMembersReady():
 		reason = utiltiflowcluster.MasterUnhealthy
-		message = "some tiflow-worker(s) are not up yet"
+		message = "some tiflow-executor(s) are not up yet"
 	default:
 		status = v1.ConditionTrue
 		reason = utiltiflowcluster.Ready
-		message = "DM cluster is fully up and running"
+		message = "Tiflow cluster is fully up and running"
 	}
 	cond := utiltiflowcluster.NewTiflowClusterCondition(utiltiflowcluster.Ready, status, reason, message)
 	utiltiflowcluster.SetTiflowClusterCondition(&tc.Status, *cond)
