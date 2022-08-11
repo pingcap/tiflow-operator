@@ -1,7 +1,6 @@
 package member
 
 import (
-	"context"
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
 	apps "k8s.io/api/apps/v1"
 )
@@ -9,5 +8,5 @@ import (
 // Upgrader implements the logic for upgrading the tiflow cluster.
 type Upgrader interface {
 	// Upgrade upgrade the cluster
-	Upgrade(context.Context, *v1alpha1.TiflowCluster, *apps.StatefulSet, *apps.StatefulSet) error
+	Upgrade(*v1alpha1.TiflowCluster, *apps.StatefulSet, *apps.StatefulSet) error
 }

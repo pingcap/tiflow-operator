@@ -3,6 +3,7 @@ package member
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"strings"
 
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
@@ -27,18 +28,22 @@ const (
 	executorPort = 10241
 	// tiflowExecutorDataVolumeMountPath is the mount path for tiflow-executor data volume
 	tiflowExecutorDataVolumeMountPath = "/etc/tiflow-executor"
+	// // tiflowExecutorStorageVolumeMountPath is the mount path for tiflow-executor storage volume
+	tiflowExecutorStorageVolumeMountPath = "/tmp/tiflow-executor"
 	// tiflowExecutorClusterVCertPath it where the cert for inter-cluster communication stored (if any)
 	tiflowExecutorClusterVCertPath = ""
 	// DefaultStorageSize is the default pvc request storage size for dm
 	DefaultStorageSize = "10Gi"
+	// DefaultStorageName is the default pvc name
+	DefaultStorageName = "pvc"
 )
 
 // executorMemberManager implements interface of Manager.
 type executorMemberManager struct {
-	Client           client.Client
-	ExecutorScale    Scaler
-	ExecutorUpgrade  Upgrader
-	ExecutorFailover Failover
+	Client   client.Client
+	Scale    Scaler
+	Upgrade  Upgrader
+	Failover Failover
 }
 
 func NewExecutorMemberManager(client client.Client) manager.TiflowManager {
@@ -199,7 +204,7 @@ func (m *executorMemberManager) syncExecutorStatefulSetForTiflowCluster(ctx cont
 	// TOBE
 
 	// Get old statefulSet if it is existed. Instead, we will create a new one.
-	newSts, err := m.getNewExecutorStatefulSetForTiflowCluster(ctx, tc, cfgMap)
+	newSts, err := m.getNewExecutorStatefulSet(ctx, tc, cfgMap)
 	if err != nil {
 		return err
 	}
@@ -302,7 +307,7 @@ func (m *executorMemberManager) getNewExecutorHeadlessService(tc *v1alpha1.Tiflo
 }
 
 // getNewExecutorStatefulSet returns a new statefulSet of executor by tiflowCluster Spec.
-func (m *executorMemberManager) getNewExecutorStatefulSetForTiflowCluster(ctx context.Context, tc *v1alpha1.TiflowCluster, cfgMap *corev1.ConfigMap) (*appsv1.StatefulSet, error) {
+func (m *executorMemberManager) getNewExecutorStatefulSet(ctx context.Context, tc *v1alpha1.TiflowCluster, cfgMap *corev1.ConfigMap) (*appsv1.StatefulSet, error) {
 	ns := tc.GetNamespace()
 	tcName := tc.GetName()
 	baseExecutorSpec := component.BuildExecutorSpec(tc)
@@ -311,23 +316,136 @@ func (m *executorMemberManager) getNewExecutorStatefulSetForTiflowCluster(ctx co
 		return nil, fmt.Errorf("config-map for tiflow-exeutor is not found, tifloeCluster %s/%s", tc.Namespace, tc.Name)
 	}
 
-	executorConfigMap := cfgMap.Name
+	// todo: Need to handle the secret if it is existed
 
-	annoMout, annoVolume := annotationsMountVolume()
-	// dataVolumeName := string(mngerutils.GetStorageVolumeName("", v1alpha1.TiFlowExecutorMemberType))
-	// todo: Need to set MountPath
+	stsName := controller.TiflowExecutorMemberName(tcName)
+	stsLabels := label.New().Instance(instanceName).TiflowExecutor()
+	stsAnnotations := tc.Annotations
 
-	volMounts := []corev1.VolumeMount{
-		annoMout,
-		{Name: "config", ReadOnly: true, MountPath: tiflowExecutorDataVolumeMountPath},
-		{Name: "startup-script", ReadOnly: true, MountPath: "/usr/local/bin"},
+	podTemp := m.getNewExecutorPodTemp(tc, cfgMap)
+	pvcTemp, err := m.getNewExecutorPVCTemp(tc)
+	if err != nil {
+		return nil, err
 	}
 
-	volMounts = append(volMounts, tc.Spec.Executor.AdditionalVolumeMounts...)
+	executorSts := &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            stsName,
+			Namespace:       ns,
+			Labels:          stsLabels,
+			Annotations:     stsAnnotations,
+			OwnerReferences: []metav1.OwnerReference{controller.GetOwnerRef(tc)},
+		},
+		Spec: appsv1.StatefulSetSpec{
+			Replicas:             pointer.Int32Ptr(tc.ExecutorStsDesiredReplicas()),
+			Selector:             stsLabels.LabelSelector(),
+			Template:             podTemp,
+			VolumeClaimTemplates: pvcTemp,
+			ServiceName:          controller.TiflowExecutorPeerMemberName(tcName),
+			PodManagementPolicy:  baseExecutorSpec.PodManagementPolicy(),
+			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
+				Type: baseExecutorSpec.StatefulSetUpdateStrategy(),
+			},
+		},
+	}
 
-	// todo: will append TLS volume if need
+	return executorSts, nil
+}
 
-	// todo: Need to modify
+// getNewExecutorPodTemp return Pod Temp for Executor StatefulSetSpec
+func (m *executorMemberManager) getNewExecutorPodTemp(tc *v1alpha1.TiflowCluster, cfgMap *corev1.ConfigMap) corev1.PodTemplateSpec {
+
+	baseExecutorSpec := component.BuildExecutorSpec(tc)
+	podSpec := baseExecutorSpec.BuildPodSpec()
+
+	podVols := m.getNewExecutorPodVols(tc, cfgMap)
+	podSpec.Volumes = append(podVols, baseExecutorSpec.AdditionalVolumes()...)
+
+	executorContainer := m.getNewExecutorContainers(tc)
+	podSpec.Containers = append(executorContainer, baseExecutorSpec.AdditionalContainers()...)
+
+	var initContainers []corev1.Container
+	podSpec.InitContainers = append(initContainers, baseExecutorSpec.InitContainers()...)
+
+	// todo: More information about PosSpec will be modified in the near future
+
+	instanceName := tc.GetInstanceName()
+	podLabels := util.CombineStringMap(label.New().Instance(instanceName).TiflowExecutor(), baseExecutorSpec.Labels())
+	podAnnotations := util.CombineStringMap(controller.AnnProm(executorPort), baseExecutorSpec.Annotations())
+
+	podTemp := corev1.PodTemplateSpec{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels:      podLabels,
+			Annotations: podAnnotations,
+		},
+		Spec: podSpec,
+	}
+
+	return podTemp
+}
+
+// getNewExecutorPVCTemp getPVC return PVC temp for Executor StatefulSetSpec, used to dynamically create PVs during runtime.
+func (m *executorMemberManager) getNewExecutorPVCTemp(tc *v1alpha1.TiflowCluster) ([]corev1.PersistentVolumeClaim, error) {
+
+	storageSize := DefaultStorageSize
+	if tc.Spec.Executor.StorageSize != "" {
+		storageSize = tc.Spec.Executor.StorageSize
+	}
+
+	rs, err := resource.ParseQuantity(storageSize)
+	if err != nil {
+		return nil, fmt.Errorf("connot parse storage request for tiflow-executor, tiflowCluster %s/%s, error: %v",
+			tc.Namespace,
+			tc.Name, err)
+	}
+
+	storageRequest := corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceStorage: rs,
+		},
+	}
+
+	instanceName := tc.GetInstanceName()
+	pvcLabels := label.New().Instance(instanceName).TiflowExecutor()
+	//pvcAnnotations := tc.Annotations
+
+	// todo: Need to be modified soon
+	pvc := []corev1.PersistentVolumeClaim{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      DefaultStorageName,
+				Namespace: tc.GetNamespace(),
+				Labels:    pvcLabels,
+				//Annotations: pvcAnnotations,
+			},
+			Spec: corev1.PersistentVolumeClaimSpec{
+				AccessModes: []corev1.PersistentVolumeAccessMode{
+					corev1.ReadWriteOnce,
+				},
+				StorageClassName: tc.Spec.Executor.StorageClassName,
+				Resources:        storageRequest,
+			},
+		},
+	}
+
+	// There are two states of executor in the cluster, one is stateful and the other is stateless.
+	// Distinguish between these two states by the label stateful.
+	// If it is a stateful executor, set its OwnerReference to delete both its pvc and bound pv when deleting statefulSet.
+	// Instead, just delete the statefulSet and keep the pvc and pv.
+	// todo: The pvc and pv need to be handled separately
+	if tc.Spec.Executor.Stateful {
+		pvc[0].ObjectMeta.OwnerReferences = []metav1.OwnerReference{controller.GetOwnerRef(tc)}
+	}
+
+	return pvc, nil
+}
+
+// getNewExecutorPodVols return Vols for Executor Pod, including anno, config, startup script.
+func (m *executorMemberManager) getNewExecutorPodVols(tc *v1alpha1.TiflowCluster, cfgMap *corev1.ConfigMap) []corev1.Volume {
+	executorConfigMap := cfgMap.Name
+	_, annoVolume := annotationsMountVolume()
+
+	// handle vols for Pod
 	vols := []corev1.Volume{
 		annoVolume,
 		{
@@ -364,59 +482,13 @@ func (m *executorMemberManager) getNewExecutorStatefulSetForTiflowCluster(ctx co
 		},
 	}
 
-	// todo: Need to handle the secret if it is existed
-	//
-	//storageSize := DefaultStorageSize
-	//if tc.Spec.Executor.StorageSize != "" {
-	//	storageSize = tc.Spec.Executor.StorageSize
-	//}
-	//
-	//rs, err := resource.ParseQuantity(storageSize)
-	//if err != nil {
-	//	return nil, fmt.Errorf("connot parse storage request for tiflow-executor, tiflowCluster %s/%s, error: %v",
-	//		tc.Namespace,
-	//		tc.Namespace, err)
-	//}
-	//
-	//storageRequest := corev1.ResourceRequirements{
-	//	Requests: corev1.ResourceList{
-	//		corev1.ResourceStorage: rs,
-	//	},
-	//}
+	return vols
+}
 
-	stsName := controller.TiflowExecutorMemberName(tcName)
-	stsLabels := label.New().Instance(instanceName).TiflowExecutor()
-	// todo: need to modify
-	stsAnnotations := tc.Annotations
-
-	podLabels := util.CombineStringMap(stsLabels, baseExecutorSpec.Labels())
-	podAnnotations := util.CombineStringMap(controller.AnnProm(executorPort), baseExecutorSpec.Annotations())
-
-	//executorInitContainer := []corev1.Container{
-	//	{
-	//		Name:    "init-master",
-	//		Image:   "busybox:1.28.3",
-	//		Command: loadExecutorInitContainerCommand(tc),
-	//	},
-	//}
-
-	executorContainer := corev1.Container{
-		Name:            label.TiflowExecutorLabelVal,
-		Image:           tc.ExecutorImage(),
-		ImagePullPolicy: baseExecutorSpec.ImagePullPolicy(),
-		Command:         []string{"/bin/sh", "/usr/local/bin/tiflow_executor_start_script.sh"},
-		Ports: []corev1.ContainerPort{
-			{
-				Name:          "worker",
-				ContainerPort: int32(10241),
-				Protocol:      corev1.ProtocolTCP,
-			},
-		},
-		VolumeMounts: volMounts,
-		Resources:    controller.ContainerResource(tc.Spec.Executor.ResourceRequirements),
-	}
-
-	// todo: Need to modify it, Such as Master_Address
+// getNewExecutorContainers return container for Executor Pod
+func (m *executorMemberManager) getNewExecutorContainers(tc *v1alpha1.TiflowCluster) []corev1.Container {
+	// handling env infos
+	tcName := tc.GetName()
 	env := []corev1.EnvVar{
 		{
 			Name: "NAMESPACE",
@@ -432,7 +504,7 @@ func (m *executorMemberManager) getNewExecutorStatefulSetForTiflowCluster(ctx co
 		},
 	}
 
-	podSpec := baseExecutorSpec.BuildPodSpec()
+	baseExecutorSpec := component.BuildExecutorSpec(tc)
 	if baseExecutorSpec.HostNetwork() {
 		env = append(env, corev1.EnvVar{
 			Name: "POD_NAME",
@@ -444,56 +516,58 @@ func (m *executorMemberManager) getNewExecutorStatefulSetForTiflowCluster(ctx co
 		})
 	}
 
-	executorContainer.Env = util.AppendEnv(env, baseExecutorSpec.Env())
-	executorContainer.EnvFrom = baseExecutorSpec.EnvFrom()
-	podSpec.Volumes = append(vols, baseExecutorSpec.AdditionalVolumes()...)
-	//podSpec.InitContainers = executorInitContainer
-	podSpec.Containers = append([]corev1.Container{executorContainer}, baseExecutorSpec.AdditionalContainers()...)
+	env = util.AppendEnv(env, baseExecutorSpec.Env())
+	envFrom := baseExecutorSpec.EnvFrom()
 
-	var initContainers []corev1.Container
-	podSpec.InitContainers = append(initContainers, baseExecutorSpec.InitContainers()...)
+	volMounts := m.getNewExecutorContainerVolsMount(tc)
 
-	executorSts := &appsv1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            stsName,
-			Namespace:       ns,
-			Labels:          stsLabels,
-			Annotations:     stsAnnotations,
-			OwnerReferences: []metav1.OwnerReference{controller.GetOwnerRef(tc)},
-		},
-		Spec: appsv1.StatefulSetSpec{
-			Replicas: pointer.Int32Ptr(tc.ExecutorStsDesiredReplicas()),
-			Selector: stsLabels.LabelSelector(),
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels:      podLabels,
-					Annotations: podAnnotations,
+	executorContainer := []corev1.Container{
+		{
+			Name:            label.TiflowExecutorLabelVal,
+			Image:           tc.ExecutorImage(),
+			ImagePullPolicy: baseExecutorSpec.ImagePullPolicy(),
+			Command:         []string{"/bin/sh", "/usr/local/bin/tiflow_executor_start_script.sh"},
+			Ports: []corev1.ContainerPort{
+				{
+					Name:          "executor",
+					ContainerPort: int32(10241),
+					Protocol:      corev1.ProtocolTCP,
 				},
-				Spec: podSpec,
 			},
-			//VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
-			//	{
-			//		ObjectMeta: metav1.ObjectMeta{
-			//			Name: dataVolumeName,
-			//		},
-			//		Spec: corev1.PersistentVolumeClaimSpec{
-			//			AccessModes: []corev1.PersistentVolumeAccessMode{
-			//				corev1.ReadWriteOnce,
-			//			},
-			//			StorageClassName: tc.Spec.Executor.StorageClassName,
-			//			Resources:        storageRequest,
-			//		},
-			//	},
-			//},
-			ServiceName:         controller.TiflowExecutorPeerMemberName(tcName),
-			PodManagementPolicy: baseExecutorSpec.PodManagementPolicy(),
-			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
-				Type: baseExecutorSpec.StatefulSetUpdateStrategy(),
-			},
+			Env:          env,
+			EnvFrom:      envFrom,
+			VolumeMounts: volMounts,
+			Resources:    controller.ContainerResource(tc.Spec.Executor.ResourceRequirements),
 		},
 	}
 
-	return executorSts, nil
+	return executorContainer
+}
+
+// getNewExecutorContainerVolsMount return vols mount info for Executor Container
+func (m *executorMemberManager) getNewExecutorContainerVolsMount(tc *v1alpha1.TiflowCluster) []corev1.VolumeMount {
+	// add init volume mount, including config and startup-script
+	volMounts := []corev1.VolumeMount{
+		{Name: "config", ReadOnly: true, MountPath: tiflowExecutorDataVolumeMountPath},
+		{Name: "startup-script", ReadOnly: true, MountPath: "/usr/local/bin"},
+	}
+
+	// get Annotation mount info, and add it
+	annoMount, _ := annotationsMountVolume()
+	volMounts = append(volMounts, annoMount)
+
+	// todo: Need to be modified soon
+	// handle pvc mount, and add it
+	pvcMount := corev1.VolumeMount{
+		Name:      DefaultStorageName,
+		MountPath: tiflowExecutorStorageVolumeMountPath,
+	}
+	volMounts = append(volMounts, pvcMount)
+
+	// handling additional mount information for executor
+	volMounts = append(volMounts, tc.Spec.Executor.AdditionalVolumeMounts...)
+
+	return volMounts
 }
 
 func (m *executorMemberManager) syncExecutorStatus(tc *v1alpha1.TiflowCluster, sts *appsv1.StatefulSet) error {

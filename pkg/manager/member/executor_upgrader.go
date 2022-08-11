@@ -25,11 +25,11 @@ func NewExecutorUpgrader(cli client.Client) Upgrader {
 	}
 }
 
-func (u *executorUpgrader) Upgrade(ctx context.Context, tc *v1alpha1.TiflowCluster, oldSts *appsv1.StatefulSet, newSts *appsv1.StatefulSet) error {
-	return u.gracefulUpgrade(ctx, tc, oldSts, newSts)
+func (u *executorUpgrader) Upgrade(tc *v1alpha1.TiflowCluster, oldSts *appsv1.StatefulSet, newSts *appsv1.StatefulSet) error {
+	return u.gracefulUpgrade(tc, oldSts, newSts)
 }
 
-func (u *executorUpgrader) gracefulUpgrade(ctx context.Context, tc *v1alpha1.TiflowCluster, oldSts, newSts *appsv1.StatefulSet) error {
+func (u *executorUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSts, newSts *appsv1.StatefulSet) error {
 	ns := tc.GetNamespace()
 	tcName := tc.GetName()
 
@@ -59,9 +59,9 @@ func (u *executorUpgrader) gracefulUpgrade(ctx context.Context, tc *v1alpha1.Tif
 
 	mngerutils.SetUpgradePartition(newSts, *oldSts.Spec.UpdateStrategy.RollingUpdate.Partition)
 	for i := tc.Status.Executor.StatefulSet.Replicas - 1; i >= 0; i-- {
-		podName := ExecutorPodName(tcName, i)
+		podName := TiflowExecutorPodName(tcName, i)
 		pod := &corev1.Pod{}
-		err := u.client.Get(ctx, types.NamespacedName{
+		err := u.client.Get(context.TODO(), types.NamespacedName{
 			Namespace: ns,
 			Name:      podName,
 		}, pod)

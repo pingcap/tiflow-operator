@@ -112,6 +112,10 @@ func TiflowMasterPodName(tcName string, ordinal int32) string {
 	return fmt.Sprintf("%s-%d", controller.TiflowMasterMemberName(tcName), ordinal)
 }
 
+func TiflowExecutorPodName(tcName string, ordinal int32) string {
+	return fmt.Sprintf("%s-%d", controller.TiflowExecutorMemberName(tcName), ordinal)
+}
+
 func createOrUpdateObject(ctx context.Context, cli client.Client, obj client.Object, mergeFn MergeFn) (runtime.Object, error) {
 	// controller-runtime/client will mutate the object pointer in-place,
 	// to be consistent with other methods in our controller, we copy the object
