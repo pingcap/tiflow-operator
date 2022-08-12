@@ -3,6 +3,7 @@ package member
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -14,6 +15,7 @@ import (
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
 	"github.com/pingcap/tiflow-operator/pkg/controller"
 	mngerutils "github.com/pingcap/tiflow-operator/pkg/manager/utils"
+	"github.com/pingcap/tiflow-operator/pkg/tiflowapi"
 )
 
 type masterUpgrader struct {
@@ -104,7 +106,7 @@ func (u *masterUpgrader) upgradeMasterPod(tc *v1alpha1.TiflowCluster, ordinal in
 	ns := tc.GetNamespace()
 	tcName := tc.GetName()
 	upgradePodName := TiflowMasterPodName(tcName, ordinal)
-	if tc.Status.Master.Leader.Name == upgradePodName && tc.MasterStsActualReplicas() > 1 {
+	if strings.Contains(tc.Status.Master.Leader.ClientURL, TiflowMasterPeerSvcName(tcName, ordinal)) && tc.MasterStsActualReplicas() > 1 {
 		err := u.evictMasterLeader(tc, upgradePodName)
 		if err != nil {
 			klog.Errorf("tiflow-master upgrader: failed to evict tiflow-master %s's leader: %v", upgradePodName, err)
@@ -119,7 +121,5 @@ func (u *masterUpgrader) upgradeMasterPod(tc *v1alpha1.TiflowCluster, ordinal in
 }
 
 func (u *masterUpgrader) evictMasterLeader(tc *v1alpha1.TiflowCluster, podName string) error {
-	// TODO: implement evict master leader
-	//return controller.GetMasterPeerClient(u.cli, tc, podName).EvictLeader()
-	return nil
+	return tiflowapi.GetMasterClient(u.cli, tc.GetNamespace(), tc.GetName(), podName, tc.Spec.TLSCluster).EvictLeader()
 }

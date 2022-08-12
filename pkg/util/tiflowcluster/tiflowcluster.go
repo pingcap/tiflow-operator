@@ -1,9 +1,10 @@
 package tiflowcluster
 
 import (
-	"github.com/pingcap/tiflow-operator/api/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/pingcap/tiflow-operator/api/v1alpha1"
 )
 
 const (
@@ -13,8 +14,10 @@ const (
 	Ready = "Ready"
 	// StatefulSetNotUpToDate is added when one of statefulsets is not up to date.
 	StatfulSetNotUpToDate = "StatefulSetNotUpToDate"
-	// MasterUnhealthy is added when one of tiflow-master members is unhealthy.
-	MasterUnhealthy = "TiflowMasterUnhealthy"
+	// MasterNotUpYet is added when one of tiflow-master members is not up.
+	MasterNotUpYet = "TiflowMasterNotUp"
+	// ExecutorNotUpYet is added when one of tiflow-executor members is not up.
+	ExecutorNotUpYet = "TiflowExecutorNotUp"
 )
 
 // NewTiflowClusterCondition creates a new tiflowcluster condition.

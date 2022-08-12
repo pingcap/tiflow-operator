@@ -48,7 +48,7 @@ fi
 POD_NAME=${POD_NAME:-$HOSTNAME}
 
 ARGS="--addr=:10240 \
---advertise-addr=${POD_NAME}.${PEER_SERVICE_NAME}:10240 \
+--advertise-addr=${POD_NAME}.${PEER_SERVICE_NAME}.${NAMESPACE}.svc:10240 \
 --config=/etc/tiflow-master/tiflow-master.toml \
 "
 
@@ -67,7 +67,7 @@ func RenderTiflowMasterStartScript(model *TiflowMasterStartScriptModel) (string,
 }
 
 // tiflowExecutorStartScriptTpl is the tiflow-executor start script
-var tiflwExecutorStartScriptTpl = template.Must(template.New("tiflow-executor-start-script").Parse(`#!/bin/sh
+var tiflowExecutorStartScriptTpl = template.Must(template.New("tiflow-executor-start-script").Parse(`#!/bin/sh
 
 # This script is used to start tiflow-executor containers in kubernetes cluster
 
@@ -83,7 +83,7 @@ ANNOTATIONS="/etc/podinfo/annotations"
 
 if [[ ! -f "${ANNOTATIONS}" ]]
 then
-    echo "${ANNOTATIONS} does't exist, exiting."
+    echo "${ANNOTATIONS} doesn't exist, exiting."
     exit 1
 fi
 source ${ANNOTATIONS} 2>/dev/null
@@ -100,7 +100,7 @@ POD_NAME=${POD_NAME:-$HOSTNAME}
 
 ARGS="--join={{ .MasterAddress }} \
 --addr=:10241 \
---advertise-addr=${POD_NAME}.${PEER_SERVICE_NAME}:10241 \
+--advertise-addr=${POD_NAME}.${PEER_SERVICE_NAME}.${NAMESPACE}.svc:10241 \
 --config={{ .DataDir }}/tiflow-executor.toml \
 "
 
@@ -116,5 +116,5 @@ type TiflowExecutorStartScriptModel struct {
 }
 
 func RenderExecutorStartScript(model *TiflowExecutorStartScriptModel) (string, error) {
-	return renderTemplateFunc(tiflwExecutorStartScriptTpl, model)
+	return renderTemplateFunc(tiflowExecutorStartScriptTpl, model)
 }
