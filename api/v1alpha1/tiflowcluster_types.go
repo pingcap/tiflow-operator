@@ -409,14 +409,13 @@ const (
 
 // MasterStatus defines the desired state of Tiflow-master
 type MasterStatus struct {
-	Synced          bool                    `json:"synced"`
-	Phase           MemberPhase             `json:"phase,omitempty"`
-	StatefulSet     *apps.StatefulSetStatus `json:"statefulSet,omitempty"`
-	Members         map[string]MasterMember `json:"members,omitempty"`
-	Leader          MasterMember            `json:"leader,omitempty"`
-	FailureMembers  map[string]MasterMember `json:"failureMembers,omitempty"`
-	UnjoinedMembers map[string]MasterMember `json:"unjoinedMembers,omitempty"`
-	Image           string                  `json:"image,omitempty"`
+	Synced         bool                    `json:"synced"`
+	Phase          MemberPhase             `json:"phase,omitempty"`
+	StatefulSet    *apps.StatefulSetStatus `json:"statefulSet,omitempty"`
+	Members        map[string]MasterMember `json:"members,omitempty"`
+	Leader         MasterMember            `json:"leader,omitempty"`
+	FailureMembers map[string]MasterMember `json:"failureMembers,omitempty"`
+	Image          string                  `json:"image,omitempty"`
 }
 
 // MasterMember is Tiflow-master member status
@@ -472,7 +471,7 @@ type StorageVolumeStatus struct {
 
 // ExecutorStatus defines the desired state of Tiflow-executor
 type ExecutorStatus struct {
-	Synced         bool                      `json:"synced,omitempty"`
+	Synced         bool                      `json:"synced"`
 	Phase          MemberPhase               `json:"phase,omitempty"`
 	StatefulSet    *apps.StatefulSetStatus   `json:"statefulSet,omitempty"`
 	Members        map[string]ExecutorMember `json:"members,omitempty"`

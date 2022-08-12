@@ -12674,6 +12674,8 @@ spec:
                       type: object
                     description: Volumes contains the status of all volumes.
                     type: object
+                required:
+                - synced
                 type: object
               master:
                 description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
@@ -12853,32 +12855,6 @@ spec:
                     type: object
                   synced:
                     type: boolean
-                  unjoinedMembers:
-                    additionalProperties:
-                      description: MasterMember is Tiflow-master member status
-                      properties:
-                        clientURL:
-                          type: string
-                        health:
-                          type: boolean
-                        lastTransitionTime:
-                          description: Last time the health transitioned from one
-                            to another.
-                          format: date-time
-                          nullable: true
-                          type: string
-                        memberDeleted:
-                          type: boolean
-                        podName:
-                          description: member id is actually a uint64, but apimachinery's
-                            json only treats numbers as int64/float64 so uint64 may
-                            overflow int64 and thus convert to float64
-                          type: string
-                      required:
-                      - clientURL
-                      - health
-                      type: object
-                    type: object
                 required:
                 - synced
                 type: object
