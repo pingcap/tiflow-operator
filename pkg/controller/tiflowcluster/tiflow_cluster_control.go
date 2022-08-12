@@ -27,7 +27,8 @@ func NewDefaultTiflowClusterControl(cli client.Client) ControlInterface {
 		cli,
 		member.NewMasterMemberManager(cli),
 		member.NewExecutorMemberManager(cli),
-		&tiflowClusterConditionUpdater{},
+		&realConditionUpdater{},
+		NewRealStatusUpdater(cli),
 	}
 }
 
@@ -35,7 +36,8 @@ type defaultTiflowClusterControl struct {
 	cli                   client.Client
 	masterMemberManager   manager.TiflowManager
 	executorMemberManager manager.TiflowManager
-	conditionUpdater      TiflowClusterConditionUpdater
+	conditionUpdater      ConditionUpdater
+	statusUpdater         StatusUpdater
 }
 
 // UpdateTiflowCluster executes the core logic loop for a tiflowcluster.
@@ -58,6 +60,10 @@ func (c *defaultTiflowClusterControl) UpdateTiflowCluster(ctx context.Context, t
 
 	if apiequality.Semantic.DeepEqual(&tc.Status, oldStatus) {
 		return errorutils.NewAggregate(errs)
+	}
+
+	if _, err := c.statusUpdater.UpdateTiflowCluster(tc); err != nil {
+		errs = append(errs, err)
 	}
 
 	return errorutils.NewAggregate(errs)

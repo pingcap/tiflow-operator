@@ -112,6 +112,10 @@ func TiflowMasterPodName(tcName string, ordinal int32) string {
 	return fmt.Sprintf("%s-%d", controller.TiflowMasterMemberName(tcName), ordinal)
 }
 
+func TiflowMasterPeerSvcName(tcName string, ordinal int32) string {
+	return fmt.Sprintf("%s.%s:%d", TiflowMasterPodName(tcName, ordinal), controller.TiflowExecutorPeerMemberName(tcName), masterPort)
+}
+
 func TiflowExecutorPodName(tcName string, ordinal int32) string {
 	return fmt.Sprintf("%s-%d", controller.TiflowExecutorMemberName(tcName), ordinal)
 }

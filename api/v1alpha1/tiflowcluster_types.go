@@ -409,22 +409,19 @@ const (
 
 // MasterStatus defines the desired state of Tiflow-master
 type MasterStatus struct {
-	Synced          bool                    `json:"synced,omitempty"`
-	Phase           MemberPhase             `json:"phase,omitempty"`
-	StatefulSet     *apps.StatefulSetStatus `json:"statefulSet,omitempty"`
-	Members         map[string]MasterMember `json:"members,omitempty"`
-	Leader          MasterMember            `json:"leader,omitempty"`
-	FailureMembers  map[string]MasterMember `json:"failureMembers,omitempty"`
-	UnjoinedMembers map[string]MasterMember `json:"unjoinedMembers,omitempty"`
-	Image           string                  `json:"image,omitempty"`
+	Synced         bool                    `json:"synced"`
+	Phase          MemberPhase             `json:"phase,omitempty"`
+	StatefulSet    *apps.StatefulSetStatus `json:"statefulSet,omitempty"`
+	Members        map[string]MasterMember `json:"members,omitempty"`
+	Leader         MasterMember            `json:"leader,omitempty"`
+	FailureMembers map[string]MasterMember `json:"failureMembers,omitempty"`
+	Image          string                  `json:"image,omitempty"`
 }
 
 // MasterMember is Tiflow-master member status
 type MasterMember struct {
-	Name string `json:"name"`
 	// member id is actually a uint64, but apimachinery's json only treats numbers as int64/float64
 	// so uint64 may overflow int64 and thus convert to float64
-	MemberID      string `json:"memberID"`
 	PodName       string `json:"podName,omitempty"`
 	ClientURL     string `json:"clientURL"`
 	Health        bool   `json:"health"`
@@ -474,7 +471,7 @@ type StorageVolumeStatus struct {
 
 // ExecutorStatus defines the desired state of Tiflow-executor
 type ExecutorStatus struct {
-	Synced         bool                      `json:"synced,omitempty"`
+	Synced         bool                      `json:"synced"`
 	Phase          MemberPhase               `json:"phase,omitempty"`
 	StatefulSet    *apps.StatefulSetStatus   `json:"statefulSet,omitempty"`
 	Members        map[string]ExecutorMember `json:"members,omitempty"`
@@ -523,6 +520,8 @@ type TiflowClusterStatus struct {
 //+kubebuilder:subresource:status
 
 // TiflowCluster is the Schema for the tiflowclusters API
+// +k8s:openapi-gen=true
+// +kubebuilder:resource:shortName="tfc"
 type TiflowCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

@@ -49,11 +49,12 @@ func (tc *TiflowCluster) ExecutorImage() string {
 }
 
 func (tc *TiflowCluster) AllExecutorMembersReady() bool {
-	if int(tc.ExecutorStsDesiredReplicas()) != len(tc.Status.Executor.Members) {
-		return false
-	}
+	return true
+	// TODO: support members later
+	//if int(tc.ExecutorStsDesiredReplicas()) != len(tc.Status.Executor.Members) {
+	//	return false
+	//}
 
-	// todo: get info of Ready from Master?
 	//for _, member := range tc.Status.Executor.Members {
 	//	if member {
 	//
@@ -108,16 +109,18 @@ func (tc *TiflowCluster) MasterStsDesiredReplicas() int32 {
 }
 
 func (tc *TiflowCluster) AllMasterMembersReady() bool {
-	if int(tc.MasterStsDesiredReplicas()) != len(tc.Status.Master.Members) {
-		return false
-	}
-
-	for _, member := range tc.Status.Master.Members {
-		if !member.Health {
-			return false
-		}
-	}
 	return true
+	// TODO: support members later
+	//if int(tc.MasterStsDesiredReplicas()) != len(tc.Status.Master.Members) {
+	//	return false
+	//}
+	//
+	//for _, member := range tc.Status.Master.Members {
+	//	if !member.Health {
+	//		return false
+	//	}
+	//}
+	//return true
 }
 
 func (mt MemberType) String() string {

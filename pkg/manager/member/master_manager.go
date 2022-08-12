@@ -21,12 +21,12 @@ import (
 	"github.com/pingcap/tiflow-operator/pkg/label"
 	"github.com/pingcap/tiflow-operator/pkg/manager"
 	mngerutils "github.com/pingcap/tiflow-operator/pkg/manager/utils"
+	"github.com/pingcap/tiflow-operator/pkg/tiflowapi"
 	"github.com/pingcap/tiflow-operator/pkg/util"
 )
 
 const (
-	masterPort     = 10240
-	masterPeerPort = 8291
+	masterPort = 10240
 )
 
 type masterMemberManager struct {
@@ -253,7 +253,7 @@ func (m *masterMemberManager) syncMasterStatefulSetForTiflowCluster(ctx context.
 			return err
 		}
 		tc.Status.Master.StatefulSet = &apps.StatefulSetStatus{}
-		return controller.RequeueErrorf("TiflowCluster: [%s/%s], waiting for tiflow-master cluster running", ns, tcName)
+		return controller.RequeueErrorf("tiflow cluster: [%s/%s], waiting for tiflow-master cluster running", ns, tcName)
 	}
 
 	// Force update takes precedence over scaling because force upgrade won't take effect when cluster gets stuck at scaling
@@ -261,7 +261,7 @@ func (m *masterMemberManager) syncMasterStatefulSetForTiflowCluster(ctx context.
 		tc.Status.Master.Phase = pingcapcomv1alpha1.UpgradePhase
 		mngerutils.SetUpgradePartition(newMasterSet, 0)
 		errSTS := mngerutils.UpdateStatefulSet(ctx, m.cli, newMasterSet, oldMasterSet)
-		return controller.RequeueErrorf("tiflowcluster: [%s/%s]'s tiflow-master needs force upgrade, %v", ns, tcName, errSTS)
+		return controller.RequeueErrorf("tiflow cluster: [%s/%s]'s tiflow-master needs force upgrade, %v", ns, tcName, errSTS)
 	}
 
 	// TODO: support scaler
@@ -384,13 +384,8 @@ func getNewMasterSetForTiflowCluster(tc *pingcapcomv1alpha1.TiflowCluster, cm *c
 		Command:         []string{"/bin/sh", "/usr/local/bin/tiflow_master_start_script.sh"},
 		Ports: []corev1.ContainerPort{
 			{
-				Name:          "peer",
-				ContainerPort: int32(8291),
-				Protocol:      corev1.ProtocolTCP,
-			},
-			{
 				Name:          "client",
-				ContainerPort: int32(8261),
+				ContainerPort: int32(masterPort),
 				Protocol:      corev1.ProtocolTCP,
 			},
 		},
@@ -559,8 +554,8 @@ func getNewMasterHeadlessServiceForTiflowCluster(tc *pingcapcomv1alpha1.TiflowCl
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "tiflow-master-peer",
-					Port:       masterPeerPort,
-					TargetPort: intstr.FromInt(masterPeerPort),
+					Port:       masterPort,
+					TargetPort: intstr.FromInt(masterPort),
 					Protocol:   corev1.ProtocolTCP,
 				},
 			},
@@ -605,6 +600,9 @@ func (m *masterMemberManager) syncTiflowClusterStatus(tc *pingcapcomv1alpha1.Tif
 		return nil
 	}
 
+	tcName := tc.GetName()
+	ns := tc.GetNamespace()
+
 	tc.Status.Master.StatefulSet = &set.Status
 
 	upgrading, err := m.masterStatefulSetIsUpgrading(set, tc)
@@ -622,7 +620,54 @@ func (m *masterMemberManager) syncTiflowClusterStatus(tc *pingcapcomv1alpha1.Tif
 	}
 
 	// TODO: add status info after tiflow master interface stable
+	tiflowClient := tiflowapi.GetMasterClient(m.cli, ns, tcName, "", tc.Spec.TLSCluster)
+
+	// TODO: add GetMasters() after it's supported by tiflow
+	//mastersInfo, err := tiflowClient.GetMasters()
+	//if err != nil {
+	//	tc.Status.Master.Synced = false
+	//	// get endpoints info
+	//	eps := &corev1.Endpoints{}
+	//	epErr := m.cli.Get(context.TODO(), types.NamespacedName{
+	//		Namespace: ns,
+	//		Name:      controller.TiflowMasterMemberName(tcName),
+	//	}, eps)
+	//	if epErr != nil {
+	//		return fmt.Errorf("syncTiflowClusterStatus: failed to get endpoints %s for cluster %s/%s, err: %s, epErr %s", controller.TiflowMasterMemberName(tcName), ns, tcName, err, epErr)
+	//	}
+	//	// tiflow-master service has no endpoints
+	//	if eps != nil && len(eps.Subsets) == 0 {
+	//		return fmt.Errorf("%s, service %s/%s has no endpoints", err, ns, controller.TiflowMasterMemberName(tcName))
+	//	}
+	//	return err
+	//}
+
+	leader, err := tiflowClient.GetLeader()
+	if err != nil {
+		tc.Status.Master.Synced = false
+		return err
+	}
 
 	tc.Status.Master.Synced = true
+	tc.Status.Master.Leader = pingcapcomv1alpha1.MasterMember{
+		ClientURL: leader.AdvertiseAddr,
+		Health:    true,
+	}
+	tc.Status.Master.Image = ""
+	c := findContainerByName(set, "tiflow-master")
+	if c != nil {
+		tc.Status.Master.Image = c.Image
+	}
+
+	return nil
+}
+
+// findContainerByName finds targetContainer by containerName, If not find, then return nil
+func findContainerByName(sts *apps.StatefulSet, containerName string) *corev1.Container {
+	for _, c := range sts.Spec.Template.Spec.Containers {
+		if c.Name == containerName {
+			return &c
+		}
+	}
 	return nil
 }
