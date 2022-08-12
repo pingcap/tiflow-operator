@@ -38,7 +38,16 @@ func (u *executorUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSts, n
 			"can not to be upgraded", ns, tcName)
 	}
 
-	// todo: First, need to handle the logic of executor scaling
+	if tc.ExecutorScaling() {
+		klog.Infof("TiflowCluster: [%s/%s]'s tiflow-executor is scaling, can not upgrade tiflow-executor",
+			ns, tcName)
+		_, podSpec, err := GetLastAppliedConfig(oldSts)
+		if err != nil {
+			return err
+		}
+		newSts.Spec.Template.Spec = *podSpec
+		return nil
+	}
 
 	tc.Status.Executor.Phase = v1alpha1.UpgradePhase
 	if !templateEqual(newSts, oldSts) {

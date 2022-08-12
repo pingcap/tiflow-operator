@@ -53,13 +53,21 @@ func (tc *TiflowCluster) AllExecutorMembersReady() bool {
 		return false
 	}
 
-	// todo:
+	// todo: get info of Ready from Master?
 	//for _, member := range tc.Status.Executor.Members {
 	//	if member {
 	//
 	//	}
 	//}
 	return true
+}
+
+func (tc *TiflowCluster) ExecutorUpgrading() bool {
+	return tc.Status.Executor.Phase == UpgradePhase
+}
+
+func (tc *TiflowCluster) ExecutorScaling() bool {
+	return tc.Status.Executor.Phase == ScalePhase
 }
 
 func (tc *TiflowCluster) ExecutorStsActualReplicas() int32 {
