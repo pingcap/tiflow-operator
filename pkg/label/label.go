@@ -9,7 +9,7 @@ const (
 	// The following labels are recommended by kubernetes https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/
 
 	// ManagedByLabelKey is Kubernetes recommended label key, it represents the tool being used to manage the operation of an application
-	// For resources managed by TiDB Operator, its value is always tidb-operator
+	// For resources managed by TiFlow Operator, its value is always tiflow-operator
 	ManagedByLabelKey string = "app.kubernetes.io/managed-by"
 	// ComponentLabelKey is Kubernetes recommended label key, it represents the component within the architecture
 	ComponentLabelKey string = "app.kubernetes.io/component"

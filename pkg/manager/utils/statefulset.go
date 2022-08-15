@@ -125,11 +125,9 @@ func StatefulSetEqual(new apps.StatefulSet, old apps.StatefulSet) bool {
 	if lastAppliedConfig, ok := old.Annotations[LastAppliedConfigAnnotation]; ok {
 		err := json.Unmarshal([]byte(lastAppliedConfig), &oldConfig)
 		if err != nil {
-			klog.Errorf("unmarshal Statefulset: [%s/%s]'s applied config failed,error: %v", old.GetNamespace(), old.GetName(), err)
+			klog.Errorf("unmarshal Statefulset: [%s/%s]'s applied config failed, error: %v", old.GetNamespace(), old.GetName(), err)
 			return false
 		}
-		// oldConfig.Template.Annotations may include LastAppliedConfigAnnotation to keep backward compatiability
-		// Please check detail in https://github.com/pingcap/tidb-operator/pull/1489
 		tmpTemplate := oldConfig.Template.DeepCopy()
 		delete(tmpTemplate.Annotations, LastAppliedConfigAnnotation)
 		return apiequality.Semantic.DeepEqual(oldConfig.Replicas, new.Spec.Replicas) &&
