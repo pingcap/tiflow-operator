@@ -67,7 +67,7 @@ func (u *executorUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSts, n
 	}
 
 	mngerutils.SetUpgradePartition(newSts, *oldSts.Spec.UpdateStrategy.RollingUpdate.Partition)
-	for i := tc.Status.Executor.StatefulSet.Replicas - 1; i >= 0; i-- {
+	for i := *oldSts.Spec.Replicas - 1; i >= 0; i-- {
 		podName := TiflowExecutorPodName(tcName, i)
 		pod := &corev1.Pod{}
 		err := u.client.Get(context.TODO(), types.NamespacedName{
@@ -75,7 +75,7 @@ func (u *executorUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSts, n
 			Name:      podName,
 		}, pod)
 		if err != nil {
-			return fmt.Errorf("gracefulUpgrade: failed to get pods %s for cluster %s/%s, error: %s", podName, ns, tcName, err)
+			return fmt.Errorf("gracefulUpgrade: failed to get pods %s for cluster [%s/%s], error: %s", podName, ns, tcName, err)
 		}
 
 		revision, exists := pod.Labels[appsv1.ControllerRevisionHashLabelKey]
@@ -89,6 +89,7 @@ func (u *executorUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSts, n
 				return controller.RequeueErrorf("tiflowCluster: [%s/%s]'s upgrade tiflow-executor pod: [%s] is not ready",
 					ns, tcName, podName)
 			}
+			// todo: Need to be modified
 			if _, exist := tc.Status.Executor.Members[podName]; !exist {
 				return controller.RequeueErrorf("tiflowCluster: [%s/%s]'s upgrade tiflow-executor pod: [%s] is not exist",
 					ns, tcName, podName)
@@ -101,6 +102,7 @@ func (u *executorUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSts, n
 	return nil
 }
 
+// todo: Need to be removed
 func (u *executorUpgrader) upgradeExecutorPod(ctx context.Context, tc *v1alpha1.TiflowCluster, ordinal int32, newSts *appsv1.StatefulSet) error {
 
 	mngerutils.SetUpgradePartition(newSts, ordinal)

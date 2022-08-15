@@ -60,7 +60,7 @@ func (tc *TiflowCluster) AllExecutorMembersReady() bool {
 	//
 	//	}
 	//}
-	return true
+	//return true
 }
 
 func (tc *TiflowCluster) ExecutorUpgrading() bool {
