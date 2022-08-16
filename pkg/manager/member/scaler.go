@@ -1,6 +1,8 @@
 package member
 
 import (
+	"context"
+
 	apps "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -19,4 +21,12 @@ type Scaler interface {
 	ScaleOut(meta metav1.Object, actual *apps.StatefulSet, desired *apps.StatefulSet) error
 	// ScaleIn scales in the cluster
 	ScaleIn(meta metav1.Object, actual *apps.StatefulSet, desired *apps.StatefulSet) error
+}
+
+type PVCPruner interface {
+	Prune(ctx context.Context) error
+}
+
+type PVCMounter interface {
+	Mounter(ctx context.Context) error
 }
