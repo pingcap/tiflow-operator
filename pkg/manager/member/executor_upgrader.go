@@ -96,6 +96,7 @@ func (u *executorUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSts, n
 			}
 			continue
 		}
+		// todo: Need to re-arrange this executor's tasks in the future
 		mngerutils.SetUpgradePartition(newSts, i)
 		return nil
 	}
