@@ -59,8 +59,8 @@ func (u *masterUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSet *app
 	}
 
 	if oldSet.Spec.UpdateStrategy.Type == apps.OnDeleteStatefulSetStrategyType || oldSet.Spec.UpdateStrategy.RollingUpdate == nil {
-		// Manually bypass tidb-operator to modify statefulset directly, such as modify tiflow-master statefulset's RollingUpdate straregy to OnDelete strategy,
-		// or set RollingUpdate to nil, skip tidb-operator's rolling update logic in order to speed up the upgrade in the test environment occasionally.
+		// Manually bypass tiflow-operator to modify statefulset directly, such as modify tiflow-master statefulset's RollingUpdate straregy to OnDelete strategy,
+		// or set RollingUpdate to nil, skip tiflow-operator's rolling update logic in order to speed up the upgrade in the test environment occasionally.
 		// If we encounter this situation, we will let the native statefulset controller do the upgrade completely, which may be unsafe for upgrading tiflow-master.
 		// Therefore, in the production environment, we should try to avoid modifying the tiflow-master statefulset update strategy directly.
 		newSet.Spec.UpdateStrategy = oldSet.Spec.UpdateStrategy

@@ -3,8 +3,7 @@ package v1alpha1
 import (
 	"fmt"
 
-	"github.com/pingcap/tidb-operator/pkg/apis/util/config"
-
+	"github.com/pingcap/tiflow-operator/api/config"
 	"github.com/pingcap/tiflow-operator/pkg/label"
 )
 
@@ -49,7 +48,6 @@ func (tc *TiflowCluster) ExecutorImage() string {
 }
 
 func (tc *TiflowCluster) AllExecutorMembersReady() bool {
-	return true
 	// TODO: support members later
 	//if int(tc.ExecutorStsDesiredReplicas()) != len(tc.Status.Executor.Members) {
 	//	return false
@@ -61,6 +59,14 @@ func (tc *TiflowCluster) AllExecutorMembersReady() bool {
 	//	}
 	//}
 	return true
+}
+
+func (tc *TiflowCluster) ExecutorUpgrading() bool {
+	return tc.Status.Executor.Phase == UpgradePhase
+}
+
+func (tc *TiflowCluster) ExecutorScaling() bool {
+	return tc.Status.Executor.Phase == ScalePhase
 }
 
 func (tc *TiflowCluster) ExecutorStsActualReplicas() int32 {

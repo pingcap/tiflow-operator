@@ -17,12 +17,13 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"github.com/pingcap/tidb-operator/pkg/apis/util/config"
 	apps "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+
+	"github.com/pingcap/tiflow-operator/api/config"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -152,13 +153,13 @@ type ComponentSpec struct {
 	// +optional
 	StatefulSetUpdateStrategy apps.StatefulSetUpdateStrategyType `json:"statefulSetUpdateStrategy,omitempty"`
 
-	// PodManagementPolicy of TiDB cluster StatefulSets
+	// PodManagementPolicy of TiFlow cluster StatefulSets
 	// +optional
 	PodManagementPolicy apps.PodManagementPolicyType `json:"podManagementPolicy,omitempty"`
 
 	// TopologySpreadConstraints describes how a group of pods ought to spread across topology
 	// domains. Scheduler will schedule pods in a way which abides by the constraints.
-	// This field is is only honored by clusters that enables the EvenPodsSpread feature.
+	// This field is only honored by clusters that enables the EvenPodsSpread feature.
 	// All topologySpreadConstraints are ANDed.
 	// +optional
 	// +listType=map
