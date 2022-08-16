@@ -61,6 +61,14 @@ func (tc *TiflowCluster) AllExecutorMembersReady() bool {
 	return true
 }
 
+func (tc *TiflowCluster) ExecutorUpgrading() bool {
+	return tc.Status.Executor.Phase == UpgradePhase
+}
+
+func (tc *TiflowCluster) ExecutorScaling() bool {
+	return tc.Status.Executor.Phase == ScalePhase
+}
+
 func (tc *TiflowCluster) ExecutorStsActualReplicas() int32 {
 	stsStatus := tc.Status.Executor.StatefulSet
 	if stsStatus == nil {

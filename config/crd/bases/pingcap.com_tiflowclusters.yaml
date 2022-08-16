@@ -6121,7 +6121,7 @@ spec:
                       setting'
                     type: object
                   podManagementPolicy:
-                    description: PodManagementPolicy of TiDB cluster StatefulSets
+                    description: PodManagementPolicy of TiFlow cluster StatefulSets
                     type: string
                   podSecurityContext:
                     description: PodSecurityContext of the component
@@ -6395,7 +6395,7 @@ spec:
                     description: TopologySpreadConstraints describes how a group of
                       pods ought to spread across topology domains. Scheduler will
                       schedule pods in a way which abides by the constraints. This
-                      field is is only honored by clusters that enables the EvenPodsSpread
+                      field is only honored by clusters that enables the EvenPodsSpread
                       feature. All topologySpreadConstraints are ANDed.
                     items:
                       description: TopologySpreadConstraint specifies how to spread
@@ -11773,7 +11773,7 @@ spec:
                       setting'
                     type: object
                   podManagementPolicy:
-                    description: PodManagementPolicy of TiDB cluster StatefulSets
+                    description: PodManagementPolicy of TiFlow cluster StatefulSets
                     type: string
                   podSecurityContext:
                     description: PodSecurityContext of the component
@@ -12076,7 +12076,7 @@ spec:
                     description: TopologySpreadConstraints describes how a group of
                       pods ought to spread across topology domains. Scheduler will
                       schedule pods in a way which abides by the constraints. This
-                      field is is only honored by clusters that enables the EvenPodsSpread
+                      field is only honored by clusters that enables the EvenPodsSpread
                       feature. All topologySpreadConstraints are ANDed.
                     items:
                       description: TopologySpreadConstraint specifies how to spread
