@@ -27,3 +27,8 @@ func (p *PersistentVolumeMounter) Mounter(ctx context.Context) error {
 	//TODO implement me
 	panic("implement me")
 }
+
+func (p *PersistentVolumeMounter) IsMount() bool {
+	//TODO implement me
+	panic("implement me")
+}
