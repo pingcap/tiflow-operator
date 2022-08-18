@@ -31,12 +31,14 @@ const (
 
 type masterMemberManager struct {
 	cli      client.Client
+	scaler   Scaler
 	upgrader Upgrader
 }
 
 func NewMasterMemberManager(cli client.Client) manager.TiflowManager {
 	return &masterMemberManager{
 		cli:      cli,
+		scaler:   NewMasterScaler(cli),
 		upgrader: NewMasterUpgrader(cli),
 	}
 }
@@ -270,9 +272,9 @@ func (m *masterMemberManager) syncMasterStatefulSetForTiflowCluster(ctx context.
 	//   new replicas
 	// - it's ok to scale in the middle of upgrading (in statefulset controller
 	//   scaling takes precedence over upgrading too)
-	//if err := m.scaler.Scale(tc, oldMasterSet, newMasterSet); err != nil {
-	//	return err
-	//}
+	if err := m.scaler.Scale(tc, oldMasterSet, newMasterSet); err != nil {
+		return err
+	}
 
 	// TODO: support auto failover
 	// Perform failover logic if necessary. Note that this will only update
@@ -371,7 +373,9 @@ func getNewMasterSetForTiflowCluster(tc *pingcapcomv1alpha1.TiflowCluster, cm *c
 
 	setName := controller.TiflowMasterMemberName(tcName)
 	stsLabels := label.New().Instance(instanceName).TiflowMaster()
-	stsAnnotations := tc.Annotations
+	// can't directly use tc.Annotations here because it will affect tiflowcluster's annotations
+	// todo: use getStsAnnotations if we need to use advanced statefulset
+	stsAnnotations := map[string]string{}
 	podLabels := util.CombineStringMap(stsLabels, baseMasterSpec.Labels())
 	podAnnotations := util.CombineStringMap(controller.AnnProm(masterPort), baseMasterSpec.Annotations())
 	// TODO: support failover

@@ -3,13 +3,12 @@ package member
 import (
 	"context"
 	"fmt"
-	"github.com/pingcap/tiflow-operator/pkg/tiflowapi"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -23,6 +22,7 @@ import (
 	"github.com/pingcap/tiflow-operator/pkg/label"
 	"github.com/pingcap/tiflow-operator/pkg/manager"
 	mngerutils "github.com/pingcap/tiflow-operator/pkg/manager/utils"
+	"github.com/pingcap/tiflow-operator/pkg/tiflowapi"
 	"github.com/pingcap/tiflow-operator/pkg/util"
 )
 
@@ -337,7 +337,9 @@ func (m *executorMemberManager) getNewExecutorStatefulSet(ctx context.Context, t
 
 	stsName := controller.TiflowExecutorMemberName(tcName)
 	stsLabels := label.New().Instance(instanceName).TiflowExecutor()
-	stsAnnotations := tc.Annotations
+	// can't directly use tc.Annotations here because it will affect tiflowcluster's annotations
+	// todo: use getStsAnnotations if we need to use advanced statefulset
+	stsAnnotations := map[string]string{}
 
 	podTemp := m.getNewExecutorPodTemp(tc, cfgMap)
 	pvcTemp, err := m.getNewExecutorPVCTemp(tc)
