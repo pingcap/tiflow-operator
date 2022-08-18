@@ -2,34 +2,32 @@ package member
 
 import (
 	"context"
-	"github.com/pingcap/tiflow-operator/pkg/controller"
-	appsv1 "k8s.io/api/apps/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/klog/v2"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
+	"fmt"
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
 	"github.com/pingcap/tiflow-operator/pkg/manager/member/scale"
+
+	appsv1 "k8s.io/api/apps/v1"
+	autoscaling "k8s.io/api/autoscaling/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/klog/v2"
 )
 
 type executorScaler struct {
-	Client    client.Client
-	PVCPruner PVCPruner
+	ClientSet kubernetes.Interface
+	PVCPruner scale.PVCPruner
 }
 
 // NewExecutorScaler return a executorScaler
-func NewExecutorScaler(cli client.Client, prune bool, tc v1alpha1.TiflowCluster) Scaler {
-	ns := tc.GetNamespace()
-	tcName := tc.GetName()
-	stsName := controller.TiflowExecutorMemberName(tcName)
+func NewExecutorScaler(clientSet kubernetes.Interface, tc *v1alpha1.TiflowCluster) Scaler {
 
 	return &executorScaler{
-		Client:    cli,
-		PVCPruner: scale.NewPersistentVolumePruner(cli, prune, ns, tcName, stsName),
+		ClientSet: clientSet,
+		PVCPruner: scale.NewPersistentVolumePruner(clientSet, tc),
 	}
 }
 
-func (s *executorScaler) Scale(ctx context.Context, meta metav1.Object, oldSts *appsv1.StatefulSet, newSts *appsv1.StatefulSet) error {
+func (s *executorScaler) Scale(meta metav1.Object, oldSts *appsv1.StatefulSet, newSts *appsv1.StatefulSet) error {
 
 	actual := *oldSts.Spec.Replicas
 	desired := *newSts.Spec.Replicas
@@ -39,27 +37,28 @@ func (s *executorScaler) Scale(ctx context.Context, meta metav1.Object, oldSts *
 
 	scaling := desired - actual
 	if scaling > 0 {
-		return s.ScaleOut(ctx, meta, oldSts, newSts)
+		return s.ScaleOut(meta, oldSts, newSts)
 	} else if scaling < 0 {
-		return s.ScaleIn(ctx, meta, oldSts, newSts)
+		return s.ScaleIn(meta, oldSts, newSts)
 	}
 
 	return nil
 }
 
-func (s *executorScaler) ScaleOut(ctx context.Context, meta metav1.Object, actual *appsv1.StatefulSet, desired *appsv1.StatefulSet) error {
+func (s *executorScaler) ScaleOut(meta metav1.Object, actual *appsv1.StatefulSet, desired *appsv1.StatefulSet) error {
 	tc, ok := meta.(*v1alpha1.TiflowCluster)
 	if !ok {
 		return nil
 	}
 
-	if s.PVCPruner.IsPrune() {
+	ctx := context.TODO()
+	if !s.PVCPruner.IsStateful() {
 		klog.Info("PVC pruning for Scaling Up")
 		if err := s.PVCPruner.Prune(ctx); err != nil {
 			return err
 		}
 	} else {
-		klog.Info("Scaler will not delete the PVC. Please enable prune as true")
+		klog.Info("Scaler will not delete the PVC. Because Executor is stateful")
 	}
 
 	ns := tc.GetNamespace()
@@ -100,7 +99,7 @@ func (s *executorScaler) ScaleOut(ctx context.Context, meta metav1.Object, actua
 	return nil
 }
 
-func (s *executorScaler) ScaleIn(ctx context.Context, meta metav1.Object, actual *appsv1.StatefulSet, desired *appsv1.StatefulSet) error {
+func (s *executorScaler) ScaleIn(meta metav1.Object, actual *appsv1.StatefulSet, desired *appsv1.StatefulSet) error {
 	tc, ok := meta.(*v1alpha1.TiflowCluster)
 	if !ok {
 		return nil
@@ -115,6 +114,7 @@ func (s *executorScaler) ScaleIn(ctx context.Context, meta metav1.Object, actual
 
 	down := *actual.Spec.Replicas - *desired.Spec.Replicas
 	current := *actual.Spec.Replicas
+	ctx := context.TODO()
 
 	for i := down; i > 0; i-- {
 		klog.Infof("scaling down statefulSet %s, current: %d, desired: %d",
@@ -137,21 +137,33 @@ func (s *executorScaler) ScaleIn(ctx context.Context, meta metav1.Object, actual
 	klog.Infof("scaling up statefulSet %s, current: %d, desired: %d",
 		stsName, current, *desired.Spec.Replicas)
 
-	if s.PVCPruner.IsPrune() {
+	if !s.PVCPruner.IsStateful() {
 		klog.Info("PVC pruning for Scaling Down")
 		if err := s.PVCPruner.Prune(ctx); err != nil {
 			return err
 		}
 	} else {
-		klog.Info("Scaler will not delete the PVC. Please enable prune as true")
+		klog.Info("Scaler will not delete the PVC. Because Executor is stateful")
 	}
 
 	return nil
 }
 
 func (s *executorScaler) SetReplicas(ctx context.Context, actual *appsv1.StatefulSet, desired uint) error {
-	//TODO implement me
-	panic("implement me")
+	_, err := s.ClientSet.AppsV1().StatefulSets(actual.Namespace).UpdateScale(ctx, actual.Name, &autoscaling.Scale{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      actual.Name,
+			Namespace: actual.Namespace,
+		},
+		Spec: autoscaling.ScaleSpec{
+			Replicas: int32(desired),
+		},
+	}, metav1.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to update statefulSet %s scale, error: %v", actual.Name, err)
+	}
+
+	return nil
 }
 
 // WaitUntilRunning blocks until the tiflow-executor statefulset has the expected number of pods running but not necessarily ready

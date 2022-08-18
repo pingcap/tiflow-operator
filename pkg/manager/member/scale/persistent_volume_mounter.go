@@ -2,7 +2,6 @@ package scale
 
 import (
 	"context"
-	"github.com/pingcap/tiflow-operator/pkg/manager/member"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -15,7 +14,7 @@ type PersistentVolumeMounter struct {
 	StatefulSet string
 }
 
-func NewPersistentVolumeMounter(cli client.Client, namespace string, stsName string) member.PVCMounter {
+func NewPersistentVolumeMounter(cli client.Client, namespace string, stsName string) PVCMounter {
 	return &PersistentVolumeMounter{
 		cli,
 		namespace,
@@ -28,7 +27,7 @@ func (p *PersistentVolumeMounter) Mounter(ctx context.Context) error {
 	panic("implement me")
 }
 
-func (p *PersistentVolumeMounter) IsMount() bool {
+func (p *PersistentVolumeMounter) IsStateful() bool {
 	//TODO implement me
 	panic("implement me")
 }

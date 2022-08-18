@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"k8s.io/client-go/kubernetes"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -91,7 +92,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	reconciler := controllers.NewTiflowClusterReconciler(mgr.GetClient(), mgr.GetScheme())
+	clientSet, err := kubernetes.NewForConfig(mgr.GetConfig())
+	if err != nil {
+		setupLog.Error(err, "unable to get new clientSet", "operator", "Tiflow")
+		os.Exit(1)
+	}
+
+	reconciler := controllers.NewTiflowClusterReconciler(mgr.GetClient(), clientSet, mgr.GetScheme())
 	if err = reconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "TiflowCluster")
 		os.Exit(1)

@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"k8s.io/client-go/kubernetes"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -38,11 +39,11 @@ type TiflowClusterReconciler struct {
 	Control tiflowcluster.ControlInterface
 }
 
-func NewTiflowClusterReconciler(cli client.Client, scheme *runtime.Scheme) *TiflowClusterReconciler {
+func NewTiflowClusterReconciler(cli client.Client, clientSet kubernetes.Interface, scheme *runtime.Scheme) *TiflowClusterReconciler {
 	return &TiflowClusterReconciler{
 		Client:  cli,
 		Scheme:  scheme,
-		Control: tiflowcluster.NewDefaultTiflowClusterControl(cli),
+		Control: tiflowcluster.NewDefaultTiflowClusterControl(cli, clientSet),
 	}
 }
 

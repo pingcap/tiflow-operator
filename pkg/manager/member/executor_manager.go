@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/pingcap/tiflow-operator/pkg/tiflowapi"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/client-go/kubernetes"
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -42,17 +43,19 @@ const (
 
 // executorMemberManager implements interface of Manager.
 type executorMemberManager struct {
-	Client   client.Client
-	Scale    Scaler
-	Upgrade  Upgrader
-	Failover Failover
+	Client    client.Client
+	ClientSet kubernetes.Interface
+	Scale     Scaler
+	Upgrade   Upgrader
+	Failover  Failover
 }
 
-func NewExecutorMemberManager(client client.Client) manager.TiflowManager {
+func NewExecutorMemberManager(client client.Client, clientSet kubernetes.Interface) manager.TiflowManager {
 
 	// todo: need to implement the logic for Scale, and Failover
 	return &executorMemberManager{
 		client,
+		clientSet,
 		nil,
 		NewExecutorUpgrader(client),
 		nil,
@@ -230,6 +233,17 @@ func (m *executorMemberManager) syncExecutorStatefulSetForTiflowCluster(ctx cont
 		mngerutils.SetUpgradePartition(newSts, 0)
 		errSts := mngerutils.UpdateStatefulSet(ctx, m.Client, newSts, oldSts)
 		return controller.RequeueErrorf("tiflow cluster: [%s/%s]'s tiflow-executor needs force upgrade, %v", ns, tcName, errSts)
+	}
+
+	// todo: Need to add processing logic for Scale
+	// Scaling takes precedence over normal upgrading because:
+	// - if a tiflow-executor fails in the upgrading, users may want to delete it or add
+	//   new replicas
+	// - it's ok to scale in the middle of upgrading (in statefulset controller
+	//   scaling takes precedence over upgrading too)
+	m.Scale = NewExecutorScaler(m.ClientSet, tc)
+	if err := m.Scale.Scale(tc, oldSts, newSts); err != nil {
+		return err
 	}
 
 	if !templateEqual(newSts, oldSts) || tc.Status.Executor.Phase == v1alpha1.UpgradePhase {
