@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// todo: In the near future it will be merged into the main logic
 func requeueIfError(err error) (ctrl.Result, error) {
 	return ctrl.Result{}, err
 }

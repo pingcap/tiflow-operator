@@ -4,7 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
-	"github.com/pingcap/tiflow-operator/pkg/manager/member/scale"
+	"github.com/pingcap/tiflow-operator/pkg/manager/member/prune"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	autoscaling "k8s.io/api/autoscaling/v1"
@@ -15,15 +16,15 @@ import (
 
 type executorScaler struct {
 	ClientSet kubernetes.Interface
-	PVCPruner scale.PVCPruner
+	PVCPruner prune.PVCPruner
 }
 
 // NewExecutorScaler return a executorScaler
-func NewExecutorScaler(clientSet kubernetes.Interface, tc *v1alpha1.TiflowCluster) Scaler {
+func NewExecutorScaler(clientSet kubernetes.Interface) Scaler {
 
 	return &executorScaler{
 		ClientSet: clientSet,
-		PVCPruner: scale.NewPersistentVolumePruner(clientSet, tc),
+		PVCPruner: nil,
 	}
 }
 
@@ -32,8 +33,8 @@ func (s *executorScaler) Scale(meta metav1.Object, oldSts *appsv1.StatefulSet, n
 	actual := *oldSts.Spec.Replicas
 	desired := *newSts.Spec.Replicas
 
-	klog.Infof("start scaling logic, desired: %d, actual: %d",
-		desired, actual)
+	klog.Infof("start scaling logic, actual: %d, desired: %d",
+		actual, desired)
 
 	scaling := desired - actual
 	if scaling > 0 {
@@ -51,6 +52,7 @@ func (s *executorScaler) ScaleOut(meta metav1.Object, actual *appsv1.StatefulSet
 		return nil
 	}
 
+	s.PVCPruner = prune.NewPersistentVolumePruner(s.ClientSet, tc)
 	ctx := context.TODO()
 	if !s.PVCPruner.IsStateful() {
 		klog.Info("PVC pruning for Scaling Up")
@@ -88,6 +90,7 @@ func (s *executorScaler) ScaleOut(meta metav1.Object, actual *appsv1.StatefulSet
 		}
 
 		current++
+		time.Sleep(10 * time.Second)
 	}
 
 	klog.Infof("scaling up is done, tiflow-executor statefulSet %s for [%s/%s]",
@@ -129,6 +132,7 @@ func (s *executorScaler) ScaleIn(meta metav1.Object, actual *appsv1.StatefulSet,
 		}
 
 		current--
+		time.Sleep(10 * time.Second)
 	}
 
 	klog.Infof("scaling down is done, tiflow-executor statefulSet %s for [%s/%s]",
@@ -137,6 +141,7 @@ func (s *executorScaler) ScaleIn(meta metav1.Object, actual *appsv1.StatefulSet,
 	klog.Infof("scaling up statefulSet %s, current: %d, desired: %d",
 		stsName, current, *desired.Spec.Replicas)
 
+	s.PVCPruner = prune.NewPersistentVolumePruner(s.ClientSet, tc)
 	if !s.PVCPruner.IsStateful() {
 		klog.Info("PVC pruning for Scaling Down")
 		if err := s.PVCPruner.Prune(ctx); err != nil {
@@ -160,7 +165,7 @@ func (s *executorScaler) SetReplicas(ctx context.Context, actual *appsv1.Statefu
 		},
 	}, metav1.UpdateOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to update statefulSet %s scale, error: %v", actual.Name, err)
+		return fmt.Errorf("failed to update statefulSet %s, error: %v", actual.Name, err)
 	}
 
 	return nil
@@ -169,11 +174,13 @@ func (s *executorScaler) SetReplicas(ctx context.Context, actual *appsv1.Statefu
 // WaitUntilRunning blocks until the tiflow-executor statefulset has the expected number of pods running but not necessarily ready
 func (s *executorScaler) WaitUntilRunning(ctx context.Context) error {
 	//TODO implement me
-	panic("implement me")
+	//panic("implement me")
+	return nil
 }
 
-// WaitUntilHealthy blocks until the tiflow-executor stateful set has exactly `scale` healthy replicas.
+// WaitUntilHealthy blocks until the tiflow-executor stateful set has exactly `prune` healthy replicas.
 func (s *executorScaler) WaitUntilHealthy(ctx context.Context, scale uint) error {
 	//TODO implement me
-	panic("implement me")
+	//panic("implement me")
+	return nil
 }

@@ -1,4 +1,4 @@
-package scale
+package prune
 
 import (
 	"context"
@@ -57,11 +57,12 @@ func (p *PersistentVolumePruner) Prune(ctx context.Context) error {
 		return errors.New("statefulSet had nil")
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	if err = p.watchStatefulSet(ctx, cancel, sts); err != nil {
-		return fmt.Errorf("setting up statefulset watcher error: %v", err)
-	}
+	// todo: Need to be modified
+	//ctx, cancel := context.WithCancel(ctx)
+	//defer cancel()
+	//if err = p.watchStatefulSet(ctx, cancel, sts); err != nil {
+	//	return fmt.Errorf("setting up statefulset watcher error: %v", err)
+	//}
 
 	pvcs, err := p.findPVCDeletable(ctx, sts)
 	if err != nil {
