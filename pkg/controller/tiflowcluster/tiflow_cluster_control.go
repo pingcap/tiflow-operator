@@ -55,6 +55,8 @@ func (c *defaultTiflowClusterControl) UpdateTiflowCluster(ctx context.Context, t
 		errs = append(errs, err)
 	}
 
+	// TODO: add WaitUntilRunning here to make sure newly added nodes work now
+
 	if err := c.conditionUpdater.Update(tc); err != nil {
 		errs = append(errs, err)
 	}
