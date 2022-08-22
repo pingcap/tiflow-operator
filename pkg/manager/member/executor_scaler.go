@@ -26,7 +26,7 @@ func NewExecutorScaler(clientSet kubernetes.Interface) Scaler {
 
 	return &executorScaler{
 		ClientSet: clientSet,
-		PVCPruner: nil,
+		PVCPruner: prune.NewPersistentVolumePruner(clientSet),
 	}
 }
 
@@ -58,13 +58,12 @@ func (s *executorScaler) ScaleOut(meta metav1.Object, actual *appsv1.StatefulSet
 	tcName := tc.GetName()
 	stsName := actual.GetName()
 
-	s.PVCPruner = prune.NewPersistentVolumePruner(s.ClientSet, tc)
 	ctx := context.TODO()
 	// skip this logic if Executor is stateful
-	if !s.PVCPruner.IsStateful() {
+	if !tc.Spec.Executor.Stateful {
 		klog.Infof("tiflow-executor statefulSet %s for [%s/%s], PVC pruning for Scaling Up",
 			stsName, ns, tcName)
-		if err := s.PVCPruner.Prune(ctx); err != nil {
+		if err := s.PVCPruner.Prune(ctx, tc); err != nil {
 			return err
 		}
 	}
@@ -137,11 +136,10 @@ func (s *executorScaler) ScaleIn(meta metav1.Object, actual *appsv1.StatefulSet,
 	klog.Infof("scaling down is done, tiflow-executor statefulSet %s for [%s/%s], current: %d, desired: %d",
 		stsName, ns, tcName, current, *desired.Spec.Replicas)
 
-	s.PVCPruner = prune.NewPersistentVolumePruner(s.ClientSet, tc)
-	if !s.PVCPruner.IsStateful() {
+	if !tc.Spec.Executor.Stateful {
 		klog.Infof("tiflow-executor statefulSet %s for [%s/%s], PVC pruning for Scaling Down",
 			stsName, ns, tcName)
-		if err := s.PVCPruner.Prune(ctx); err != nil {
+		if err := s.PVCPruner.Prune(ctx, tc); err != nil {
 			return err
 		}
 	}

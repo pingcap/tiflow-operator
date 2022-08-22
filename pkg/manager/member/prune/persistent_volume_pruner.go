@@ -4,12 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/pingcap/tiflow-operator/pkg/controller"
 	"sort"
 	"strings"
 
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
-	"github.com/pingcap/tiflow-operator/pkg/controller"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,32 +20,24 @@ import (
 // PVC and their underlying PVs.
 // The underlying PVs SHOULD have their reclaim policy set to delete.
 type PersistentVolumePruner struct {
-	ClientSet       kubernetes.Interface
-	Pruner          bool
-	Namespace       string
-	InstanceName    string
-	StatefulSetName string
+	ClientSet kubernetes.Interface
 }
 
-func NewPersistentVolumePruner(clientSet kubernetes.Interface, tc *v1alpha1.TiflowCluster) PVCPruner {
-	ns := tc.GetNamespace()
-	tcName := tc.GetName()
-	stsName := controller.TiflowExecutorMemberName(tcName)
-	prune := tc.Spec.Executor.Stateful
+func NewPersistentVolumePruner(clientSet kubernetes.Interface) PVCPruner {
 
 	return &PersistentVolumePruner{
 		clientSet,
-		prune,
-		ns,
-		tcName,
-		stsName,
 	}
 }
 
-func (p *PersistentVolumePruner) Prune(ctx context.Context) error {
-	sts, err := p.ClientSet.AppsV1().StatefulSets(p.Namespace).Get(
+func (p *PersistentVolumePruner) Prune(ctx context.Context, tc *v1alpha1.TiflowCluster) error {
+	ns := tc.GetNamespace()
+	tcName := tc.GetName()
+	stsName := controller.TiflowExecutorMemberName(tcName)
+
+	sts, err := p.ClientSet.AppsV1().StatefulSets(ns).Get(
 		ctx,
-		p.StatefulSetName,
+		stsName,
 		metav1.GetOptions{},
 	)
 	if err != nil {
@@ -64,7 +55,7 @@ func (p *PersistentVolumePruner) Prune(ctx context.Context) error {
 	//	return fmt.Errorf("setting up statefulset watcher error: %v", err)
 	//}
 
-	pvcs, err := p.findPVCDeletable(ctx, sts)
+	pvcs, err := p.findPVCDeletable(ctx, tc, sts)
 	if err != nil {
 		return err
 	} else if len(pvcs) == 0 {
@@ -73,17 +64,13 @@ func (p *PersistentVolumePruner) Prune(ctx context.Context) error {
 	}
 
 	klog.Infof("PVC pruning for [%s/%s], statefulSet: %s, PVCs: %v",
-		p.Namespace, p.InstanceName, p.StatefulSetName, pvcs)
+		ns, tcName, stsName, pvcs)
 
-	if err = p.pvcsToRemove(ctx, pvcs); err != nil {
+	if err = p.pvcsToRemove(ctx, tc, pvcs); err != nil {
 		return fmt.Errorf("pvc remove error: %v", err)
 	}
 
 	return nil
-}
-
-func (p *PersistentVolumePruner) IsStateful() bool {
-	return p.Pruner
 }
 
 func (p *PersistentVolumePruner) watchStatefulSet(
@@ -95,7 +82,7 @@ func (p *PersistentVolumePruner) watchStatefulSet(
 	panic("implement me")
 }
 
-func (p *PersistentVolumePruner) findPVCDeletable(ctx context.Context, sts *appsv1.StatefulSet) ([]corev1.PersistentVolumeClaim, error) {
+func (p *PersistentVolumePruner) findPVCDeletable(ctx context.Context, tc *v1alpha1.TiflowCluster, sts *appsv1.StatefulSet) ([]corev1.PersistentVolumeClaim, error) {
 
 	prefixes := make([]string, len(sts.Spec.VolumeClaimTemplates))
 	pvcsToKeep := make(map[string]bool, int(*sts.Spec.Replicas)*len(sts.Spec.VolumeClaimTemplates))
@@ -114,7 +101,7 @@ func (p *PersistentVolumePruner) findPVCDeletable(ctx context.Context, sts *apps
 		return nil, errors.New("converting statefulset selector to metav1 selector")
 	}
 
-	pvcs, err := p.ClientSet.CoreV1().PersistentVolumeClaims(p.Namespace).List(ctx, metav1.ListOptions{
+	pvcs, err := p.ClientSet.CoreV1().PersistentVolumeClaims(tc.GetNamespace()).List(ctx, metav1.ListOptions{
 		LabelSelector: selector.String(),
 	})
 	if err != nil {
@@ -153,7 +140,7 @@ func (p *PersistentVolumePruner) findPVCDeletable(ctx context.Context, sts *apps
 
 }
 
-func (p *PersistentVolumePruner) pvcsToRemove(ctx context.Context, pvcs []corev1.PersistentVolumeClaim) error {
+func (p *PersistentVolumePruner) pvcsToRemove(ctx context.Context, tc *v1alpha1.TiflowCluster, pvcs []corev1.PersistentVolumeClaim) error {
 	gracePeriod := int64(60)
 	propagationPolicy := metav1.DeletePropagationForeground
 
@@ -165,7 +152,7 @@ func (p *PersistentVolumePruner) pvcsToRemove(ctx context.Context, pvcs []corev1
 
 		}
 		klog.Infof("deleting PVC, Name: %s", pvc.Name)
-		if err := p.ClientSet.CoreV1().PersistentVolumeClaims(p.Namespace).Delete(ctx, pvc.Name, metav1.DeleteOptions{
+		if err := p.ClientSet.CoreV1().PersistentVolumeClaims(tc.GetNamespace()).Delete(ctx, pvc.Name, metav1.DeleteOptions{
 			GracePeriodSeconds: &gracePeriod,
 			PropagationPolicy:  &propagationPolicy,
 			Preconditions: &metav1.Preconditions{
