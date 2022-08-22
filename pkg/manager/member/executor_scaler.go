@@ -14,6 +14,8 @@ import (
 	"k8s.io/klog/v2"
 )
 
+const defaultSleepTime = 10 * time.Second
+
 type executorScaler struct {
 	ClientSet kubernetes.Interface
 	PVCPruner prune.PVCPruner
@@ -52,20 +54,20 @@ func (s *executorScaler) ScaleOut(meta metav1.Object, actual *appsv1.StatefulSet
 		return nil
 	}
 
-	s.PVCPruner = prune.NewPersistentVolumePruner(s.ClientSet, tc)
-	ctx := context.TODO()
-	if !s.PVCPruner.IsStateful() {
-		klog.Info("PVC pruning for Scaling Up")
-		if err := s.PVCPruner.Prune(ctx); err != nil {
-			return err
-		}
-	} else {
-		klog.Info("Scaler will not delete the PVC. Because Executor is stateful")
-	}
-
 	ns := tc.GetNamespace()
 	tcName := tc.GetName()
 	stsName := actual.GetName()
+
+	s.PVCPruner = prune.NewPersistentVolumePruner(s.ClientSet, tc)
+	ctx := context.TODO()
+	// skip this logic if Executor is stateful
+	if !s.PVCPruner.IsStateful() {
+		klog.Infof("tiflow-executor statefulSet %s for [%s/%s], PVC pruning for Scaling Up",
+			stsName, ns, tcName)
+		if err := s.PVCPruner.Prune(ctx); err != nil {
+			return err
+		}
+	}
 
 	klog.Infof("start to scaling up tiflow-executor statefulSet %s for [%s/%s]",
 		stsName, ns, tcName)
@@ -90,14 +92,11 @@ func (s *executorScaler) ScaleOut(meta metav1.Object, actual *appsv1.StatefulSet
 		}
 
 		current++
-		time.Sleep(10 * time.Second)
+		time.Sleep(defaultSleepTime)
 	}
 
-	klog.Infof("scaling up is done, tiflow-executor statefulSet %s for [%s/%s]",
-		stsName, ns, tcName)
-
-	klog.Infof("scaling up statefulSet %s, current: %d, desired: %d",
-		stsName, current, *desired.Spec.Replicas)
+	klog.Infof("scaling up is done, tiflow-executor statefulSet %s for [%s/%s], current: %d, desired: %d",
+		stsName, ns, tcName, current, *desired.Spec.Replicas)
 
 	return nil
 }
@@ -132,23 +131,19 @@ func (s *executorScaler) ScaleIn(meta metav1.Object, actual *appsv1.StatefulSet,
 		}
 
 		current--
-		time.Sleep(10 * time.Second)
+		time.Sleep(defaultSleepTime)
 	}
 
-	klog.Infof("scaling down is done, tiflow-executor statefulSet %s for [%s/%s]",
-		stsName, ns, tcName)
-
-	klog.Infof("scaling up statefulSet %s, current: %d, desired: %d",
-		stsName, current, *desired.Spec.Replicas)
+	klog.Infof("scaling down is done, tiflow-executor statefulSet %s for [%s/%s], current: %d, desired: %d",
+		stsName, ns, tcName, current, *desired.Spec.Replicas)
 
 	s.PVCPruner = prune.NewPersistentVolumePruner(s.ClientSet, tc)
 	if !s.PVCPruner.IsStateful() {
-		klog.Info("PVC pruning for Scaling Down")
+		klog.Infof("tiflow-executor statefulSet %s for [%s/%s], PVC pruning for Scaling Down",
+			stsName, ns, tcName)
 		if err := s.PVCPruner.Prune(ctx); err != nil {
 			return err
 		}
-	} else {
-		klog.Info("Scaler will not delete the PVC. Because Executor is stateful")
 	}
 
 	return nil

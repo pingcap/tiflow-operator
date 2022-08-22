@@ -352,8 +352,7 @@ func (m *executorMemberManager) getNewExecutorStatefulSet(ctx context.Context, t
 
 	// can't directly use tc.Annotations here because it will affect tiflowcluster's annotations
 	// todo: use getStsAnnotations if we need to use advanced statefulset
-	//stsAnnotations := map[string]string{}
-	stsAnnotations := tc.Annotations
+	stsAnnotations := map[string]string{}
 
 	podTemp := m.getNewExecutorPodTemp(tc, cfgMap)
 	pvcTemp, err := m.getNewExecutorPVCTemp(tc)

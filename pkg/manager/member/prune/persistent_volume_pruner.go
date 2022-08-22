@@ -160,7 +160,7 @@ func (p *PersistentVolumePruner) pvcsToRemove(ctx context.Context, pvcs []corev1
 	for _, pvc := range pvcs {
 		select {
 		case <-ctx.Done():
-			return errors.New("concurrent statefulset modification detected")
+			return errors.New("concurrent statefulSet modification detected")
 		default:
 
 		}
@@ -173,7 +173,6 @@ func (p *PersistentVolumePruner) pvcsToRemove(ctx context.Context, pvcs []corev1
 				ResourceVersion: &pvc.ResourceVersion,
 			},
 		}); err != nil {
-
 			return fmt.Errorf("delting PVC %s err, error: %v", pvc.Name, err)
 		}
 
