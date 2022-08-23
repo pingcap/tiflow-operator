@@ -3,12 +3,14 @@ package member
 import (
 	"context"
 	"fmt"
+	"github.com/pingcap/tiflow-operator/pkg/tiflowapi"
+	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/client-go/kubernetes"
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -22,7 +24,6 @@ import (
 	"github.com/pingcap/tiflow-operator/pkg/label"
 	"github.com/pingcap/tiflow-operator/pkg/manager"
 	mngerutils "github.com/pingcap/tiflow-operator/pkg/manager/utils"
-	"github.com/pingcap/tiflow-operator/pkg/tiflowapi"
 	"github.com/pingcap/tiflow-operator/pkg/util"
 )
 
@@ -48,12 +49,12 @@ type executorMemberManager struct {
 	Failover Failover
 }
 
-func NewExecutorMemberManager(client client.Client) manager.TiflowManager {
+func NewExecutorMemberManager(client client.Client, clientSet kubernetes.Interface) manager.TiflowManager {
 
-	// todo: need to implement the logic for Scale, and Failover
+	// todo: need to implement the logic for Failover
 	return &executorMemberManager{
 		client,
-		nil,
+		NewExecutorScaler(clientSet),
 		NewExecutorUpgrader(client),
 		nil,
 	}
@@ -188,6 +189,7 @@ func (m *executorMemberManager) syncExecutorStatefulSetForTiflowCluster(ctx cont
 	stsNotExist := errors.IsNotFound(err)
 	oldSts := oldStsTmp.DeepCopy()
 
+	// todo: WIP
 	// failed to sync executor status will not affect subsequent logic, just print the errors.
 	if err := m.syncExecutorStatus(tc, oldSts); err != nil {
 		klog.Errorf("failed to sync TiflowCluster : [%s/%s]'s executor status, error: %v",
@@ -230,6 +232,16 @@ func (m *executorMemberManager) syncExecutorStatefulSetForTiflowCluster(ctx cont
 		mngerutils.SetUpgradePartition(newSts, 0)
 		errSts := mngerutils.UpdateStatefulSet(ctx, m.Client, newSts, oldSts)
 		return controller.RequeueErrorf("tiflow cluster: [%s/%s]'s tiflow-executor needs force upgrade, %v", ns, tcName, errSts)
+	}
+
+	// todo: Need to add processing logic for Scale
+	// Scaling takes precedence over normal upgrading because:
+	// - if a tiflow-executor fails in the upgrading, users may want to delete it or add
+	//   new replicas
+	// - it's ok to prune in the middle of upgrading (in statefulset controller
+	//   scaling takes precedence over upgrading too)
+	if err := m.Scale.Scale(tc, oldSts, newSts); err != nil {
+		return err
 	}
 
 	if !templateEqual(newSts, oldSts) || tc.Status.Executor.Phase == v1alpha1.UpgradePhase {
@@ -337,6 +349,7 @@ func (m *executorMemberManager) getNewExecutorStatefulSet(ctx context.Context, t
 
 	stsName := controller.TiflowExecutorMemberName(tcName)
 	stsLabels := label.New().Instance(instanceName).TiflowExecutor()
+
 	// can't directly use tc.Annotations here because it will affect tiflowcluster's annotations
 	// todo: use getStsAnnotations if we need to use advanced statefulset
 	stsAnnotations := map[string]string{}

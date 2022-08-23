@@ -2,6 +2,7 @@ package tiflowcluster
 
 import (
 	"context"
+	"k8s.io/client-go/kubernetes"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	errorutils "k8s.io/apimachinery/pkg/util/errors"
@@ -22,11 +23,11 @@ type ControlInterface interface {
 
 // NewDefaultTiflowClusterControl returns a new instance of the default implementation tiflowClusterControlInterface that
 // implements the documented semantics for tiflowClusters.
-func NewDefaultTiflowClusterControl(cli client.Client) ControlInterface {
+func NewDefaultTiflowClusterControl(cli client.Client, clientSet kubernetes.Interface) ControlInterface {
 	return &defaultTiflowClusterControl{
 		cli,
 		member.NewMasterMemberManager(cli),
-		member.NewExecutorMemberManager(cli),
+		member.NewExecutorMemberManager(cli, clientSet),
 		&realConditionUpdater{},
 		NewRealStatusUpdater(cli),
 	}
