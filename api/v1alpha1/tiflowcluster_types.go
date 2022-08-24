@@ -306,6 +306,21 @@ type ExecutorSpec struct {
 	Config *config.GenericConfig `json:"config,omitempty"`
 }
 
+// +k8s:openapi-gen=true
+// ClusterRef reference to a TiflowCluster
+type ClusterRef struct {
+	// Namespace is the namespace that TiflowCluster object locates
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+
+	// Name is the name of TiflowCluster object
+	Name string `json:"name"`
+
+	// ClusterDomain is the domain of TiflowCluster object
+	// +optional
+	ClusterDomain string `json:"clusterDomain,omitempty"`
+}
+
 // TiflowClusterSpec defines the desired state of TiflowCluster
 type TiflowClusterSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
@@ -382,6 +397,15 @@ type TiflowClusterSpec struct {
 	// DNSPolicy Specifies the DNSPolicy parameters of a pod.
 	// +optional
 	DNSPolicy corev1.DNSPolicy `json:"dnsPolicy,omitempty"`
+
+	// ClusterDomain is the Kubernetes Cluster Domain of TiDB cluster
+	// Optional: Defaults to ""
+	// +optional
+	ClusterDomain string `json:"clusterDomain,omitempty"`
+
+	// Cluster is the external cluster, if configured, the components in this TiflowCluster will join to this configured cluster.
+	// +optional
+	Cluster *ClusterRef `json:"cluster,omitempty"`
 
 	// PodSecurityContext of the component
 	// +optional

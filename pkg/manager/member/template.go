@@ -5,6 +5,17 @@ import (
 	"text/template"
 )
 
+type CommonModel struct {
+	ClusterDomain string // same as tc.spec.clusterDomain
+}
+
+func (c CommonModel) FormatClusterDomain() string {
+	if len(c.ClusterDomain) > 0 {
+		return "." + c.ClusterDomain
+	}
+	return ""
+}
+
 func renderTemplateFunc(tpl *template.Template, model interface{}) (string, error) {
 	buff := new(bytes.Buffer)
 	err := tpl.Execute(buff, model)
@@ -48,7 +59,7 @@ fi
 POD_NAME=${POD_NAME:-$HOSTNAME}
 
 ARGS="--addr=:10240 \
---advertise-addr=${POD_NAME}.${PEER_SERVICE_NAME}.${NAMESPACE}.svc:10240 \
+--advertise-addr=${POD_NAME}.${PEER_SERVICE_NAME}.${NAMESPACE}.svc{{ .FormatClusterDomain }}:10240 \
 --config=/etc/tiflow-master/tiflow-master.toml \
 "
 
@@ -59,6 +70,7 @@ exec /tiflow master ${ARGS}
 `))
 
 type TiflowMasterStartScriptModel struct {
+	CommonModel
 	Scheme string
 }
 
@@ -100,7 +112,7 @@ POD_NAME=${POD_NAME:-$HOSTNAME}
 
 ARGS="--join={{ .MasterAddress }} \
 --addr=:10241 \
---advertise-addr=${POD_NAME}.${PEER_SERVICE_NAME}.${NAMESPACE}.svc:10241 \
+--advertise-addr=${POD_NAME}.${PEER_SERVICE_NAME}.${NAMESPACE}.svc{{ .FormatClusterDomain }}:10241 \
 --config={{ .DataDir }}/tiflow-executor.toml \
 "
 
@@ -111,6 +123,7 @@ exec /tiflow executor ${ARGS}
 `))
 
 type TiflowExecutorStartScriptModel struct {
+	CommonModel
 	DataDir       string
 	MasterAddress string
 }
