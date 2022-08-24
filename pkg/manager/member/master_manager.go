@@ -81,6 +81,9 @@ func getMasterConfigMap(tc *pingcapcomv1alpha1.TiflowCluster) (*corev1.ConfigMap
 	}
 
 	startScript, err := RenderTiflowMasterStartScript(&TiflowMasterStartScriptModel{
+		CommonModel: CommonModel{
+			ClusterDomain: tc.Spec.ClusterDomain,
+		},
 		Scheme: tc.Scheme(),
 	})
 	if err != nil {

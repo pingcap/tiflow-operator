@@ -121,6 +121,14 @@ func (tc *TiflowCluster) AllMasterMembersReady() bool {
 	//return true
 }
 
+func (tc *TiflowCluster) Heterogeneous() bool {
+	return tc.Spec.Cluster != nil && len(tc.Spec.Cluster.Name) > 0
+}
+
+func (tc *TiflowCluster) WithoutLocalMaster() bool {
+	return tc.Spec.Master == nil
+}
+
 func (mt MemberType) String() string {
 	return string(mt)
 }

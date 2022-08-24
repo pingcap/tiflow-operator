@@ -3,9 +3,10 @@ package controller
 import (
 	"fmt"
 
-	pingcapcomv1alpha1 "github.com/pingcap/tiflow-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	pingcapcomv1alpha1 "github.com/pingcap/tiflow-operator/api/v1alpha1"
 )
 
 var (
@@ -36,6 +37,21 @@ func IsRequeueError(err error) bool {
 // TiflowMasterMemberName returns tiflow-master member name
 func TiflowMasterMemberName(clusterName string) string {
 	return fmt.Sprintf("%s-tiflow-master", clusterName)
+}
+
+// TiflowMasterFullHost returns tiflow-master full host
+func TiflowMasterFullHost(clusterName, namespace, clusterDomain string) string {
+	svc := ""
+	if clusterDomain != "" || namespace != "" {
+		svc = ".svc"
+	}
+	if clusterDomain != "" {
+		clusterDomain = "." + clusterDomain
+	}
+	if namespace != "" {
+		namespace = "." + namespace
+	}
+	return fmt.Sprintf("%s-tiflow-master%s%s%s", clusterName, namespace, svc, clusterDomain)
 }
 
 // TiflowMasterPeerMemberName returns tiflow-master peer service name

@@ -3,10 +3,12 @@ package member
 import (
 	"context"
 	"fmt"
-	"github.com/pingcap/tiflow-operator/pkg/tiflowapi"
+	"strings"
+
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/client-go/kubernetes"
-	"strings"
+
+	"github.com/pingcap/tiflow-operator/pkg/tiflowapi"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -268,9 +270,18 @@ func (m *executorMemberManager) getExecutorConfigMap(tc *v1alpha1.TiflowCluster)
 		return nil, err
 	}
 
+	// TODO: add discovery or full name to make sure executor can connect to alive master
+	masterHost := controller.TiflowMasterMemberName(tc.Name)
+	if tc.Heterogeneous() && tc.WithoutLocalMaster() {
+		masterHost = controller.TiflowMasterFullHost(tc.Spec.Cluster.Name, tc.Spec.Cluster.Name, tc.Spec.ClusterDomain) // use pd of reference cluster
+	}
+
 	startScript, err := RenderExecutorStartScript(&TiflowExecutorStartScriptModel{
+		CommonModel: CommonModel{
+			ClusterDomain: tc.Spec.ClusterDomain,
+		},
 		DataDir:       tiflowExecutorDataVolumeMountPath,
-		MasterAddress: controller.TiflowMasterMemberName(tc.Name) + ":10240",
+		MasterAddress: masterHost + ":10240",
 	})
 
 	if err != nil {
