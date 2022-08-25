@@ -11,7 +11,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 
-	"github.com/pingcap/errors"
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
 	"github.com/pingcap/tiflow-operator/pkg/manager/member/prune"
 )
@@ -70,10 +69,11 @@ func (s *executorScaler) ScaleOut(meta metav1.Object, actual *appsv1.StatefulSet
 		}
 	}
 
-	if !tc.Status.Executor.Synced {
-		return errors.Errorf("tiflow cluster: [%s/%s]'s tiflow-executor status sync failed, can't scale up now",
-			ns, tcName)
-	}
+	// todo:
+	//if !tc.Status.Executor.Synced {
+	//	return errors.Errorf("tiflow cluster: [%s/%s]'s tiflow-executor status sync failed, can't scale up now",
+	//		ns, tcName)
+	//}
 
 	klog.Infof("start to scaling up tiflow-executor statefulSet %s for [%s/%s]",
 		stsName, ns, tcName)
@@ -117,10 +117,11 @@ func (s *executorScaler) ScaleIn(meta metav1.Object, actual *appsv1.StatefulSet,
 	tcName := tc.GetName()
 	stsName := actual.GetName()
 
-	if !tc.Status.Executor.Synced {
-		return errors.Errorf("tiflow cluster: [%s/%s]'s tiflow-executor status sync failed, can't scale down now",
-			ns, tcName)
-	}
+	// todo:
+	//if !tc.Status.Executor.Synced {
+	//	return errors.Errorf("tiflow cluster: [%s/%s]'s tiflow-executor status sync failed, can't scale down now",
+	//		ns, tcName)
+	//}
 
 	klog.Infof("start to scaling down tiflow-executor statefulSet %s for [%s/%s]",
 		stsName, ns, tcName)
