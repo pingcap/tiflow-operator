@@ -39,7 +39,7 @@ type masterMemberManager struct {
 func NewMasterMemberManager(cli client.Client, clientSet kubernetes.Interface) manager.TiflowManager {
 	return &masterMemberManager{
 		cli:      cli,
-		scaler:   NewMasterScaler(clientSet),
+		scaler:   NewMasterScaler(cli, clientSet),
 		upgrader: NewMasterUpgrader(cli),
 	}
 }
