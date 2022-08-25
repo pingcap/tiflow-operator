@@ -31,16 +31,18 @@ func NewMasterScaler(cli client.Client, clientSet kubernetes.Interface) Scaler {
 	}
 }
 
-func (s masterScaler) Scale(meta metav1.Object, actual *apps.StatefulSet, desired *apps.StatefulSet) error {
-	scaling := *desired.Spec.Replicas - *actual.Spec.Replicas
+func (s masterScaler) Scale(meta metav1.Object, oldSts *apps.StatefulSet, newSts *apps.StatefulSet) error {
+	actual := *oldSts.Spec.Replicas
+	desired := *newSts.Spec.Replicas
 
 	klog.Infof("start scaling logic of Master, actual: %d, desired: %d",
 		actual, desired)
 
+	scaling := desired - actual
 	if scaling > 0 {
-		return s.ScaleOut(meta, actual, desired)
+		return s.ScaleOut(meta, oldSts, newSts)
 	} else if scaling < 0 {
-		return s.ScaleIn(meta, actual, desired)
+		return s.ScaleIn(meta, oldSts, newSts)
 	}
 	return nil
 }
