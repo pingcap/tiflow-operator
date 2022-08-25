@@ -2,6 +2,7 @@ package util
 
 import (
 	"encoding/json"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 )
@@ -79,4 +80,12 @@ func Encode(obj interface{}) (string, error) {
 		return "", err
 	}
 	return string(b), nil
+}
+
+func ClusterClientTLSSecretName(tcName string) string {
+	return fmt.Sprintf("%s-cluster-client-secret", tcName)
+}
+
+func ClusterTLSSecretName(tcName, component string) string {
+	return fmt.Sprintf("%s-%s-cluster-secret", tcName, component)
 }

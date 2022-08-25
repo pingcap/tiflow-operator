@@ -74,7 +74,7 @@ func (s masterScaler) ScaleIn(meta metav1.Object, actual *apps.StatefulSet, desi
 	// If it's the last member we don't need to do this because we will delete this later
 	if ordinal > 0 {
 		if tc.Status.Master.Leader.ClientURL == memberName {
-			masterPeerClient := tiflowapi.GetMasterClient(s.cli, ns, tcName, memberName, tc.Spec.TLSCluster)
+			masterPeerClient := tiflowapi.GetMasterClient(s.cli, ns, tcName, memberName, tc.IsClusterTLSEnabled())
 			err := masterPeerClient.EvictLeader()
 			if err != nil {
 				return err

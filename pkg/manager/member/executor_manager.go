@@ -525,6 +525,25 @@ func (m *executorMemberManager) getNewExecutorPodVols(tc *v1alpha1.TiflowCluster
 			},
 		},
 	}
+	if tc.IsClusterTLSEnabled() {
+		vols = append(vols, corev1.Volume{
+			Name: "tiflow-executor-tls", VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: util.ClusterTLSSecretName(tc.Name, label.TiflowMasterLabelVal),
+				},
+			},
+		})
+	}
+
+	for _, tlsClientSecretName := range tc.Spec.Master.TLSClientSecretNames {
+		vols = append(vols, corev1.Volume{
+			Name: tlsClientSecretName, VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: tlsClientSecretName,
+				},
+			},
+		})
+	}
 
 	return vols
 }
@@ -596,6 +615,18 @@ func (m *executorMemberManager) getNewExecutorContainerVolsMount(tc *v1alpha1.Ti
 		{Name: "startup-script", ReadOnly: true, MountPath: "/usr/local/bin"},
 	}
 
+	if tc.IsClusterTLSEnabled() {
+		volMounts = append(volMounts, corev1.VolumeMount{
+			Name: "tiflow-executor-tls", ReadOnly: true, MountPath: clusterCertPath,
+		})
+	}
+
+	for _, tlsClientSecretName := range tc.Spec.Master.TLSClientSecretNames {
+		volMounts = append(volMounts, corev1.VolumeMount{
+			Name: tlsClientSecretName, ReadOnly: true, MountPath: clientCertPath + "/" + tlsClientSecretName,
+		})
+	}
+
 	// get Annotation mount info, and add it
 	annoMount, _ := annotationsMountVolume()
 	volMounts = append(volMounts, annoMount)
@@ -644,7 +675,7 @@ func (m *executorMemberManager) syncExecutorStatus(tc *v1alpha1.TiflowCluster, s
 	// todo: Get information about the Executor Members, FailureMembers and FailoverUID through the Master API
 	// todo: Or may be get info through the Sts Status
 	// TOBE
-	tiflowClient := tiflowapi.GetMasterClient(m.Client, ns, tcName, "", tc.Spec.TLSCluster)
+	tiflowClient := tiflowapi.GetMasterClient(m.Client, ns, tcName, "", tc.IsClusterTLSEnabled())
 	_, err = tiflowClient.GetLeader()
 	if err != nil {
 		tc.Status.Master.Synced = false

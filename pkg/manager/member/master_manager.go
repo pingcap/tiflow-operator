@@ -320,12 +320,11 @@ func getNewMasterSetForTiflowCluster(tc *pingcapcomv1alpha1.TiflowCluster, cm *c
 	}
 	volMounts = append(volMounts, tc.Spec.Master.AdditionalVolumeMounts...)
 
-	// TODO: tls
-	//if tc.IsTLSClusterEnabled() {
-	//	volMounts = append(volMounts, corev1.VolumeMount{
-	//		Name: "tiflow-master-tls", ReadOnly: true, MountPath: "/var/lib/tiflow-master-tls",
-	//	})
-	//}
+	if tc.IsClusterTLSEnabled() {
+		volMounts = append(volMounts, corev1.VolumeMount{
+			Name: "tiflow-master-tls", ReadOnly: true, MountPath: clusterCertPath,
+		})
+	}
 
 	vols := []corev1.Volume{
 		annoVolume,
@@ -350,29 +349,29 @@ func getNewMasterSetForTiflowCluster(tc *pingcapcomv1alpha1.TiflowCluster, cm *c
 			},
 		},
 	}
-	// TODO: tls
-	//if tc.IsTLSClusterEnabled() {
-	//	vols = append(vols, corev1.Volume{
-	//		Name: "tiflow-master-tls", VolumeSource: corev1.VolumeSource{
-	//			Secret: &corev1.SecretVolumeSource{
-	//				SecretName: util.ClusterTLSSecretName(tc.Name, label.TiflowMaster),
-	//			},
-	//		},
-	//	})
-	//}
-	//
-	//for _, tlsClientSecretName := range tc.Spec.TLSClientSecretNames {
-	//	volMounts = append(volMounts, corev1.VolumeMount{
-	//		Name: tlsClientSecretName, ReadOnly: true, MountPath: fmt.Sprintf("/var/lib/source-tls/%s", tlsClientSecretName),
-	//	})
-	//	vols = append(vols, corev1.Volume{
-	//		Name: tlsClientSecretName, VolumeSource: corev1.VolumeSource{
-	//			Secret: &corev1.SecretVolumeSource{
-	//				SecretName: tlsClientSecretName,
-	//			},
-	//		},
-	//	})
-	//}
+
+	if tc.IsClusterTLSEnabled() {
+		vols = append(vols, corev1.Volume{
+			Name: "tiflow-master-tls", VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: util.ClusterTLSSecretName(tc.Name, label.TiflowMasterLabelVal),
+				},
+			},
+		})
+	}
+
+	for _, tlsClientSecretName := range tc.Spec.Master.TLSClientSecretNames {
+		volMounts = append(volMounts, corev1.VolumeMount{
+			Name: tlsClientSecretName, ReadOnly: true, MountPath: clientCertPath + "/" + tlsClientSecretName,
+		})
+		vols = append(vols, corev1.Volume{
+			Name: tlsClientSecretName, VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: tlsClientSecretName,
+				},
+			},
+		})
+	}
 
 	setName := controller.TiflowMasterMemberName(tcName)
 	stsLabels := label.New().Instance(instanceName).TiflowMaster()
@@ -627,7 +626,7 @@ func (m *masterMemberManager) syncTiflowClusterStatus(tc *pingcapcomv1alpha1.Tif
 	}
 
 	// TODO: add status info after tiflow master interface stable
-	tiflowClient := tiflowapi.GetMasterClient(m.cli, ns, tcName, "", tc.Spec.TLSCluster)
+	tiflowClient := tiflowapi.GetMasterClient(m.cli, ns, tcName, "", tc.IsClusterTLSEnabled())
 
 	// TODO: add GetMasters() after it's supported by tiflow
 	//mastersInfo, err := tiflowClient.GetMasters()

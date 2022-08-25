@@ -106,6 +106,10 @@ func (tc *TiflowCluster) MasterStsDesiredReplicas() int32 {
 	return tc.Spec.Master.Replicas + int32(len(tc.Status.Master.FailureMembers))
 }
 
+func (tc *TiflowCluster) IsClusterTLSEnabled() bool {
+	return tc.Spec.TLSCluster != nil && *tc.Spec.TLSCluster
+}
+
 func (tc *TiflowCluster) AllMasterMembersReady() bool {
 	return true
 	// TODO: support members later
