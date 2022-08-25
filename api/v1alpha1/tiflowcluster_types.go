@@ -235,6 +235,11 @@ type MasterSpec struct {
 	// +optional
 	Service *ServiceSpec `json:"service,omitempty"`
 
+	// TLSClientSecretNames are the names of secrets which stores etcd/metastore client certificates
+	// that used by tiflow-master.
+	// +optional
+	TLSClientSecretNames []string `json:"tlsClientSecretNames,omitempty"`
+
 	// MaxFailoverCount limit the max replicas could be added in failover, 0 means no failover.
 	// Optional: Defaults to 3
 	// +kubebuilder:validation:Minimum=0
@@ -288,6 +293,11 @@ type ExecutorSpec struct {
 	// Defaults to "" (volume's root).
 	// +optional
 	DataSubDir string `json:"dataSubDir,omitempty"`
+
+	// TLSClientSecretNames are the names of secrets which stores upstream/downstream client certificates
+	// that used by tiflow-executor.
+	// +optional
+	TLSClientSecretNames []string `json:"tlsClientSecretNames,omitempty"`
 
 	// Persistent volume reclaim policy applied to the PVs that consumed by TiDB cluster
 	// +kubebuilder:default=Retain
@@ -356,7 +366,7 @@ type TiflowClusterSpec struct {
 	// Whether enable the TLS connection between Tiflow components
 	// Optional: Defaults to nil
 	// +optional
-	TLSCluster bool `json:"tlsCluster,omitempty"`
+	TLSCluster *bool `json:"tlsCluster,omitempty"`
 
 	// Whether Hostnetwork is enabled for Tiflow cluster Pods
 	// Optional: Defaults to false

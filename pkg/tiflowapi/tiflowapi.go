@@ -87,12 +87,12 @@ func (c masterClient) DeleteExecutor(name string) error {
 }
 
 // NewMasterClient returns a new MasterClient
-func NewMasterClient(url string, timeout time.Duration, tlsConfig *tls.Config, disableKeepalive bool) MasterClient {
+func NewMasterClient(url string, timeout time.Duration, tlsConfig *tls.Config) MasterClient {
 	return &masterClient{
 		url: url,
 		httpClient: &http.Client{
 			Timeout:   timeout,
-			Transport: &http.Transport{TLSClientConfig: tlsConfig, DisableKeepAlives: disableKeepalive},
+			Transport: &http.Transport{TLSClientConfig: tlsConfig, DisableKeepAlives: true},
 		},
 	}
 }

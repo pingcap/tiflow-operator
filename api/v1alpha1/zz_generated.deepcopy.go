@@ -210,6 +210,11 @@ func (in *ExecutorSpec) DeepCopyInto(out *ExecutorSpec) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.TLSClientSecretNames != nil {
+		in, out := &in.TLSClientSecretNames, &out.TLSClientSecretNames
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.PVReclaimPolicy != nil {
 		in, out := &in.PVReclaimPolicy, &out.PVReclaimPolicy
 		*out = new(v1.PersistentVolumeReclaimPolicy)
@@ -325,6 +330,11 @@ func (in *MasterSpec) DeepCopyInto(out *MasterSpec) {
 		in, out := &in.Service, &out.Service
 		*out = new(ServiceSpec)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.TLSClientSecretNames != nil {
+		in, out := &in.TLSClientSecretNames, &out.TLSClientSecretNames
+		*out = make([]string, len(*in))
+		copy(*out, *in)
 	}
 	if in.Config != nil {
 		in, out := &in.Config, &out.Config
@@ -653,6 +663,11 @@ func (in *TiflowClusterSpec) DeepCopyInto(out *TiflowClusterSpec) {
 		in, out := &in.ImagePullSecrets, &out.ImagePullSecrets
 		*out = make([]v1.LocalObjectReference, len(*in))
 		copy(*out, *in)
+	}
+	if in.TLSCluster != nil {
+		in, out := &in.TLSCluster, &out.TLSCluster
+		*out = new(bool)
+		**out = **in
 	}
 	if in.HostNetwork != nil {
 		in, out := &in.HostNetwork, &out.HostNetwork

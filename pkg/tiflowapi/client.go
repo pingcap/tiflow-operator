@@ -1,9 +1,13 @@
 package tiflowapi
 
 import (
+	"crypto/tls"
 	"fmt"
 
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/pingcap/tiflow-operator/pkg/util"
 )
 
 // GetMasterClient provides a MasterClient of real tiflow-master cluster
@@ -12,21 +16,20 @@ import (
 func GetMasterClient(cli client.Client, namespace, tcName, podName string, tlsEnabled bool) MasterClient {
 	var scheme = "http"
 
-	// TODO: support tls later
-	//var tlsConfig *tls.Config
-	//var err error
-	//if tlsEnabled {
-	//	scheme = "https"
-	//	tlsConfig, err = GetTLSConfig(cli, namespace, util.TiflowClientTLSSecretName(tcName))
-	//	if err != nil {
-	//		klog.Errorf("Unable to get tls config for tiflow cluster %q, master client may not work: %v", tcName, err)
-	//		return NewMasterClient(MasterClientURL(namespace, tcName, scheme), DefaultTimeout, tlsConfig, true)
-	//	}
-	//
-	//	return NewMasterClient(MasterClientURL(namespace, tcName, scheme), DefaultTimeout, tlsConfig, true)
-	//}
+	var tlsConfig *tls.Config
+	var err error
+	if tlsEnabled {
+		scheme = "https"
+		tlsConfig, err = GetTLSConfig(cli, namespace, util.ClusterClientTLSSecretName(tcName))
+		if err != nil {
+			klog.Errorf("Unable to get tls config for tiflow cluster %q, master client may not work: %v", tcName, err)
+			return NewMasterClient(MasterClientURL(namespace, tcName, podName, scheme), DefaultTimeout, tlsConfig)
+		}
 
-	return NewMasterClient(MasterClientURL(namespace, tcName, podName, scheme), DefaultTimeout, nil, true)
+		return NewMasterClient(MasterClientURL(namespace, tcName, podName, scheme), DefaultTimeout, tlsConfig)
+	}
+
+	return NewMasterClient(MasterClientURL(namespace, tcName, podName, scheme), DefaultTimeout, nil)
 }
 
 // MasterClientURL builds the url of master client

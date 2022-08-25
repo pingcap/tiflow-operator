@@ -6369,6 +6369,13 @@ spec:
                       for your process. Defaults to 30 seconds.
                     format: int64
                     type: integer
+                  tlsClientSecretNames:
+                    description: TLSClientSecretNames are the names of secrets which
+                      stores upstream/downstream client certificates that used by
+                      tiflow-executor.
+                    items:
+                      type: string
+                    type: array
                   tolerations:
                     description: 'Tolerations of the component. Override the cluster-level
                       tolerations if non-empty Optional: Defaults to cluster-level
@@ -12050,6 +12057,12 @@ spec:
                       for your process. Defaults to 30 seconds.
                     format: int64
                     type: integer
+                  tlsClientSecretNames:
+                    description: TLSClientSecretNames are the names of secrets which
+                      stores etcd/metastore client certificates that used by tiflow-master.
+                    items:
+                      type: string
+                    type: array
                   tolerations:
                     description: 'Tolerations of the component. Override the cluster-level
                       tolerations if non-empty Optional: Defaults to cluster-level
