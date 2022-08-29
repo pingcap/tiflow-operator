@@ -115,7 +115,7 @@ func (s masterScaler) ScaleIn(meta metav1.Object, actual *apps.StatefulSet, desi
 	ctx := context.TODO()
 
 	for i := down; i > 0; i-- {
-		klog.Infof("scaling down statefulSet  %s of master, current: %d, desired: %d",
+		klog.Infof("scaling down statefulSet %s of master, current: %d, desired: %d",
 			stsName, current, current-1)
 
 		if err := s.EvictLeader(tc, current-1); err != nil {
