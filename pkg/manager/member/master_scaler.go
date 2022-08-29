@@ -119,7 +119,7 @@ func (s masterScaler) ScaleIn(meta metav1.Object, actual *apps.StatefulSet, desi
 			stsName, current, current-1)
 
 		if err := s.EvictLeader(tc, current-1); err != nil {
-			return nil
+			return err
 		}
 
 		if err := s.SetReplicas(ctx, actual, uint(current-1)); err != nil {

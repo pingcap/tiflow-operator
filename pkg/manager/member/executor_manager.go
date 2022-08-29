@@ -64,7 +64,7 @@ func (m *executorMemberManager) Sync(ctx context.Context, tc *v1alpha1.TiflowClu
 	ns := tc.GetNamespace()
 	tcName := tc.GetName()
 
-	klog.Infof("start to sync tiflow-Executor [%s/%s]", ns, tcName)
+	klog.Infof("start to sync tiflow executor [%s/%s]", ns, tcName)
 
 	if tc.Spec.Executor == nil {
 		return nil
