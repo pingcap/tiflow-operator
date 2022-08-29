@@ -35,9 +35,6 @@ func (s masterScaler) Scale(meta metav1.Object, oldSts *apps.StatefulSet, newSts
 	actual := *oldSts.Spec.Replicas
 	desired := *newSts.Spec.Replicas
 
-	klog.Infof("start scaling logic of Master, actual: %d, desired: %d",
-		actual, desired)
-
 	scaling := desired - actual
 	if scaling > 0 {
 		return s.ScaleOut(meta, oldSts, newSts)
@@ -62,8 +59,8 @@ func (s masterScaler) ScaleOut(meta metav1.Object, actual *apps.StatefulSet, des
 			ns, tcName)
 	}
 
-	klog.Infof("start to scaling up tiflow-master statefulSet %s for [%s/%s]",
-		stsName, ns, tcName)
+	klog.Infof("start to scaling up tiflow-master statefulSet %s for [%s/%s], actual: %d, desired: %d",
+		stsName, ns, tcName, *actual.Spec.Replicas, *desired.Spec.Replicas)
 
 	up := *desired.Spec.Replicas - *actual.Spec.Replicas
 	current := *actual.Spec.Replicas
@@ -110,8 +107,8 @@ func (s masterScaler) ScaleIn(meta metav1.Object, actual *apps.StatefulSet, desi
 			ns, tcName)
 	}
 
-	klog.Infof("start to scaling down tiflow-master statefulSet %s for [%s/%s]",
-		stsName, ns, tcName)
+	klog.Infof("start to scaling down tiflow-master statefulSet %s for [%s/%s], actual: %d, desired: %d",
+		stsName, ns, tcName, *actual.Spec.Replicas, *desired.Spec.Replicas)
 
 	down := *actual.Spec.Replicas - *desired.Spec.Replicas
 	current := *actual.Spec.Replicas

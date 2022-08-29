@@ -36,9 +36,6 @@ func (s *executorScaler) Scale(meta metav1.Object, oldSts *appsv1.StatefulSet, n
 	actual := *oldSts.Spec.Replicas
 	desired := *newSts.Spec.Replicas
 
-	klog.Infof("start scaling logic of Executor, actual: %d, desired: %d",
-		actual, desired)
-
 	scaling := desired - actual
 	if scaling > 0 {
 		return s.ScaleOut(meta, oldSts, newSts)
@@ -75,8 +72,8 @@ func (s *executorScaler) ScaleOut(meta metav1.Object, actual *appsv1.StatefulSet
 	//		ns, tcName)
 	//}
 
-	klog.Infof("start to scaling up tiflow-executor statefulSet %s for [%s/%s]",
-		stsName, ns, tcName)
+	klog.Infof("start to scaling up tiflow-executor statefulSet %s for [%s/%s], actual: %d, desired: %d",
+		stsName, ns, tcName, *actual.Spec.Replicas, *desired.Spec.Replicas)
 
 	up := *desired.Spec.Replicas - *actual.Spec.Replicas
 	current := *actual.Spec.Replicas
@@ -123,8 +120,8 @@ func (s *executorScaler) ScaleIn(meta metav1.Object, actual *appsv1.StatefulSet,
 	//		ns, tcName)
 	//}
 
-	klog.Infof("start to scaling down tiflow-executor statefulSet %s for [%s/%s]",
-		stsName, ns, tcName)
+	klog.Infof("start to scaling down tiflow-executor statefulSet %s for [%s/%s], actual: %d, desired: %d",
+		stsName, ns, tcName, *actual.Spec.Replicas, *desired.Spec.Replicas)
 
 	down := *actual.Spec.Replicas - *desired.Spec.Replicas
 	current := *actual.Spec.Replicas
