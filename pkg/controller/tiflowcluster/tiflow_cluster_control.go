@@ -26,7 +26,7 @@ type ControlInterface interface {
 func NewDefaultTiflowClusterControl(cli client.Client, clientSet kubernetes.Interface) ControlInterface {
 	return &defaultTiflowClusterControl{
 		cli,
-		member.NewMasterMemberManager(cli),
+		member.NewMasterMemberManager(cli, clientSet),
 		member.NewExecutorMemberManager(cli, clientSet),
 		&realConditionUpdater{},
 		NewRealStatusUpdater(cli),

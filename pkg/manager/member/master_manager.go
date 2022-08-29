@@ -3,6 +3,7 @@ package member
 import (
 	"context"
 	"fmt"
+	"k8s.io/client-go/kubernetes"
 	"strings"
 
 	apps "k8s.io/api/apps/v1"
@@ -35,15 +36,20 @@ type masterMemberManager struct {
 	upgrader Upgrader
 }
 
-func NewMasterMemberManager(cli client.Client) manager.TiflowManager {
+func NewMasterMemberManager(cli client.Client, clientSet kubernetes.Interface) manager.TiflowManager {
 	return &masterMemberManager{
 		cli:      cli,
-		scaler:   NewMasterScaler(cli),
+		scaler:   NewMasterScaler(cli, clientSet),
 		upgrader: NewMasterUpgrader(cli),
 	}
 }
 
 func (m *masterMemberManager) Sync(ctx context.Context, tc *pingcapcomv1alpha1.TiflowCluster) error {
+	ns := tc.GetNamespace()
+	tcName := tc.GetName()
+
+	klog.Infof("start to sync tiflow master [%s/%s]", ns, tcName)
+
 	if tc.Spec.Master == nil {
 		return nil
 	}

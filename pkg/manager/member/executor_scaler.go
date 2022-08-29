@@ -3,8 +3,6 @@ package member
 import (
 	"context"
 	"fmt"
-	"github.com/pingcap/tiflow-operator/api/v1alpha1"
-	"github.com/pingcap/tiflow-operator/pkg/manager/member/prune"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -12,6 +10,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
+
+	"github.com/pingcap/tiflow-operator/api/v1alpha1"
+	"github.com/pingcap/tiflow-operator/pkg/manager/member/prune"
 )
 
 const defaultSleepTime = 10 * time.Second
@@ -34,9 +35,6 @@ func (s *executorScaler) Scale(meta metav1.Object, oldSts *appsv1.StatefulSet, n
 
 	actual := *oldSts.Spec.Replicas
 	desired := *newSts.Spec.Replicas
-
-	klog.Infof("start scaling logic, actual: %d, desired: %d",
-		actual, desired)
 
 	scaling := desired - actual
 	if scaling > 0 {
@@ -68,14 +66,20 @@ func (s *executorScaler) ScaleOut(meta metav1.Object, actual *appsv1.StatefulSet
 		}
 	}
 
-	klog.Infof("start to scaling up tiflow-executor statefulSet %s for [%s/%s]",
-		stsName, ns, tcName)
+	// todo:
+	//if !tc.Status.Executor.Synced {
+	//	return errors.Errorf("tiflow cluster: [%s/%s]'s tiflow-executor status sync failed, can't scale up now",
+	//		ns, tcName)
+	//}
+
+	klog.Infof("start to scaling up tiflow-executor statefulSet %s for [%s/%s], actual: %d, desired: %d",
+		stsName, ns, tcName, *actual.Spec.Replicas, *desired.Spec.Replicas)
 
 	up := *desired.Spec.Replicas - *actual.Spec.Replicas
 	current := *actual.Spec.Replicas
 
 	for i := up; i > 0; i-- {
-		klog.Infof("scaling up statefulSet %s, current: %d, desired: %d",
+		klog.Infof("scaling up statefulSet %s of executor, current: %d, desired: %d",
 			stsName, current, current+1)
 
 		if err := s.SetReplicas(ctx, actual, uint(current+1)); err != nil {
@@ -110,15 +114,21 @@ func (s *executorScaler) ScaleIn(meta metav1.Object, actual *appsv1.StatefulSet,
 	tcName := tc.GetName()
 	stsName := actual.GetName()
 
-	klog.Infof("start to scaling down tiflow-executor statefulSet %s for [%s/%s]",
-		stsName, ns, tcName)
+	// todo:
+	//if !tc.Status.Executor.Synced {
+	//	return errors.Errorf("tiflow cluster: [%s/%s]'s tiflow-executor status sync failed, can't scale down now",
+	//		ns, tcName)
+	//}
+
+	klog.Infof("start to scaling down tiflow-executor statefulSet %s for [%s/%s], actual: %d, desired: %d",
+		stsName, ns, tcName, *actual.Spec.Replicas, *desired.Spec.Replicas)
 
 	down := *actual.Spec.Replicas - *desired.Spec.Replicas
 	current := *actual.Spec.Replicas
 	ctx := context.TODO()
 
 	for i := down; i > 0; i-- {
-		klog.Infof("scaling down statefulSet %s, current: %d, desired: %d",
+		klog.Infof("scaling down statefulSet %s of executor, current: %d, desired: %d",
 			stsName, current, current-1)
 
 		if err := s.SetReplicas(ctx, actual, uint(current-1)); err != nil {
@@ -158,7 +168,8 @@ func (s *executorScaler) SetReplicas(ctx context.Context, actual *appsv1.Statefu
 		},
 	}, metav1.UpdateOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to update statefulSet %s, error: %v", actual.Name, err)
+		return fmt.Errorf("failed to update statefulSet %s of executor, error: %v",
+			actual.Name, err)
 	}
 
 	return nil
