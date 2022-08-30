@@ -44,18 +44,20 @@ const (
 
 // executorMemberManager implements interface of Manager.
 type executorMemberManager struct {
-	cli      client.Client
-	scaler   Scaler
-	upgrader Upgrader
+	cli       client.Client
+	clientSet kubernetes.Interface
+	scaler    Scaler
+	upgrader  Upgrader
 }
 
 func NewExecutorMemberManager(cli client.Client, clientSet kubernetes.Interface) manager.TiflowManager {
 
 	// todo: need to implement the logic for Failover
 	return &executorMemberManager{
-		cli:      cli,
-		scaler:   NewExecutorScaler(clientSet),
-		upgrader: NewExecutorUpgrader(cli),
+		cli:       cli,
+		clientSet: clientSet,
+		scaler:    NewExecutorScaler(clientSet),
+		upgrader:  NewExecutorUpgrader(cli),
 	}
 }
 
@@ -644,7 +646,6 @@ func (m *executorMemberManager) syncExecutorStatus(tc *v1alpha1.TiflowCluster, s
 	// update the status of statefulSet which created by executor in the cluster
 	tc.Status.Executor.StatefulSet = &sts.Status
 
-	// todo: How to get Synced info
 	upgrading, err := m.executorStatefulSetIsUpgrading(tc, sts)
 	if err != nil {
 		return err
@@ -658,28 +659,49 @@ func (m *executorMemberManager) syncExecutorStatus(tc *v1alpha1.TiflowCluster, s
 		tc.Status.Executor.Phase = v1alpha1.NormalPhase
 	}
 
-	// todo: Get information about the Executor Members, FailureMembers and FailoverUID through the Master API
-	// todo: Or may be get info through the Sts Status
-	// TOBE
 	tiflowClient := tiflowapi.GetMasterClient(m.cli, ns, tcName, "", tc.IsClusterTLSEnabled())
-	_, err = tiflowClient.GetLeader()
+
+	// get executors info from master
+	executorsInfo, err := tiflowClient.GetExecutors()
 	if err != nil {
-		tc.Status.Master.Synced = false
+		tc.Status.Executor.Synced = false
+		// get endpoints info
+		eps := &corev1.Endpoints{}
+		epErr := m.cli.Get(context.TODO(), types.NamespacedName{
+			Namespace: ns,
+			Name:      controller.TiflowMasterMemberName(tcName),
+		}, eps)
+		if epErr != nil {
+			return fmt.Errorf("syncTiflowClusterStatus: failed to get endpoints %s for cluster %s/%s, err: %s, epErr %s",
+				controller.TiflowMasterMemberName(tcName), ns, tcName, err, epErr)
+		}
+		if eps != nil && len(eps.Subsets) == 0 {
+			return fmt.Errorf("%s, service %s/%s has no endpoints",
+				err, ns, controller.TiflowMasterMemberName(tcName))
+		}
 		return err
 	}
 
-	// todo: get member's infos for master
-	// todo: get failure members and UID
+	// todo: WIP, get information about the FailureMembers and FailoverUID through the MasterClient
+	// sync executors info
+	for _, e := range executorsInfo {
+		tc.Status.Executor.Members[e.Name] = v1alpha1.ExecutorMember{
+			Id:         e.Id,
+			Name:       e.Name,
+			Addr:       e.Address,
+			Capability: e.Capability,
+		}
+	}
 
 	// get follows from podName
 	tc.Status.Executor.Image = ""
-	if c := m.getContainerByName(sts, "tiflow-executor"); c != nil {
+	if c := m.findContainerByName(sts, "tiflow-executor"); c != nil {
 		tc.Status.Executor.Image = c.Image
 	}
 
 	// todo: Need to get the info of volumes which running container has bound
 	// todo: Waiting for discussion
-	// vols,err := m.getVolsByName()
+	//m.syncVolsStatus(tc,sts)
 	tc.Status.Executor.Volumes = nil
 
 	return nil
@@ -716,7 +738,7 @@ func (m *executorMemberManager) executorStatefulSetIsUpgrading(tc *v1alpha1.Tifl
 	return false, nil
 }
 
-func (m *executorMemberManager) getContainerByName(sts *appsv1.StatefulSet, containerName string) *corev1.Container {
+func (m *executorMemberManager) findContainerByName(sts *appsv1.StatefulSet, containerName string) *corev1.Container {
 	for _, container := range sts.Spec.Template.Spec.Containers {
 		if container.Name == containerName {
 			return &container
@@ -725,7 +747,30 @@ func (m *executorMemberManager) getContainerByName(sts *appsv1.StatefulSet, cont
 	return nil
 }
 
-func (m *executorMemberManager) getVolsByName(tc *v1alpha1.TiflowCluster, sts *appsv1.StatefulSet, podName string) (map[string]*v1alpha1.StorageVolumeStatus, error) {
+func (m *executorMemberManager) syncVolsStatus(tc *v1alpha1.TiflowCluster, sts *appsv1.StatefulSet) error {
 	// todo:
-	return nil, nil
+	selector, err := metav1.LabelSelectorAsSelector(sts.Spec.Selector)
+	if err != nil {
+		klog.Errorf("converting statefulSet %s selector to metav1 selector", sts.Name)
+		return err
+	}
+
+	pvs, err := m.clientSet.CoreV1().PersistentVolumes().List(context.TODO(), metav1.ListOptions{
+		LabelSelector: selector.String(),
+	})
+
+	for _, pv := range pvs.Items {
+		tc.Status.Executor.Volumes[pv.Name] = &v1alpha1.StorageVolumeStatus{
+			Name: DefaultStorageName,
+			ObservedStorageVolumeStatus: v1alpha1.ObservedStorageVolumeStatus{
+				BoundCount:      1,
+				CurrentCount:    1,
+				ResizedCount:    1,
+				CurrentCapacity: resource.Quantity{},
+				ResizedCapacity: resource.Quantity{},
+			},
+		}
+	}
+
+	return nil
 }

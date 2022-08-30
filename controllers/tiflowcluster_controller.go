@@ -52,7 +52,10 @@ func NewTiflowClusterReconciler(cli client.Client, clientSet kubernetes.Interfac
 //+kubebuilder:rbac:groups=pingcap.com,resources=tiflowclusters/finalizers,verbs=update
 //+kubebuilder:rbac:groups="",resources=configmaps;secrets;services;persistentvolumeclaims;persistentvolumes,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;update;delete
+//+kubebuilder:rbac:groups="",resources=endpoints,verbs=get;list;watch
 //+kubebuilder:rbac:groups=apps,resources=statefulsets;deployments,verbs=*
+//+kubebuilder:rbac:groups=core,resources=persistentvolumes,verbs=get;list;update;delete
+//+kubebuilder:rbac:groups=core,resources=persistentvolumeclaims,verbs=get;list;update;delete
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=*
 //+kubebuilder:rbac:groups=storage.k8s.io,resources=storageclasses,verbs=get;list;watch
 

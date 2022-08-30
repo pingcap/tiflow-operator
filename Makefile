@@ -1,6 +1,6 @@
 
 # Image URL to use all building/pushing image targets
-DOCKER_REGISTRY ?= chunzhuli
+DOCKER_REGISTRY ?= steponce7
 DOCKER_REPO ?= ${DOCKER_REGISTRY}/controller
 IMAGE_TAG ?= latest
 IMG ?= ${DOCKER_REPO}:${IMAGE_TAG}

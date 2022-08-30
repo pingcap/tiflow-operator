@@ -634,25 +634,35 @@ func (m *masterMemberManager) syncTiflowClusterStatus(tc *pingcapcomv1alpha1.Tif
 	// TODO: add status info after tiflow master interface stable
 	tiflowClient := tiflowapi.GetMasterClient(m.cli, ns, tcName, "", tc.IsClusterTLSEnabled())
 
-	// TODO: add GetMasters() after it's supported by tiflow
-	//mastersInfo, err := tiflowClient.GetMasters()
-	//if err != nil {
-	//	tc.Status.Master.Synced = false
-	//	// get endpoints info
-	//	eps := &corev1.Endpoints{}
-	//	epErr := m.cli.Get(context.TODO(), types.NamespacedName{
-	//		Namespace: ns,
-	//		Name:      controller.TiflowMasterMemberName(tcName),
-	//	}, eps)
-	//	if epErr != nil {
-	//		return fmt.Errorf("syncTiflowClusterStatus: failed to get endpoints %s for cluster %s/%s, err: %s, epErr %s", controller.TiflowMasterMemberName(tcName), ns, tcName, err, epErr)
-	//	}
-	//	// tiflow-master service has no endpoints
-	//	if eps != nil && len(eps.Subsets) == 0 {
-	//		return fmt.Errorf("%s, service %s/%s has no endpoints", err, ns, controller.TiflowMasterMemberName(tcName))
-	//	}
-	//	return err
-	//}
+	mastersInfo, err := tiflowClient.GetMasters()
+	if err != nil {
+		tc.Status.Master.Synced = false
+		// get endpoints info
+		eps := &corev1.Endpoints{}
+		epErr := m.cli.Get(context.TODO(), types.NamespacedName{
+			Namespace: ns,
+			Name:      controller.TiflowMasterMemberName(tcName),
+		}, eps)
+		if epErr != nil {
+			return fmt.Errorf("syncTiflowClusterStatus: failed to get endpoints %s for cluster %s/%s, err: %s, epErr %s", controller.TiflowMasterMemberName(tcName), ns, tcName, err, epErr)
+		}
+		// tiflow-master service has no endpoints
+		if eps != nil && len(eps.Subsets) == 0 {
+			return fmt.Errorf("%s, service %s/%s has no endpoints", err, ns, controller.TiflowMasterMemberName(tcName))
+		}
+		return err
+	}
+
+	// TODO: WIP, need to get the information of memberDeleted and LastTransitionTime
+	for _, master := range mastersInfo {
+		tc.Status.Master.Members[master.Name] = pingcapcomv1alpha1.MasterMember{
+			Id:       master.ID,
+			Address:  master.Address,
+			IsLeader: master.IsLeader,
+			PodName:  master.Name,
+			Health:   true,
+		}
+	}
 
 	leader, err := tiflowClient.GetLeader()
 	if err != nil {

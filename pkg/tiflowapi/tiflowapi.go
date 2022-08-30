@@ -18,25 +18,32 @@ const (
 type MasterClient interface {
 	// GetMasters returns all master members from cluster
 	GetMasters() ([]*MastersInfo, error)
-	GetExecutors() ([]*WorkersInfo, error)
+	GetExecutors() ([]*ExecutorsInfo, error)
 	GetLeader() (LeaderInfo, error)
 	EvictLeader() error
 	DeleteMaster(name string) error
 	DeleteExecutor(name string) error
 }
 
-const leaderPrefix = "api/v1/leader"
+const (
+	leaderPrefix        = "api/v1/leader"
+	leaderResignPrefix  = "api/v1/leader/resign"
+	listMastersPrefix   = "api/v1/masters"
+	listExecutorsPrefix = "api/v1/executors"
+)
 
 type MastersInfo struct {
-	Name      string `json:"name,omitempty"`
-	MemberID  string `json:"memberID,omitempty"`
-	Alive     bool   `json:"alive,omitempty"`
-	ClientURL string `json:"clientURLs,omitempty"`
+	ID       string `json:"id,omitempty"`
+	Name     string `json:"name,omitempty"`
+	Address  string `json:"address,omitempty"`
+	IsLeader bool   `json:"is_leader,omitempty"`
 }
 
-type WorkersInfo struct {
-	Name string `json:"name,omitempty"`
-	Addr string `json:"addr,omitempty"`
+type ExecutorsInfo struct {
+	Id         string `json:"id,omitempty"`
+	Name       string `json:"name,omitempty"`
+	Address    string `json:"address,omitempty"`
+	Capability int64  `json:"capability,omitempty"`
 }
 
 type LeaderInfo struct {
@@ -50,13 +57,27 @@ type masterClient struct {
 }
 
 func (c masterClient) GetMasters() ([]*MastersInfo, error) {
-	//TODO implement me
-	panic("implement me")
+	apiURL := fmt.Sprintf("%s/%s", c.url, listMastersPrefix)
+	body, err := httputil.GetBodyOK(c.httpClient, apiURL)
+	if err != nil {
+		return nil, err
+	}
+
+	var masters []*MastersInfo
+	err = json.Unmarshal(body, &masters)
+	return masters, err
 }
 
-func (c masterClient) GetExecutors() ([]*WorkersInfo, error) {
-	//TODO implement me
-	panic("implement me")
+func (c masterClient) GetExecutors() ([]*ExecutorsInfo, error) {
+	apiURL := fmt.Sprintf("%s/%s", c.url, listExecutorsPrefix)
+	body, err := httputil.GetBodyOK(c.httpClient, apiURL)
+	if err != nil {
+		return nil, err
+	}
+
+	var executors []*ExecutorsInfo
+	err = json.Unmarshal(body, &executors)
+	return executors, err
 }
 
 func (c masterClient) GetLeader() (LeaderInfo, error) {
@@ -71,7 +92,7 @@ func (c masterClient) GetLeader() (LeaderInfo, error) {
 }
 
 func (c masterClient) EvictLeader() error {
-	apiURL := fmt.Sprintf("%s/%s", c.url, leaderPrefix)
+	apiURL := fmt.Sprintf("%s/%s", c.url, leaderResignPrefix)
 	_, err := httputil.PostBodyOK(c.httpClient, apiURL, nil)
 	return err
 }
