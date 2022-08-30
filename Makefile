@@ -70,7 +70,7 @@ build: generate fmt vet ## Build manager binary.
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.
-	go run ./main.go
+	go run ./main.go -standalone-reconcile true
 
 .PHONY: run-test
 run-test: manifests generate fmt vet ## Run a test-controller from your host.
