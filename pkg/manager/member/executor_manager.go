@@ -423,7 +423,7 @@ func (m *executorMemberManager) getNewExecutorPVCTemp(tc *v1alpha1.TiflowCluster
 
 	rs, err := resource.ParseQuantity(storageSize)
 	if err != nil {
-		return nil, fmt.Errorf("connot parse storage request for tiflow-executor, tiflowCluster [%s/%s], error: %v",
+		return nil, fmt.Errorf("cannot parse storage request for tiflow-executor, tiflowCluster [%s/%s], error: %v",
 			tc.Namespace,
 			tc.Name, err)
 	}
