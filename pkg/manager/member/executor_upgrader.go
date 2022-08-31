@@ -34,7 +34,7 @@ func (u *executorUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSts, n
 	tcName := tc.GetName()
 
 	if !tc.Status.Executor.Synced {
-		return fmt.Errorf("tiflowCluster: [%s/%s]'s tiflow-executor status sunc failed,"+
+		return fmt.Errorf("tiflowCluster: [%s/%s]'s tiflow-executor status sync failed,"+
 			"can not to be upgraded", ns, tcName)
 	}
 
