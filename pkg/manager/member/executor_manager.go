@@ -254,7 +254,7 @@ func (m *executorMemberManager) getExecutorConfigMap(tc *v1alpha1.TiflowCluster)
 	// TODO: add discovery or full name to make sure executor can connect to alive master
 	masterHost := controller.TiflowMasterMemberName(tc.Name)
 	if tc.Heterogeneous() && tc.WithoutLocalMaster() {
-		masterHost = controller.TiflowMasterFullHost(tc.Spec.Cluster.Name, tc.Spec.Cluster.Name, tc.Spec.ClusterDomain) // use pd of reference cluster
+		masterHost = controller.TiflowMasterFullHost(tc.Spec.Cluster.Name, tc.Spec.Cluster.Namespace, tc.Spec.ClusterDomain) // use pd of reference cluster
 	}
 
 	startScript, err := RenderExecutorStartScript(&TiflowExecutorStartScriptModel{
@@ -521,7 +521,7 @@ func (m *executorMemberManager) getNewExecutorPodVols(tc *v1alpha1.TiflowCluster
 		})
 	}
 
-	for _, tlsClientSecretName := range tc.Spec.Master.TLSClientSecretNames {
+	for _, tlsClientSecretName := range tc.Spec.Executor.TLSClientSecretNames {
 		vols = append(vols, corev1.Volume{
 			Name: tlsClientSecretName, VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
@@ -607,7 +607,7 @@ func (m *executorMemberManager) getNewExecutorContainerVolsMount(tc *v1alpha1.Ti
 		})
 	}
 
-	for _, tlsClientSecretName := range tc.Spec.Master.TLSClientSecretNames {
+	for _, tlsClientSecretName := range tc.Spec.Executor.TLSClientSecretNames {
 		volMounts = append(volMounts, corev1.VolumeMount{
 			Name: tlsClientSecretName, ReadOnly: true, MountPath: clientCertPath + "/" + tlsClientSecretName,
 		})
