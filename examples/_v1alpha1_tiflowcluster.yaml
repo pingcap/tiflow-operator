@@ -15,16 +15,16 @@ spec:
     requests:
       storage: "1Gi"
     config: |
-      etcd-endpoints = ["etcd:2379"]
+      etcd-endpoints = ["etcd.default.svc:2379"]
       [framework-metastore-conf]
         schema = "example_framework"
-        endpoints = ["mysql:3306"]
+        endpoints = ["mysql.default.svc:3306"]
       [framework-metastore-conf.auth]
         user = "root"
         passwd = "123456"
       [business-metastore-conf]
         schema = "example_business"
-        endpoints = ["mysql:3306"]
+        endpoints = ["mysql.default.svc:3306"]
       [business-metastore-conf.auth]
         user = "root"
         passwd = "123456"
