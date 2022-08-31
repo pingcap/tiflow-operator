@@ -66,11 +66,10 @@ func (s *executorScaler) ScaleOut(meta metav1.Object, actual *appsv1.StatefulSet
 		}
 	}
 
-	// todo:
-	//if !tc.Status.Executor.Synced {
-	//	return errors.Errorf("tiflow cluster: [%s/%s]'s tiflow-executor status sync failed, can't scale up now",
-	//		ns, tcName)
-	//}
+	if !tc.Status.Executor.Synced {
+		return fmt.Errorf("tiflow cluster: [%s/%s]'s tiflow-executor status sync failed, can't scale up now",
+			ns, tcName)
+	}
 
 	klog.Infof("start to scaling up tiflow-executor statefulSet %s for [%s/%s], actual: %d, desired: %d",
 		stsName, ns, tcName, *actual.Spec.Replicas, *desired.Spec.Replicas)
@@ -114,11 +113,10 @@ func (s *executorScaler) ScaleIn(meta metav1.Object, actual *appsv1.StatefulSet,
 	tcName := tc.GetName()
 	stsName := actual.GetName()
 
-	// todo:
-	//if !tc.Status.Executor.Synced {
-	//	return errors.Errorf("tiflow cluster: [%s/%s]'s tiflow-executor status sync failed, can't scale down now",
-	//		ns, tcName)
-	//}
+	if !tc.Status.Executor.Synced {
+		return fmt.Errorf("tiflow cluster: [%s/%s]'s tiflow-executor status sync failed, can't scale down now",
+			ns, tcName)
+	}
 
 	klog.Infof("start to scaling down tiflow-executor statefulSet %s for [%s/%s], actual: %d, desired: %d",
 		stsName, ns, tcName, *actual.Spec.Replicas, *desired.Spec.Replicas)

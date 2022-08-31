@@ -654,8 +654,9 @@ func (m *masterMemberManager) syncTiflowClusterStatus(tc *pingcapcomv1alpha1.Tif
 	}
 
 	// TODO: WIP, need to get the information of memberDeleted and LastTransitionTime
-	for _, master := range mastersInfo {
-		tc.Status.Master.Members[master.Name] = pingcapcomv1alpha1.MasterMember{
+	members := make(map[string]pingcapcomv1alpha1.MasterMember)
+	for _, master := range mastersInfo.Masters {
+		members[master.Name] = pingcapcomv1alpha1.MasterMember{
 			Id:       master.ID,
 			Address:  master.Address,
 			IsLeader: master.IsLeader,
@@ -663,6 +664,7 @@ func (m *masterMemberManager) syncTiflowClusterStatus(tc *pingcapcomv1alpha1.Tif
 			Health:   true,
 		}
 	}
+	tc.Status.Master.Members = members
 
 	leader, err := tiflowClient.GetLeader()
 	if err != nil {

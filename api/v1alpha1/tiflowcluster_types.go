@@ -338,11 +338,11 @@ type TiflowClusterSpec struct {
 
 	// Tiflow-master cluster spec
 	// +optional
-	Master *MasterSpec `json:"master"`
+	Master *MasterSpec `json:"master,omitempty"`
 
 	// Tiflow-executor cluster spec
 	// +optional
-	Executor *ExecutorSpec `json:"executor"`
+	Executor *ExecutorSpec `json:"executor,omitempty"`
 
 	// TiDB cluster version
 	// +optional

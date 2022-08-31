@@ -523,14 +523,17 @@ func (m *executorMemberManager) getNewExecutorPodVols(tc *v1alpha1.TiflowCluster
 		})
 	}
 
-	for _, tlsClientSecretName := range tc.Spec.Master.TLSClientSecretNames {
-		vols = append(vols, corev1.Volume{
-			Name: tlsClientSecretName, VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: tlsClientSecretName,
+	if tc.Spec.Master != nil {
+		for _, tlsClientSecretName := range tc.Spec.Master.TLSClientSecretNames {
+			vols = append(vols, corev1.Volume{
+				Name: tlsClientSecretName, VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: tlsClientSecretName,
+					},
 				},
-			},
-		})
+			})
+		}
+
 	}
 
 	return vols
@@ -609,10 +612,12 @@ func (m *executorMemberManager) getNewExecutorContainerVolsMount(tc *v1alpha1.Ti
 		})
 	}
 
-	for _, tlsClientSecretName := range tc.Spec.Master.TLSClientSecretNames {
-		volMounts = append(volMounts, corev1.VolumeMount{
-			Name: tlsClientSecretName, ReadOnly: true, MountPath: clientCertPath + "/" + tlsClientSecretName,
-		})
+	if tc.Spec.Master != nil {
+		for _, tlsClientSecretName := range tc.Spec.Master.TLSClientSecretNames {
+			volMounts = append(volMounts, corev1.VolumeMount{
+				Name: tlsClientSecretName, ReadOnly: true, MountPath: clientCertPath + "/" + tlsClientSecretName,
+			})
+		}
 	}
 
 	// get Annotation mount info, and add it
@@ -651,7 +656,7 @@ func (m *executorMemberManager) syncExecutorStatus(tc *v1alpha1.TiflowCluster, s
 		return err
 	}
 
-	if tc.ExecutorStsDesiredReplicas() == *sts.Spec.Replicas {
+	if tc.ExecutorStsDesiredReplicas() != *sts.Spec.Replicas {
 		tc.Status.Executor.Phase = v1alpha1.ScalePhase
 	} else if upgrading {
 		tc.Status.Executor.Phase = v1alpha1.UpgradePhase
@@ -684,14 +689,17 @@ func (m *executorMemberManager) syncExecutorStatus(tc *v1alpha1.TiflowCluster, s
 
 	// todo: WIP, get information about the FailureMembers and FailoverUID through the MasterClient
 	// sync executors info
-	for _, e := range executorsInfo {
-		tc.Status.Executor.Members[e.Name] = v1alpha1.ExecutorMember{
-			Id:         e.Id,
+	members := make(map[string]v1alpha1.ExecutorMember)
+	for _, e := range executorsInfo.Executors {
+		members[e.Name] = v1alpha1.ExecutorMember{
+			Id:         e.ID,
 			Name:       e.Name,
 			Addr:       e.Address,
 			Capability: e.Capability,
 		}
 	}
+	tc.Status.Executor.Members = members
+	tc.Status.Executor.Synced = true
 
 	// get follows from podName
 	tc.Status.Executor.Image = ""

@@ -17,8 +17,8 @@ const (
 // MasterClient provides master server's api
 type MasterClient interface {
 	// GetMasters returns all master members from cluster
-	GetMasters() ([]*MastersInfo, error)
-	GetExecutors() ([]*ExecutorsInfo, error)
+	GetMasters() (MastersInfo, error)
+	GetExecutors() (ExecutorsInfo, error)
 	GetLeader() (LeaderInfo, error)
 	EvictLeader() error
 	DeleteMaster(name string) error
@@ -32,18 +32,26 @@ const (
 	listExecutorsPrefix = "api/v1/executors"
 )
 
-type MastersInfo struct {
+type Master struct {
 	ID       string `json:"id,omitempty"`
 	Name     string `json:"name,omitempty"`
 	Address  string `json:"address,omitempty"`
 	IsLeader bool   `json:"is_leader,omitempty"`
 }
 
-type ExecutorsInfo struct {
-	Id         string `json:"id,omitempty"`
+type MastersInfo struct {
+	Masters []*Master `json:"masters,omitempty"`
+}
+
+type Executor struct {
+	ID         string `json:"id,omitempty"`
 	Name       string `json:"name,omitempty"`
 	Address    string `json:"address,omitempty"`
 	Capability int64  `json:"capability,omitempty"`
+}
+
+type ExecutorsInfo struct {
+	Executors []*Executor `json:"executors,omitempty"`
 }
 
 type LeaderInfo struct {
@@ -56,26 +64,26 @@ type masterClient struct {
 	httpClient *http.Client
 }
 
-func (c masterClient) GetMasters() ([]*MastersInfo, error) {
+func (c masterClient) GetMasters() (MastersInfo, error) {
 	apiURL := fmt.Sprintf("%s/%s", c.url, listMastersPrefix)
 	body, err := httputil.GetBodyOK(c.httpClient, apiURL)
 	if err != nil {
-		return nil, err
+		return MastersInfo{}, err
 	}
 
-	var masters []*MastersInfo
+	var masters MastersInfo
 	err = json.Unmarshal(body, &masters)
 	return masters, err
 }
 
-func (c masterClient) GetExecutors() ([]*ExecutorsInfo, error) {
+func (c masterClient) GetExecutors() (ExecutorsInfo, error) {
 	apiURL := fmt.Sprintf("%s/%s", c.url, listExecutorsPrefix)
 	body, err := httputil.GetBodyOK(c.httpClient, apiURL)
 	if err != nil {
-		return nil, err
+		return ExecutorsInfo{}, err
 	}
 
-	var executors []*ExecutorsInfo
+	var executors ExecutorsInfo
 	err = json.Unmarshal(body, &executors)
 	return executors, err
 }
