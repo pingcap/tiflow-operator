@@ -49,9 +49,5 @@ func MasterClientURL(namespace, clusterName, podName, scheme string, hetero Hete
 		return fmt.Sprintf("%s://%s-tiflow-master.%s.svc:10240", scheme, hetero.Name, hetero.Namespace)
 	}
 
-	res := fmt.Sprintf("%s://%s%s-tiflow-master%s.%s.svc:10240", scheme, podName, clusterName, peer, namespace)
-
-	klog.Info(res)
-
-	return res
+	return fmt.Sprintf("%s://%s%s-tiflow-master%s.%s.svc:10240", scheme, podName, clusterName, peer, namespace)
 }

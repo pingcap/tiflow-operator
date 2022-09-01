@@ -1,13 +1,44 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: basic-0
----
 apiVersion: pingcap.com/v1alpha1
 kind: TiflowCluster
 metadata:
   name: basic
-  namespace: basic-0
+spec:
+  version: latest
+  configUpdateStrategy: RollingUpdate
+  imagePullPolicy: Always
+  master:
+    baseImage: chunzhuli/dataflow
+    maxFailoverCount: 0
+    replicas: 3
+    # if storageClassName is not set, the default Storage Class of the Kubernetes cluster will be used
+    # storageClassName: local-storage
+    requests:
+      storage: "1Gi"
+    config: |
+      etcd-endpoints = ["etcd.default.svc:2379"]
+      [framework-metastore-conf]
+        schema = "example_framework"
+        endpoints = ["mysql.default.svc:3306"]
+      [framework-metastore-conf.auth]
+        user = "root"
+        passwd = "123456"
+      [business-metastore-conf]
+        schema = "example_business"
+        endpoints = ["mysql.default.svc:3306"]
+      [business-metastore-conf.auth]
+        user = "root"
+        passwd = "123456"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hetero-0
+---
+apiVersion: pingcap.com/v1alpha1
+kind: TiflowCluster
+metadata:
+  name: hetero
+  namespace: hetero-0
 spec:
   version: latest
   configUpdateStrategy: RollingUpdate
@@ -28,13 +59,13 @@ spec:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: basic-1
+  name: hetero-1
 ---
 apiVersion: pingcap.com/v1alpha1
 kind: TiflowCluster
 metadata:
-  name: basic
-  namespace: basic-1
+  name: hetero
+  namespace: hetero-1
 spec:
   version: latest
   configUpdateStrategy: RollingUpdate
@@ -55,13 +86,13 @@ spec:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: basic-2
+  name: hetero-2
 ---
 apiVersion: pingcap.com/v1alpha1
 kind: TiflowCluster
 metadata:
-  name: basic
-  namespace: basic-2
+  name: hetero
+  namespace: hetero-2
 spec:
   version: latest
   configUpdateStrategy: RollingUpdate

@@ -33,7 +33,7 @@ import (
 	"github.com/pingcap/tiflow-operator/pkg/controller/tiflowcluster"
 )
 
-const Version = "2022.09.01.01/4"
+const Version = "2022.09.01.01/8"
 
 // TiflowClusterReconciler reconciles a TiflowCluster object
 type TiflowClusterReconciler struct {
