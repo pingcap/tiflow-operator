@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/klog/v2"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -31,6 +32,8 @@ import (
 	pingcapcomv1alpha1 "github.com/pingcap/tiflow-operator/api/v1alpha1"
 	"github.com/pingcap/tiflow-operator/pkg/controller/tiflowcluster"
 )
+
+const Version = "2022.09.01.01/4"
 
 // TiflowClusterReconciler reconciles a TiflowCluster object
 type TiflowClusterReconciler struct {
@@ -54,6 +57,8 @@ func NewTiflowClusterReconciler(cli client.Client, clientSet kubernetes.Interfac
 //+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;update;delete
 //+kubebuilder:rbac:groups="",resources=endpoints,verbs=get;list;watch
 //+kubebuilder:rbac:groups=apps,resources=statefulsets;deployments,verbs=*
+//+kubebuilder:rbac:groups=apps,resources=statefulsets/scale,verbs=get;watch;update
+//+kubebuilder:rbac:groups=apps,resources=statefulsets/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=core,resources=persistentvolumes,verbs=get;list;update;delete
 //+kubebuilder:rbac:groups=core,resources=persistentvolumeclaims,verbs=get;list;update;delete
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=*
@@ -70,6 +75,8 @@ func NewTiflowClusterReconciler(cli client.Client, clientSet kubernetes.Interfac
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.1/pkg/reconcile
 func (r *TiflowClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
+
+	klog.Infof("Current Version: %s", Version)
 
 	tc := &pingcapcomv1alpha1.TiflowCluster{}
 

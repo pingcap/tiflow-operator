@@ -144,7 +144,6 @@ func (m *masterMemberManager) syncMasterServiceForTiflowCluster(ctx context.Cont
 
 	newSvc := m.getNewMasterServiceForTiflowCluster(tc)
 	oldSvcTmp := &corev1.Service{}
-	klog.Infof("start to get svc %s.%s", ns, controller.TiflowMasterMemberName(tcName))
 	err := m.cli.Get(ctx, types.NamespacedName{
 		Namespace: ns,
 		Name:      controller.TiflowMasterMemberName(tcName),
@@ -632,7 +631,8 @@ func (m *masterMemberManager) syncTiflowClusterStatus(tc *pingcapcomv1alpha1.Tif
 	}
 
 	// TODO: add status info after tiflow master interface stable
-	tiflowClient := tiflowapi.GetMasterClient(m.cli, ns, tcName, "", tc.IsClusterTLSEnabled())
+	hetero := tiflowapi.Heterogeneous{}
+	tiflowClient := tiflowapi.GetMasterClient(m.cli, ns, tcName, "", tc.IsClusterTLSEnabled(), hetero)
 
 	mastersInfo, err := tiflowClient.GetMasters()
 	if err != nil {
@@ -656,7 +656,12 @@ func (m *masterMemberManager) syncTiflowClusterStatus(tc *pingcapcomv1alpha1.Tif
 	// TODO: WIP, need to get the information of memberDeleted and LastTransitionTime
 	members := make(map[string]pingcapcomv1alpha1.MasterMember)
 	for _, master := range mastersInfo.Masters {
-		members[master.Name] = pingcapcomv1alpha1.MasterMember{
+		masterName, err := formatMasterName(master.Address)
+		if err != nil {
+			return err
+		}
+
+		members[masterName] = pingcapcomv1alpha1.MasterMember{
 			Id:       master.ID,
 			Address:  master.Address,
 			IsLeader: master.IsLeader,
@@ -694,4 +699,14 @@ func findContainerByName(sts *apps.StatefulSet, containerName string) *corev1.Co
 		}
 	}
 	return nil
+}
+
+func formatMasterName(name string) (string, error) {
+	nameSlice := strings.Split(name, ".")
+	if len(nameSlice) != 4 {
+		return "", fmt.Errorf("split name %s error", name)
+	}
+
+	res := fmt.Sprintf("%s/Master: %s", nameSlice[2], nameSlice[0])
+	return res, nil
 }

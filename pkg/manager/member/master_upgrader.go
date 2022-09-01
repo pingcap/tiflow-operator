@@ -121,5 +121,6 @@ func (u *masterUpgrader) upgradeMasterPod(tc *v1alpha1.TiflowCluster, ordinal in
 }
 
 func (u *masterUpgrader) evictMasterLeader(tc *v1alpha1.TiflowCluster, podName string) error {
-	return tiflowapi.GetMasterClient(u.cli, tc.GetNamespace(), tc.GetName(), podName, tc.IsClusterTLSEnabled()).EvictLeader()
+	herero := tiflowapi.Heterogeneous{}
+	return tiflowapi.GetMasterClient(u.cli, tc.GetNamespace(), tc.GetName(), podName, tc.IsClusterTLSEnabled(), herero).EvictLeader()
 }

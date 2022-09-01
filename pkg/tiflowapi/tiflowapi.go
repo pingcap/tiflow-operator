@@ -47,7 +47,7 @@ type Executor struct {
 	ID         string `json:"id,omitempty"`
 	Name       string `json:"name,omitempty"`
 	Address    string `json:"address,omitempty"`
-	Capability int64  `json:"capability,omitempty"`
+	Capability string `json:"capability,omitempty"`
 }
 
 type ExecutorsInfo struct {

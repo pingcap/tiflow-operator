@@ -2,6 +2,7 @@ package member
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -523,17 +524,14 @@ func (m *executorMemberManager) getNewExecutorPodVols(tc *v1alpha1.TiflowCluster
 		})
 	}
 
-	if tc.Spec.Master != nil {
-		for _, tlsClientSecretName := range tc.Spec.Executor.TLSClientSecretNames {
-			vols = append(vols, corev1.Volume{
-				Name: tlsClientSecretName, VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: tlsClientSecretName,
-					},
+	for _, tlsClientSecretName := range tc.Spec.Executor.TLSClientSecretNames {
+		vols = append(vols, corev1.Volume{
+			Name: tlsClientSecretName, VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: tlsClientSecretName,
 				},
-			})
-		}
-
+			},
+		})
 	}
 
 	return vols
@@ -612,12 +610,10 @@ func (m *executorMemberManager) getNewExecutorContainerVolsMount(tc *v1alpha1.Ti
 		})
 	}
 
-	if tc.Spec.Master != nil {
-		for _, tlsClientSecretName := range tc.Spec.Executor.TLSClientSecretNames {
-			volMounts = append(volMounts, corev1.VolumeMount{
-				Name: tlsClientSecretName, ReadOnly: true, MountPath: clientCertPath + "/" + tlsClientSecretName,
-			})
-		}
+	for _, tlsClientSecretName := range tc.Spec.Executor.TLSClientSecretNames {
+		volMounts = append(volMounts, corev1.VolumeMount{
+			Name: tlsClientSecretName, ReadOnly: true, MountPath: clientCertPath + "/" + tlsClientSecretName,
+		})
 	}
 
 	// get Annotation mount info, and add it
@@ -645,9 +641,6 @@ func (m *executorMemberManager) syncExecutorStatus(tc *v1alpha1.TiflowCluster, s
 		return nil
 	}
 
-	ns := tc.GetNamespace()
-	tcName := tc.GetName()
-
 	// update the status of statefulSet which created by executor in the cluster
 	tc.Status.Executor.StatefulSet = &sts.Status
 
@@ -665,41 +658,10 @@ func (m *executorMemberManager) syncExecutorStatus(tc *v1alpha1.TiflowCluster, s
 		tc.Status.Executor.Phase = v1alpha1.NormalPhase
 	}
 
-	tiflowClient := tiflowapi.GetMasterClient(m.cli, ns, tcName, "", tc.IsClusterTLSEnabled())
-
-	// get executors info from master
-	executorsInfo, err := tiflowClient.GetExecutors()
+	tc.Status.Executor.Members, err = m.syncExecutorMembersStatus(tc)
 	if err != nil {
-		tc.Status.Executor.Synced = false
-		// get endpoints info
-		eps := &corev1.Endpoints{}
-		epErr := m.cli.Get(context.TODO(), types.NamespacedName{
-			Namespace: ns,
-			Name:      controller.TiflowMasterMemberName(tcName),
-		}, eps)
-		if epErr != nil {
-			return fmt.Errorf("syncTiflowClusterStatus: failed to get endpoints %s for cluster %s/%s, err: %s, epErr %s",
-				controller.TiflowMasterMemberName(tcName), ns, tcName, err, epErr)
-		}
-		if eps != nil && len(eps.Subsets) == 0 {
-			return fmt.Errorf("%s, service %s/%s has no endpoints",
-				err, ns, controller.TiflowMasterMemberName(tcName))
-		}
 		return err
 	}
-
-	// todo: WIP, get information about the FailureMembers and FailoverUID through the MasterClient
-	// sync executors info
-	members := make(map[string]v1alpha1.ExecutorMember)
-	for _, e := range executorsInfo.Executors {
-		members[e.Name] = v1alpha1.ExecutorMember{
-			Id:         e.ID,
-			Name:       e.Name,
-			Addr:       e.Address,
-			Capability: e.Capability,
-		}
-	}
-	tc.Status.Executor.Members = members
 	tc.Status.Executor.Synced = true
 
 	// get follows from podName
@@ -782,4 +744,132 @@ func (m *executorMemberManager) syncVolsStatus(tc *v1alpha1.TiflowCluster, sts *
 	}
 
 	return nil
+}
+
+func (m *executorMemberManager) syncExecutorMembersStatus(tc *v1alpha1.TiflowCluster) (map[string]v1alpha1.ExecutorMember, error) {
+	if tc.Heterogeneous() && tc.Spec.Master == nil {
+		return m.syncExecutorsStatusWithHetero(tc)
+	}
+
+	return m.syncExecutorsStatusWithoutHetero(tc)
+}
+
+func (m *executorMemberManager) syncExecutorsStatusWithoutHetero(tc *v1alpha1.TiflowCluster) (map[string]v1alpha1.ExecutorMember, error) {
+	hetero := tiflowapi.Heterogeneous{}
+	ns := tc.GetNamespace()
+	tcName := tc.GetName()
+	tiflowClient := tiflowapi.GetMasterClient(m.cli, ns, tcName, "", tc.IsClusterTLSEnabled(), hetero)
+
+	// get executors info from master
+	executorsInfo, err := tiflowClient.GetExecutors()
+	if err != nil {
+		tc.Status.Executor.Synced = false
+		// get endpoints info
+		eps := &corev1.Endpoints{}
+		epErr := m.cli.Get(context.TODO(), types.NamespacedName{
+			Namespace: ns,
+			Name:      controller.TiflowMasterMemberName(tcName),
+		}, eps)
+		if epErr != nil {
+			return nil, fmt.Errorf("syncTiflowClusterStatus: failed to get endpoints %s for cluster %s/%s, err: %s, epErr %s",
+				controller.TiflowMasterMemberName(tcName), ns, tcName, err, epErr)
+		}
+		if eps != nil && len(eps.Subsets) == 0 {
+			return nil, fmt.Errorf("%s, service %s/%s has no endpoints",
+				err, ns, controller.TiflowMasterMemberName(tcName))
+		}
+		return nil, err
+	}
+
+	return syncExecutorMembers(executorsInfo)
+}
+
+func (m *executorMemberManager) syncExecutorsStatusWithHetero(tc *v1alpha1.TiflowCluster) (map[string]v1alpha1.ExecutorMember, error) {
+	ns := tc.Spec.Cluster.Namespace
+	tcName := tc.Spec.Cluster.Name
+
+	hetero := tiflowapi.Heterogeneous{}
+	if tc.Heterogeneous() && tc.Spec.Master == nil {
+		hetero.Hetero = true
+		hetero.Namespace = ns
+		hetero.Name = tcName
+	}
+
+	tiflowClient := tiflowapi.GetMasterClient(m.cli, ns, tcName, "", tc.IsClusterTLSEnabled(), hetero)
+
+	// get executors info from master
+	executorsInfo, err := tiflowClient.GetExecutors()
+	if err != nil {
+		tc.Status.Executor.Synced = false
+		// get endpoints info
+		eps := &corev1.Endpoints{}
+		epErr := m.cli.Get(context.TODO(), types.NamespacedName{
+			Namespace: ns,
+			Name:      controller.TiflowMasterMemberName(tcName),
+		}, eps)
+		if epErr != nil {
+			return nil, fmt.Errorf("syncTiflowClusterStatus: failed to get endpoints %s for cluster %s/%s, err: %s, epErr %s",
+				controller.TiflowMasterMemberName(tcName), ns, tcName, err, epErr)
+		}
+		if eps != nil && len(eps.Subsets) == 0 {
+			return nil, fmt.Errorf("%s, service %s/%s has no endpoints",
+				err, ns, controller.TiflowMasterMemberName(tcName))
+		}
+		return nil, err
+	}
+	return syncExecutorMembers(executorsInfo)
+}
+
+func syncExecutorMembers(executors tiflowapi.ExecutorsInfo) (map[string]v1alpha1.ExecutorMember, error) {
+	// todo: WIP, get information about the FailureMembers and FailoverUID through the MasterClient
+	// sync executors info
+	members := make(map[string]v1alpha1.ExecutorMember)
+	for _, e := range executors.Executors {
+		c, err := handleCapability(e.Capability)
+		if err != nil {
+			return nil, err
+		}
+
+		memberName, err := formatExecutorName(e.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		members[memberName] = v1alpha1.ExecutorMember{
+			Id:         e.ID,
+			Name:       e.Name,
+			Addr:       e.Address,
+			Capability: c,
+		}
+	}
+
+	return members, nil
+}
+
+func handleCapability(o string) (int64, error) {
+	var i interface{}
+	d := json.NewDecoder(strings.NewReader(o))
+	d.UseNumber()
+
+	if err := d.Decode(&i); err != nil {
+		return -1, err
+	}
+
+	n := i.(json.Number)
+	res, err := n.Int64()
+	if err != nil {
+		return -1, err
+	}
+
+	return res, nil
+}
+
+func formatExecutorName(name string) (string, error) {
+	nameSlice := strings.Split(name, ".")
+	if len(nameSlice) != 4 {
+		return "", fmt.Errorf("split name %s error", name)
+	}
+
+	res := fmt.Sprintf("%s/Executor: %s", nameSlice[2], nameSlice[0])
+	return res, nil
 }
