@@ -3,7 +3,6 @@ package tiflowapi
 import (
 	"crypto/tls"
 	"fmt"
-
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -39,5 +38,7 @@ func MasterClientURL(namespace, clusterName, podName, scheme string) string {
 		podName += "."
 		peer = "-peer"
 	}
+
 	return fmt.Sprintf("%s://%s%s-tiflow-master%s.%s.svc:10240", scheme, podName, clusterName, peer, namespace)
+
 }

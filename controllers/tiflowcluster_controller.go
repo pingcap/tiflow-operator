@@ -18,12 +18,11 @@ package controllers
 
 import (
 	"context"
-	"k8s.io/client-go/kubernetes"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -52,7 +51,12 @@ func NewTiflowClusterReconciler(cli client.Client, clientSet kubernetes.Interfac
 //+kubebuilder:rbac:groups=pingcap.com,resources=tiflowclusters/finalizers,verbs=update
 //+kubebuilder:rbac:groups="",resources=configmaps;secrets;services;persistentvolumeclaims;persistentvolumes,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;update;delete
+//+kubebuilder:rbac:groups="",resources=endpoints,verbs=get;list;watch
 //+kubebuilder:rbac:groups=apps,resources=statefulsets;deployments,verbs=*
+//+kubebuilder:rbac:groups=apps,resources=statefulsets/scale,verbs=get;watch;update
+//+kubebuilder:rbac:groups=apps,resources=statefulsets/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=core,resources=persistentvolumes,verbs=get;list;update;delete
+//+kubebuilder:rbac:groups=core,resources=persistentvolumeclaims,verbs=get;list;update;delete
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=*
 //+kubebuilder:rbac:groups=storage.k8s.io,resources=storageclasses,verbs=get;list;watch
 

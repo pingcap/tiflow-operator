@@ -2,8 +2,10 @@ package member
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/client-go/kubernetes"
@@ -44,18 +46,20 @@ const (
 
 // executorMemberManager implements interface of Manager.
 type executorMemberManager struct {
-	cli      client.Client
-	scaler   Scaler
-	upgrader Upgrader
+	cli       client.Client
+	clientSet kubernetes.Interface
+	scaler    Scaler
+	upgrader  Upgrader
 }
 
 func NewExecutorMemberManager(cli client.Client, clientSet kubernetes.Interface) manager.TiflowManager {
 
 	// todo: need to implement the logic for Failover
 	return &executorMemberManager{
-		cli:      cli,
-		scaler:   NewExecutorScaler(clientSet),
-		upgrader: NewExecutorUpgrader(cli),
+		cli:       cli,
+		clientSet: clientSet,
+		scaler:    NewExecutorScaler(clientSet),
+		upgrader:  NewExecutorUpgrader(cli),
 	}
 }
 
@@ -638,9 +642,6 @@ func (m *executorMemberManager) syncExecutorStatus(tc *v1alpha1.TiflowCluster, s
 		return nil
 	}
 
-	ns := tc.GetNamespace()
-	tcName := tc.GetName()
-
 	// update the status of statefulSet which created by executor in the cluster
 	tc.Status.Executor.StatefulSet = &sts.Status
 
@@ -650,7 +651,7 @@ func (m *executorMemberManager) syncExecutorStatus(tc *v1alpha1.TiflowCluster, s
 		return err
 	}
 
-	if tc.ExecutorStsDesiredReplicas() == *sts.Spec.Replicas {
+	if tc.ExecutorStsDesiredReplicas() != *sts.Spec.Replicas {
 		tc.Status.Executor.Phase = v1alpha1.ScalePhase
 	} else if upgrading {
 		tc.Status.Executor.Phase = v1alpha1.UpgradePhase
@@ -658,28 +659,21 @@ func (m *executorMemberManager) syncExecutorStatus(tc *v1alpha1.TiflowCluster, s
 		tc.Status.Executor.Phase = v1alpha1.NormalPhase
 	}
 
-	// todo: Get information about the Executor Members, FailureMembers and FailoverUID through the Master API
-	// todo: Or may be get info through the Sts Status
-	// TOBE
-	tiflowClient := tiflowapi.GetMasterClient(m.cli, ns, tcName, "", tc.IsClusterTLSEnabled())
-	_, err = tiflowClient.GetLeader()
+	tc.Status.Executor.Members, err = m.syncExecutorMembersStatus(tc)
 	if err != nil {
-		tc.Status.Master.Synced = false
 		return err
 	}
-
-	// todo: get member's infos for master
-	// todo: get failure members and UID
+	tc.Status.Executor.Synced = true
 
 	// get follows from podName
 	tc.Status.Executor.Image = ""
-	if c := m.getContainerByName(sts, "tiflow-executor"); c != nil {
+	if c := m.findContainerByName(sts, "tiflow-executor"); c != nil {
 		tc.Status.Executor.Image = c.Image
 	}
 
 	// todo: Need to get the info of volumes which running container has bound
 	// todo: Waiting for discussion
-	// vols,err := m.getVolsByName()
+	//m.syncVolsStatus(tc,sts)
 	tc.Status.Executor.Volumes = nil
 
 	return nil
@@ -716,7 +710,7 @@ func (m *executorMemberManager) executorStatefulSetIsUpgrading(tc *v1alpha1.Tifl
 	return false, nil
 }
 
-func (m *executorMemberManager) getContainerByName(sts *appsv1.StatefulSet, containerName string) *corev1.Container {
+func (m *executorMemberManager) findContainerByName(sts *appsv1.StatefulSet, containerName string) *corev1.Container {
 	for _, container := range sts.Spec.Template.Spec.Containers {
 		if container.Name == containerName {
 			return &container
@@ -725,7 +719,126 @@ func (m *executorMemberManager) getContainerByName(sts *appsv1.StatefulSet, cont
 	return nil
 }
 
-func (m *executorMemberManager) getVolsByName(tc *v1alpha1.TiflowCluster, sts *appsv1.StatefulSet, podName string) (map[string]*v1alpha1.StorageVolumeStatus, error) {
+func (m *executorMemberManager) syncVolsStatus(tc *v1alpha1.TiflowCluster, sts *appsv1.StatefulSet) error {
 	// todo:
-	return nil, nil
+	selector, err := metav1.LabelSelectorAsSelector(sts.Spec.Selector)
+	if err != nil {
+		klog.Errorf("converting statefulSet %s selector to metav1 selector", sts.Name)
+		return err
+	}
+
+	pvs, err := m.clientSet.CoreV1().PersistentVolumes().List(context.TODO(), metav1.ListOptions{
+		LabelSelector: selector.String(),
+	})
+
+	for _, pv := range pvs.Items {
+		tc.Status.Executor.Volumes[pv.Name] = &v1alpha1.StorageVolumeStatus{
+			Name: DefaultStorageName,
+			ObservedStorageVolumeStatus: v1alpha1.ObservedStorageVolumeStatus{
+				BoundCount:      1,
+				CurrentCount:    1,
+				ResizedCount:    1,
+				CurrentCapacity: resource.Quantity{},
+				ResizedCapacity: resource.Quantity{},
+			},
+		}
+	}
+
+	return nil
+}
+
+func (m *executorMemberManager) syncExecutorMembersStatus(tc *v1alpha1.TiflowCluster) (map[string]v1alpha1.ExecutorMember, error) {
+	ns := tc.GetNamespace()
+	tcName := tc.GetName()
+
+	if tc.Heterogeneous() && tc.WithoutLocalMaster() {
+		ns = tc.Spec.Cluster.Namespace
+		tcName = tc.Spec.Cluster.Name
+	}
+
+	tiflowClient := tiflowapi.GetMasterClient(m.cli, ns, tcName, "", tc.IsClusterTLSEnabled())
+
+	// get executors info from master
+	executorsInfo, err := tiflowClient.GetExecutors()
+	if err != nil {
+		tc.Status.Executor.Synced = false
+		// get endpoints info
+		eps := &corev1.Endpoints{}
+		epErr := m.cli.Get(context.TODO(), types.NamespacedName{
+			Namespace: ns,
+			Name:      controller.TiflowMasterMemberName(tcName),
+		}, eps)
+		if epErr != nil {
+			return nil, fmt.Errorf("syncTiflowClusterStatus: failed to get endpoints %s for cluster %s/%s, err: %s, epErr %s",
+				controller.TiflowMasterMemberName(tcName), ns, tcName, err, epErr)
+		}
+		if eps != nil && len(eps.Subsets) == 0 {
+			return nil, fmt.Errorf("%s, service %s/%s has no endpoints",
+				err, ns, controller.TiflowMasterMemberName(tcName))
+		}
+		return nil, err
+	}
+
+	return syncExecutorMembers(tc, executorsInfo)
+}
+
+func syncExecutorMembers(tc *v1alpha1.TiflowCluster, executors tiflowapi.ExecutorsInfo) (map[string]v1alpha1.ExecutorMember, error) {
+	// todo: WIP, get information about the FailureMembers and FailoverUID through the MasterClient
+	// sync executors info
+	ns := tc.GetNamespace()
+	members := make(map[string]v1alpha1.ExecutorMember)
+	for _, e := range executors.Executors {
+		// todo: WIP
+		if !strings.Contains(e.Address, ns) {
+			continue
+		}
+
+		c, err := handleCapability(e.Capability)
+		if err != nil {
+			return nil, err
+		}
+
+		memberName, err := formatExecutorName(e.Address)
+		if err != nil {
+			return nil, err
+		}
+
+		members[memberName] = v1alpha1.ExecutorMember{
+			Id:                 e.ID,
+			Name:               e.Name,
+			Addr:               e.Address,
+			Capability:         c,
+			LastTransitionTime: metav1.NewTime(time.Now()),
+		}
+	}
+
+	return members, nil
+}
+
+func handleCapability(o string) (int64, error) {
+	var i interface{}
+	d := json.NewDecoder(strings.NewReader(o))
+	d.UseNumber()
+
+	if err := d.Decode(&i); err != nil {
+		return -1, err
+	}
+
+	n := i.(json.Number)
+	res, err := n.Int64()
+	if err != nil {
+		return -1, err
+	}
+
+	return res, nil
+}
+
+func formatExecutorName(name string) (string, error) {
+	nameSlice := strings.Split(name, ".")
+	if len(nameSlice) != 4 {
+		return "", fmt.Errorf("split name %s error", name)
+	}
+
+	res := fmt.Sprintf("%s.%s", nameSlice[0], nameSlice[2])
+	return res, nil
 }

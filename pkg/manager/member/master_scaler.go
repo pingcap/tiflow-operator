@@ -12,7 +12,6 @@ import (
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/pingcap/errors"
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
 	"github.com/pingcap/tiflow-operator/pkg/controller"
 	"github.com/pingcap/tiflow-operator/pkg/tiflowapi"
@@ -55,7 +54,7 @@ func (s masterScaler) ScaleOut(meta metav1.Object, actual *apps.StatefulSet, des
 	stsName := actual.GetName()
 
 	if !tc.Status.Master.Synced {
-		return errors.Errorf("tiflow cluster: [%s/%s]'s tiflow-master status sync failed, can't scale up now",
+		return fmt.Errorf("tiflow cluster: [%s/%s]'s tiflow-master status sync failed, can't scale up now",
 			ns, tcName)
 	}
 
@@ -103,7 +102,7 @@ func (s masterScaler) ScaleIn(meta metav1.Object, actual *apps.StatefulSet, desi
 	stsName := actual.GetName()
 
 	if !tc.Status.Master.Synced {
-		return errors.Errorf("tiflow cluster: %s/%s's tiflow-master status sync failed, can't scale out now",
+		return fmt.Errorf("tiflow cluster: %s/%s's tiflow-master status sync failed, can't scale out now",
 			ns, tcName)
 	}
 

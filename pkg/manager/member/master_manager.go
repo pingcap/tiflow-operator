@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"k8s.io/client-go/kubernetes"
 	"strings"
+	"time"
 
 	apps "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -144,7 +145,6 @@ func (m *masterMemberManager) syncMasterServiceForTiflowCluster(ctx context.Cont
 
 	newSvc := m.getNewMasterServiceForTiflowCluster(tc)
 	oldSvcTmp := &corev1.Service{}
-	klog.Infof("start to get svc %s.%s", ns, controller.TiflowMasterMemberName(tcName))
 	err := m.cli.Get(ctx, types.NamespacedName{
 		Namespace: ns,
 		Name:      controller.TiflowMasterMemberName(tcName),
@@ -634,25 +634,48 @@ func (m *masterMemberManager) syncTiflowClusterStatus(tc *pingcapcomv1alpha1.Tif
 	// TODO: add status info after tiflow master interface stable
 	tiflowClient := tiflowapi.GetMasterClient(m.cli, ns, tcName, "", tc.IsClusterTLSEnabled())
 
-	// TODO: add GetMasters() after it's supported by tiflow
-	//mastersInfo, err := tiflowClient.GetMasters()
-	//if err != nil {
-	//	tc.Status.Master.Synced = false
-	//	// get endpoints info
-	//	eps := &corev1.Endpoints{}
-	//	epErr := m.cli.Get(context.TODO(), types.NamespacedName{
-	//		Namespace: ns,
-	//		Name:      controller.TiflowMasterMemberName(tcName),
-	//	}, eps)
-	//	if epErr != nil {
-	//		return fmt.Errorf("syncTiflowClusterStatus: failed to get endpoints %s for cluster %s/%s, err: %s, epErr %s", controller.TiflowMasterMemberName(tcName), ns, tcName, err, epErr)
-	//	}
-	//	// tiflow-master service has no endpoints
-	//	if eps != nil && len(eps.Subsets) == 0 {
-	//		return fmt.Errorf("%s, service %s/%s has no endpoints", err, ns, controller.TiflowMasterMemberName(tcName))
-	//	}
-	//	return err
-	//}
+	mastersInfo, err := tiflowClient.GetMasters()
+	if err != nil {
+		tc.Status.Master.Synced = false
+		// get endpoints info
+		eps := &corev1.Endpoints{}
+		epErr := m.cli.Get(context.TODO(), types.NamespacedName{
+			Namespace: ns,
+			Name:      controller.TiflowMasterMemberName(tcName),
+		}, eps)
+		if epErr != nil {
+			return fmt.Errorf("syncTiflowClusterStatus: failed to get endpoints %s for cluster %s/%s, err: %s, epErr %s", controller.TiflowMasterMemberName(tcName), ns, tcName, err, epErr)
+		}
+		// tiflow-master service has no endpoints
+		if eps != nil && len(eps.Subsets) == 0 {
+			return fmt.Errorf("%s, service %s/%s has no endpoints", err, ns, controller.TiflowMasterMemberName(tcName))
+		}
+		return err
+	}
+
+	// TODO: WIP, need to get the information of memberDeleted and LastTransitionTime
+	members := make(map[string]pingcapcomv1alpha1.MasterMember)
+	for _, master := range mastersInfo.Masters {
+		// TODO: WIP
+		if !strings.Contains(master.Address, ns) {
+			continue
+		}
+
+		masterName, err := formatMasterName(master.Address)
+		if err != nil {
+			return err
+		}
+
+		members[masterName] = pingcapcomv1alpha1.MasterMember{
+			Id:                 master.ID,
+			Address:            master.Address,
+			IsLeader:           master.IsLeader,
+			PodName:            master.Name,
+			Health:             true,
+			LastTransitionTime: metav1.NewTime(time.Now()),
+		}
+	}
+	tc.Status.Master.Members = members
 
 	leader, err := tiflowClient.GetLeader()
 	if err != nil {
@@ -682,4 +705,14 @@ func findContainerByName(sts *apps.StatefulSet, containerName string) *corev1.Co
 		}
 	}
 	return nil
+}
+
+func formatMasterName(name string) (string, error) {
+	nameSlice := strings.Split(name, ".")
+	if len(nameSlice) != 4 {
+		return "", fmt.Errorf("split name %s error", name)
+	}
+
+	res := fmt.Sprintf("%s.%s", nameSlice[0], nameSlice[2])
+	return res, nil
 }

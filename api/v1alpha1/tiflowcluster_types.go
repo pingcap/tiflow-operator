@@ -338,11 +338,11 @@ type TiflowClusterSpec struct {
 
 	// Tiflow-master cluster spec
 	// +optional
-	Master *MasterSpec `json:"master"`
+	Master *MasterSpec `json:"master,omitempty"`
 
 	// Tiflow-executor cluster spec
 	// +optional
-	Executor *ExecutorSpec `json:"executor"`
+	Executor *ExecutorSpec `json:"executor,omitempty"`
 
 	// TiDB cluster version
 	// +optional
@@ -455,7 +455,10 @@ type MasterStatus struct {
 
 // MasterMember is Tiflow-master member status
 type MasterMember struct {
-	// member id is actually a uint64, but apimachinery's json only treats numbers as int64/float64
+	Id       string `json:"id,omitempty"`
+	Address  string `json:"address,omitempty"`
+	IsLeader bool   `json:"is_leader,omitempty"`
+	// member id is actually an uint64, but apimachinery's json only treats numbers as int64/float64
 	// so uint64 may overflow int64 and thus convert to float64
 	PodName       string `json:"podName,omitempty"`
 	ClientURL     string `json:"clientURL"`
@@ -468,8 +471,10 @@ type MasterMember struct {
 
 // ExecutorMember is Tiflow-executor member status
 type ExecutorMember struct {
-	Name string `json:"name,omitempty"`
-	Addr string `json:"addr,omitempty"`
+	Id         string `json:"id,omitempty"`
+	Name       string `json:"name,omitempty"`
+	Addr       string `json:"addr,omitempty"`
+	Capability int64  `json:"capability,omitempty"`
 	// TODO: add cpu/memory/disk usage later
 	// Last time the health transitioned from one to another.
 	// +nullable
