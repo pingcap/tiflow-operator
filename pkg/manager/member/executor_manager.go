@@ -789,7 +789,7 @@ func syncExecutorMembers(tc *v1alpha1.TiflowCluster, executors tiflowapi.Executo
 	members := make(map[string]v1alpha1.ExecutorMember)
 	for _, e := range executors.Executors {
 		// todo: WIP
-		if !strings.Contains(e.ID, ns) {
+		if !strings.Contains(e.Address, ns) {
 			continue
 		}
 
