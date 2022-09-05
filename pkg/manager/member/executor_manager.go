@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/client-go/kubernetes"
@@ -750,7 +751,7 @@ func (m *executorMemberManager) syncExecutorMembersStatus(tc *v1alpha1.TiflowClu
 	ns := tc.GetNamespace()
 	tcName := tc.GetName()
 
-	if tc.Heterogeneous() && tc.Spec.Master == nil {
+	if tc.Heterogeneous() && tc.WithoutLocalMaster() {
 		ns = tc.Spec.Cluster.Namespace
 		tcName = tc.Spec.Cluster.Name
 	}
@@ -778,29 +779,36 @@ func (m *executorMemberManager) syncExecutorMembersStatus(tc *v1alpha1.TiflowClu
 		return nil, err
 	}
 
-	return syncExecutorMembers(executorsInfo)
+	return syncExecutorMembers(tc, executorsInfo)
 }
 
-func syncExecutorMembers(executors tiflowapi.ExecutorsInfo) (map[string]v1alpha1.ExecutorMember, error) {
+func syncExecutorMembers(tc *v1alpha1.TiflowCluster, executors tiflowapi.ExecutorsInfo) (map[string]v1alpha1.ExecutorMember, error) {
 	// todo: WIP, get information about the FailureMembers and FailoverUID through the MasterClient
 	// sync executors info
+	ns := tc.GetNamespace()
 	members := make(map[string]v1alpha1.ExecutorMember)
 	for _, e := range executors.Executors {
+		// todo: WIP
+		if !strings.Contains(e.ID, ns) {
+			continue
+		}
+
 		c, err := handleCapability(e.Capability)
 		if err != nil {
 			return nil, err
 		}
 
-		memberName, err := formatExecutorName(e.ID)
+		memberName, err := formatExecutorName(e.Address)
 		if err != nil {
 			return nil, err
 		}
 
 		members[memberName] = v1alpha1.ExecutorMember{
-			Id:         e.ID,
-			Name:       e.Name,
-			Addr:       e.Address,
-			Capability: c,
+			Id:                 e.ID,
+			Name:               e.Name,
+			Addr:               e.Address,
+			Capability:         c,
+			LastTransitionTime: metav1.NewTime(time.Now()),
 		}
 	}
 
@@ -831,6 +839,6 @@ func formatExecutorName(name string) (string, error) {
 		return "", fmt.Errorf("split name %s error", name)
 	}
 
-	res := fmt.Sprintf("%s/Executor: %s", nameSlice[2], nameSlice[0])
+	res := fmt.Sprintf("%s.%s", nameSlice[0], nameSlice[2])
 	return res, nil
 }

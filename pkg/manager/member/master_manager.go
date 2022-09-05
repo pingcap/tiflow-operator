@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"k8s.io/client-go/kubernetes"
 	"strings"
+	"time"
 
 	apps "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -655,17 +656,23 @@ func (m *masterMemberManager) syncTiflowClusterStatus(tc *pingcapcomv1alpha1.Tif
 	// TODO: WIP, need to get the information of memberDeleted and LastTransitionTime
 	members := make(map[string]pingcapcomv1alpha1.MasterMember)
 	for _, master := range mastersInfo.Masters {
+		// TODO: WIP
+		if !strings.Contains(master.Address, ns) {
+			continue
+		}
+
 		masterName, err := formatMasterName(master.Address)
 		if err != nil {
 			return err
 		}
 
 		members[masterName] = pingcapcomv1alpha1.MasterMember{
-			Id:       master.ID,
-			Address:  master.Address,
-			IsLeader: master.IsLeader,
-			PodName:  master.Name,
-			Health:   true,
+			Id:                 master.ID,
+			Address:            master.Address,
+			IsLeader:           master.IsLeader,
+			PodName:            master.Name,
+			Health:             true,
+			LastTransitionTime: metav1.NewTime(time.Now()),
 		}
 	}
 	tc.Status.Master.Members = members
@@ -706,6 +713,6 @@ func formatMasterName(name string) (string, error) {
 		return "", fmt.Errorf("split name %s error", name)
 	}
 
-	res := fmt.Sprintf("%s/Master: %s", nameSlice[2], nameSlice[0])
+	res := fmt.Sprintf("%s.%s", nameSlice[0], nameSlice[2])
 	return res, nil
 }
