@@ -747,55 +747,15 @@ func (m *executorMemberManager) syncVolsStatus(tc *v1alpha1.TiflowCluster, sts *
 }
 
 func (m *executorMemberManager) syncExecutorMembersStatus(tc *v1alpha1.TiflowCluster) (map[string]v1alpha1.ExecutorMember, error) {
-	if tc.Heterogeneous() && tc.Spec.Master == nil {
-		return m.syncExecutorsStatusWithHetero(tc)
-	}
-
-	return m.syncExecutorsStatusWithoutHetero(tc)
-}
-
-func (m *executorMemberManager) syncExecutorsStatusWithoutHetero(tc *v1alpha1.TiflowCluster) (map[string]v1alpha1.ExecutorMember, error) {
-	hetero := tiflowapi.Heterogeneous{}
 	ns := tc.GetNamespace()
 	tcName := tc.GetName()
-	tiflowClient := tiflowapi.GetMasterClient(m.cli, ns, tcName, "", tc.IsClusterTLSEnabled(), hetero)
 
-	// get executors info from master
-	executorsInfo, err := tiflowClient.GetExecutors()
-	if err != nil {
-		tc.Status.Executor.Synced = false
-		// get endpoints info
-		eps := &corev1.Endpoints{}
-		epErr := m.cli.Get(context.TODO(), types.NamespacedName{
-			Namespace: ns,
-			Name:      controller.TiflowMasterMemberName(tcName),
-		}, eps)
-		if epErr != nil {
-			return nil, fmt.Errorf("syncTiflowClusterStatus: failed to get endpoints %s for cluster %s/%s, err: %s, epErr %s",
-				controller.TiflowMasterMemberName(tcName), ns, tcName, err, epErr)
-		}
-		if eps != nil && len(eps.Subsets) == 0 {
-			return nil, fmt.Errorf("%s, service %s/%s has no endpoints",
-				err, ns, controller.TiflowMasterMemberName(tcName))
-		}
-		return nil, err
-	}
-
-	return syncExecutorMembers(executorsInfo)
-}
-
-func (m *executorMemberManager) syncExecutorsStatusWithHetero(tc *v1alpha1.TiflowCluster) (map[string]v1alpha1.ExecutorMember, error) {
-	ns := tc.Spec.Cluster.Namespace
-	tcName := tc.Spec.Cluster.Name
-
-	hetero := tiflowapi.Heterogeneous{}
 	if tc.Heterogeneous() && tc.Spec.Master == nil {
-		hetero.Hetero = true
-		hetero.Namespace = ns
-		hetero.Name = tcName
+		ns = tc.Spec.Cluster.Namespace
+		tcName = tc.Spec.Cluster.Name
 	}
 
-	tiflowClient := tiflowapi.GetMasterClient(m.cli, ns, tcName, "", tc.IsClusterTLSEnabled(), hetero)
+	tiflowClient := tiflowapi.GetMasterClient(m.cli, ns, tcName, "", tc.IsClusterTLSEnabled())
 
 	// get executors info from master
 	executorsInfo, err := tiflowClient.GetExecutors()
@@ -817,6 +777,7 @@ func (m *executorMemberManager) syncExecutorsStatusWithHetero(tc *v1alpha1.Tiflo
 		}
 		return nil, err
 	}
+
 	return syncExecutorMembers(executorsInfo)
 }
 

@@ -150,8 +150,7 @@ func (s *masterScaler) EvictLeader(tc *v1alpha1.TiflowCluster, ordinal int32) er
 		if tc.Status.Master.Leader.ClientURL == memberName {
 			klog.Infof("tiflow cluster [%s/%s]'s tiflow-master pod [%s/%s] is transferring tiflow-master leader",
 				ns, tcName, ns, memberName)
-			hetero := tiflowapi.Heterogeneous{}
-			masterPeerClient := tiflowapi.GetMasterClient(s.cli, ns, tcName, memberName, tc.IsClusterTLSEnabled(), hetero)
+			masterPeerClient := tiflowapi.GetMasterClient(s.cli, ns, tcName, memberName, tc.IsClusterTLSEnabled())
 			err := masterPeerClient.EvictLeader()
 			if err != nil {
 				return err

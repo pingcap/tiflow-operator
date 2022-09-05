@@ -18,13 +18,11 @@ package controllers
 
 import (
 	"context"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/klog/v2"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -32,8 +30,6 @@ import (
 	pingcapcomv1alpha1 "github.com/pingcap/tiflow-operator/api/v1alpha1"
 	"github.com/pingcap/tiflow-operator/pkg/controller/tiflowcluster"
 )
-
-const Version = "2022.09.01.01/8"
 
 // TiflowClusterReconciler reconciles a TiflowCluster object
 type TiflowClusterReconciler struct {
@@ -75,8 +71,6 @@ func NewTiflowClusterReconciler(cli client.Client, clientSet kubernetes.Interfac
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.1/pkg/reconcile
 func (r *TiflowClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
-
-	klog.Infof("Current Version: %s", Version)
 
 	tc := &pingcapcomv1alpha1.TiflowCluster{}
 

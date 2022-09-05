@@ -631,8 +631,7 @@ func (m *masterMemberManager) syncTiflowClusterStatus(tc *pingcapcomv1alpha1.Tif
 	}
 
 	// TODO: add status info after tiflow master interface stable
-	hetero := tiflowapi.Heterogeneous{}
-	tiflowClient := tiflowapi.GetMasterClient(m.cli, ns, tcName, "", tc.IsClusterTLSEnabled(), hetero)
+	tiflowClient := tiflowapi.GetMasterClient(m.cli, ns, tcName, "", tc.IsClusterTLSEnabled())
 
 	mastersInfo, err := tiflowClient.GetMasters()
 	if err != nil {
