@@ -18,10 +18,10 @@ package controllers
 
 import (
 	"context"
-	"github.com/pingcap/tiflow-operator/pkg/controller"
+	"github.com/lithammer/shortuuid/v3"
+	"go.uber.org/zap/zapcore"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -29,6 +29,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	pingcapcomv1alpha1 "github.com/pingcap/tiflow-operator/api/v1alpha1"
+	"github.com/pingcap/tiflow-operator/pkg/controller"
+	"github.com/pingcap/tiflow-operator/pkg/result"
+	"github.com/pingcap/tiflow-operator/pkg/status"
 )
 
 // TiflowClusterReconciler reconciles a TiflowCluster object
@@ -46,19 +49,19 @@ func NewTiflowClusterReconciler(cli client.Client, clientSet kubernetes.Interfac
 	}
 }
 
-//+kubebuilder:rbac:groups=pingcap.com,resources=tiflowclusters,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=pingcap.com,resources=tiflowclusters/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=pingcap.com,resources=tiflowclusters/finalizers,verbs=update
-//+kubebuilder:rbac:groups="",resources=configmaps;secrets;services;persistentvolumeclaims;persistentvolumes,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;update;delete
-//+kubebuilder:rbac:groups="",resources=endpoints,verbs=get;list;watch
-//+kubebuilder:rbac:groups=apps,resources=statefulsets;deployments,verbs=*
-//+kubebuilder:rbac:groups=apps,resources=statefulsets/scale,verbs=get;watch;update
-//+kubebuilder:rbac:groups=apps,resources=statefulsets/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=core,resources=persistentvolumes,verbs=get;list;update;delete
-//+kubebuilder:rbac:groups=core,resources=persistentvolumeclaims,verbs=get;list;update;delete
-//+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=*
-//+kubebuilder:rbac:groups=storage.k8s.io,resources=storageclasses,verbs=get;list;watch
+// +kubebuilder:rbac:groups=pingcap.com,resources=tiflowclusters,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=pingcap.com,resources=tiflowclusters/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=pingcap.com,resources=tiflowclusters/finalizers,verbs=update
+// +kubebuilder:rbac:groups="",resources=configmaps;secrets;services;persistentvolumeclaims;persistentvolumes,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;update;delete
+// +kubebuilder:rbac:groups="",resources=endpoints,verbs=get;list;watch
+// +kubebuilder:rbac:groups=apps,resources=statefulsets;deployments,verbs=*
+// +kubebuilder:rbac:groups=apps,resources=statefulsets/scale,verbs=get;watch;update
+// +kubebuilder:rbac:groups=apps,resources=statefulsets/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=core,resources=persistentvolumes,verbs=get;list;update;delete
+// +kubebuilder:rbac:groups=core,resources=persistentvolumeclaims,verbs=get;list;update;delete
+// +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=*
+// +kubebuilder:rbac:groups=storage.k8s.io,resources=storageclasses,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -70,23 +73,50 @@ func NewTiflowClusterReconciler(cli client.Client, clientSet kubernetes.Interfac
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.1/pkg/reconcile
 func (r *TiflowClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	logger := log.FromContext(ctx)
+
+	logger.WithValues("TiflowCluster", req.NamespacedName, "ReconcileID", shortuuid.New())
+	logger.V(int(zapcore.InfoLevel)).Info("reconciling tiflow cluster")
 
 	tc := &pingcapcomv1alpha1.TiflowCluster{}
-
 	if err := r.Get(ctx, req.NamespacedName, tc); err != nil {
-		if errors.IsNotFound(err) {
-			return ctrl.Result{}, nil
+		logger.Error(err, "failed to retrieve tiflow cluster resource")
+		return result.RequeueIfError(client.IgnoreNotFound(err))
+	}
+
+	if tc.Status.ClusterStatus == "" {
+		status.SetTiflowClusterStatusOnFirstReconcile(&tc.Status)
+		if err := r.updateTiflowClusterStatus(ctx, tc); err != nil {
+			logger.Error(err, "failed to update tiflow cluster status")
+			return result.RequeueIfError(err)
 		}
-
-		return ctrl.Result{}, err
+		return result.RequeueImmediately()
 	}
 
-	if err := r.Control.UpdateTiflowCluster(ctx, tc); err != nil {
-		return ctrl.Result{}, err
+	err := r.Control.UpdateTiflowCluster(ctx, tc)
+	switch err.(type) {
+	case result.SyncStatusErr:
+		return result.RequeueAfter(result.ShortPauseTime, err(result.SyncStatusErr{}))
+	case result.ValidationErr:
+		logger.Error(err, "failed to reconcile tiflow cluster")
+		return result.RequeueImmediately()
+	case result.NotReadyErr:
+		return result.RequeueAfter(result.LongPauseTime, err(result.NotReadyErr{}))
+	case result.NormalErr:
+		return result.RequeueIfError(err)
+	default:
+		logger.V(int(zapcore.InfoLevel)).Info("reconciling tiflow cluster completed successfully")
 	}
 
-	return ctrl.Result{}, nil
+	if err = r.updateTiflowClusterStatus(ctx, tc); err != nil {
+		logger.Error(err, "update tiflow Cluster Status")
+		return result.RequeueIfError(err)
+	}
+
+	return result.NoRequeue()
+}
+func (r *TiflowClusterReconciler) updateTiflowClusterStatus(ctx context.Context, tc *pingcapcomv1alpha1.TiflowCluster) error {
+	panic("not implemented")
 }
 
 // SetupWithManager sets up the controller with the Manager.

@@ -5,19 +5,23 @@ import (
 	"time"
 )
 
-// todo: In the near future it will be merged into the main logic
-func requeueIfError(err error) (ctrl.Result, error) {
+const (
+	ShortPauseTime = 5 * time.Second
+	LongPauseTime  = 10 * time.Second
+)
+
+func RequeueIfError(err error) (ctrl.Result, error) {
 	return ctrl.Result{}, err
 }
 
-func noRequeue() (ctrl.Result, error) {
+func NoRequeue() (ctrl.Result, error) {
 	return ctrl.Result{}, nil
 }
 
-func requeueAfter(interval time.Duration, err error) (ctrl.Result, error) {
+func RequeueAfter(interval time.Duration, err error) (ctrl.Result, error) {
 	return ctrl.Result{RequeueAfter: interval}, err
 }
 
-func requeueImmediately() (ctrl.Result, error) {
+func RequeueImmediately() (ctrl.Result, error) {
 	return ctrl.Result{Requeue: true}, nil
 }

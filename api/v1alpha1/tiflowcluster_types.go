@@ -549,15 +549,17 @@ type TiflowClusterStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 	Master   MasterStatus   `json:"master,omitempty"`
 	Executor ExecutorStatus `json:"executor,omitempty"`
-
 	// Represents the latest available observations of a tiflow cluster's state.
 	// +optional
 	// +nullable
 	Conditions []TiflowClusterCondition `json:"conditions,omitempty"`
+	// OperatorStatus represent the status of the operator(Failed, Starting, Running or Other)
+	// +optional
+	ClusterStatus string `json:"clusterStatus,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 
 // TiflowCluster is the Schema for the tiflowclusters API
 // +k8s:openapi-gen=true
@@ -570,7 +572,7 @@ type TiflowCluster struct {
 	Status TiflowClusterStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // TiflowClusterList contains a list of TiflowCluster
 type TiflowClusterList struct {
