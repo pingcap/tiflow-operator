@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"github.com/pingcap/tiflow-operator/pkg/controller"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -28,21 +29,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	pingcapcomv1alpha1 "github.com/pingcap/tiflow-operator/api/v1alpha1"
-	"github.com/pingcap/tiflow-operator/pkg/controller/tiflowcluster"
 )
 
 // TiflowClusterReconciler reconciles a TiflowCluster object
 type TiflowClusterReconciler struct {
 	client.Client
 	Scheme  *runtime.Scheme
-	Control tiflowcluster.ControlInterface
+	Control controller.ControlInterface
 }
 
 func NewTiflowClusterReconciler(cli client.Client, clientSet kubernetes.Interface, scheme *runtime.Scheme) *TiflowClusterReconciler {
 	return &TiflowClusterReconciler{
 		Client:  cli,
 		Scheme:  scheme,
-		Control: tiflowcluster.NewDefaultTiflowClusterControl(cli, clientSet),
+		Control: controller.NewDefaultTiflowClusterControl(cli, clientSet),
 	}
 }
 

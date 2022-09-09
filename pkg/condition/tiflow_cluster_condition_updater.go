@@ -1,4 +1,4 @@
-package tiflowcluster
+package condition
 
 import (
 	appsv1 "k8s.io/api/apps/v1"
@@ -14,12 +14,12 @@ type ConditionUpdater interface {
 	Update(*v1alpha1.TiflowCluster) error
 }
 
-type realConditionUpdater struct {
+type RealConditionUpdater struct {
 }
 
-var _ ConditionUpdater = &realConditionUpdater{}
+var _ ConditionUpdater = &RealConditionUpdater{}
 
-func (u *realConditionUpdater) Update(tc *v1alpha1.TiflowCluster) error {
+func (u *RealConditionUpdater) Update(tc *v1alpha1.TiflowCluster) error {
 	u.updateReadyCondition(tc)
 	// in the future, we may return error when we need to Kubernetes API, etc.
 	return nil
@@ -36,7 +36,7 @@ func allStatefulSetsAreUpToDate(dc *v1alpha1.TiflowCluster) bool {
 		(isUpToDate(dc.Status.Executor.StatefulSet, false))
 }
 
-func (u *realConditionUpdater) updateReadyCondition(tc *v1alpha1.TiflowCluster) {
+func (u *RealConditionUpdater) updateReadyCondition(tc *v1alpha1.TiflowCluster) {
 	status := v1.ConditionFalse
 	reason := ""
 	message := ""

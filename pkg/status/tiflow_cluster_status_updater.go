@@ -1,4 +1,4 @@
-package tiflowcluster
+package status
 
 import (
 	"context"

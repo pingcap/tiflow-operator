@@ -1,16 +1,18 @@
-package tiflowcluster
+package controller
 
 import (
 	"context"
-	"k8s.io/client-go/kubernetes"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	errorutils "k8s.io/apimachinery/pkg/util/errors"
+	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
+	"github.com/pingcap/tiflow-operator/pkg/condition"
 	"github.com/pingcap/tiflow-operator/pkg/manager"
 	"github.com/pingcap/tiflow-operator/pkg/manager/member"
+	"github.com/pingcap/tiflow-operator/pkg/status"
 )
 
 // ControlInterface implements the control logic for updating TiflowClusters and their children StatefulSets.
@@ -28,8 +30,8 @@ func NewDefaultTiflowClusterControl(cli client.Client, clientSet kubernetes.Inte
 		cli,
 		member.NewMasterMemberManager(cli, clientSet),
 		member.NewExecutorMemberManager(cli, clientSet),
-		&realConditionUpdater{},
-		NewRealStatusUpdater(cli),
+		&condition.RealConditionUpdater{},
+		status.NewRealStatusUpdater(cli),
 	}
 }
 
@@ -37,16 +39,16 @@ type defaultTiflowClusterControl struct {
 	cli                   client.Client
 	masterMemberManager   manager.TiflowManager
 	executorMemberManager manager.TiflowManager
-	conditionUpdater      ConditionUpdater
-	statusUpdater         StatusUpdater
+	conditionUpdater      condition.ConditionUpdater
+	statusUpdater         status.StatusUpdater
 }
 
 // UpdateTiflowCluster executes the core logic loop for a tiflowcluster.
 func (c *defaultTiflowClusterControl) UpdateTiflowCluster(ctx context.Context, tc *v1alpha1.TiflowCluster) error {
-	//c.defaulting(tc)
-	//if !c.validate(tc) {
+	// c.defaulting(tc)
+	// if !c.validate(tc) {
 	//	return nil // fatal error, no need to retry on invalid object
-	//}
+	// }
 
 	var errs []error
 	oldStatus := tc.Status.DeepCopy()
