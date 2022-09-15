@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/pingcap/tiflow-operator/api/config"
-	"github.com/pingcap/tiflow-operator/pkg/label"
+	"github.com/pingcap/tiflow-operator/api/label"
 )
 
 func (tc *TiflowCluster) GetInstanceName() string {
@@ -17,9 +17,9 @@ func (tc *TiflowCluster) GetInstanceName() string {
 
 func (tc *TiflowCluster) Scheme() string {
 	// TODO: tls
-	//if tc.IsTLSClusterEnabled() {
+	// if tc.IsTLSClusterEnabled() {
 	//	return "https"
-	//}
+	// }
 	return "http"
 }
 
@@ -49,15 +49,15 @@ func (tc *TiflowCluster) ExecutorImage() string {
 
 func (tc *TiflowCluster) AllExecutorMembersReady() bool {
 	// TODO: support members later
-	//if int(tc.ExecutorStsDesiredReplicas()) != len(tc.Status.Executor.Members) {
+	// if int(tc.ExecutorStsDesiredReplicas()) != len(tc.Status.Executor.Members) {
 	//	return false
-	//}
+	// }
 
-	//for _, member := range tc.Status.Executor.Members {
+	// for _, member := range tc.Status.Executor.Members {
 	//	if member {
 	//
 	//	}
-	//}
+	// }
 	return true
 }
 
@@ -113,16 +113,16 @@ func (tc *TiflowCluster) IsClusterTLSEnabled() bool {
 func (tc *TiflowCluster) AllMasterMembersReady() bool {
 	return true
 	// TODO: support members later
-	//if int(tc.MasterStsDesiredReplicas()) != len(tc.Status.Master.Members) {
+	// if int(tc.MasterStsDesiredReplicas()) != len(tc.Status.Master.Members) {
 	//	return false
-	//}
+	// }
 	//
-	//for _, member := range tc.Status.Master.Members {
+	// for _, member := range tc.Status.Master.Members {
 	//	if !member.Health {
 	//		return false
 	//	}
-	//}
-	//return true
+	// }
+	// return true
 }
 
 func (tc *TiflowCluster) Heterogeneous() bool {

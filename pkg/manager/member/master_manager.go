@@ -17,10 +17,10 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/pingcap/tiflow-operator/api/label"
 	pingcapcomv1alpha1 "github.com/pingcap/tiflow-operator/api/v1alpha1"
 	"github.com/pingcap/tiflow-operator/pkg/component"
 	"github.com/pingcap/tiflow-operator/pkg/controller"
-	"github.com/pingcap/tiflow-operator/pkg/label"
 	"github.com/pingcap/tiflow-operator/pkg/manager"
 	mngerutils "github.com/pingcap/tiflow-operator/pkg/manager/utils"
 	"github.com/pingcap/tiflow-operator/pkg/tiflowapi"
@@ -76,11 +76,11 @@ func getMasterConfigMap(tc *pingcapcomv1alpha1.TiflowCluster) (*corev1.ConfigMap
 
 	// TODO: tls
 	// override CA if tls enabled
-	//if tc.IsTLSClusterEnabled() {
+	// if tc.IsTLSClusterEnabled() {
 	//	config.Set("ssl-ca", path.Join(tiflowMasterClusterCertPath, tlsSecretRootCAKey))
 	//	config.Set("ssl-cert", path.Join(tiflowMasterClusterCertPath, corev1.TLSCertKey))
 	//	config.Set("ssl-key", path.Join(tiflowMasterClusterCertPath, corev1.TLSPrivateKeyKey))
-	//}
+	// }
 
 	confText, err := config.MarshalTOML()
 	if err != nil {
@@ -289,7 +289,7 @@ func (m *masterMemberManager) syncMasterStatefulSetForTiflowCluster(ctx context.
 	// Perform failover logic if necessary. Note that this will only update
 	// DMCluster status. The actual scaling performs in next sync loop (if a
 	// new replica needs to be added).
-	//if m.deps.CLIConfig.AutoFailover {
+	// if m.deps.CLIConfig.AutoFailover {
 	//	if m.shouldRecover(tc) {
 	//		m.failover.Recover(tc)
 	//	} else if tc.MasterAllPodsStarted() && !tc.AllMasterMembersReady() || tc.MasterAutoFailovering() {
@@ -297,7 +297,7 @@ func (m *masterMemberManager) syncMasterStatefulSetForTiflowCluster(ctx context.
 	//			return err
 	//		}
 	//	}
-	//}
+	// }
 
 	if !templateEqual(newMasterSet, oldMasterSet) || tc.Status.Master.Phase == pingcapcomv1alpha1.UpgradePhase {
 		if err := m.upgrader.Upgrade(tc, oldMasterSet, newMasterSet); err != nil {
@@ -387,7 +387,7 @@ func getNewMasterSetForTiflowCluster(tc *pingcapcomv1alpha1.TiflowCluster, cm *c
 	podLabels := util.CombineStringMap(stsLabels, baseMasterSpec.Labels())
 	podAnnotations := util.CombineStringMap(controller.AnnProm(masterPort), baseMasterSpec.Annotations())
 	// TODO: support failover
-	//failureReplicas := getTiflowMasterFailureReplicas(tc)
+	// failureReplicas := getTiflowMasterFailureReplicas(tc)
 
 	masterContainer := corev1.Container{
 		Name:            label.TiflowMasterLabelVal,
@@ -452,8 +452,8 @@ func getNewMasterSetForTiflowCluster(tc *pingcapcomv1alpha1.TiflowCluster, cm *c
 		updateStrategy.Type = apps.RollingUpdateStatefulSetStrategyType
 		updateStrategy.RollingUpdate = &apps.RollingUpdateStatefulSetStrategy{
 			Partition: pointer.Int32Ptr(tc.Spec.Master.Replicas),
-			//TODO: support failover later
-			//Partition: pointer.Int32Ptr(tc.Spec.Master.Replicas + int32(failureReplicas)),
+			// TODO: support failover later
+			// Partition: pointer.Int32Ptr(tc.Spec.Master.Replicas + int32(failureReplicas)),
 		}
 	}
 
@@ -467,8 +467,8 @@ func getNewMasterSetForTiflowCluster(tc *pingcapcomv1alpha1.TiflowCluster, cm *c
 		},
 		Spec: apps.StatefulSetSpec{
 			Replicas: pointer.Int32Ptr(tc.Spec.Master.Replicas),
-			//TODO: support failover later
-			//Replicas: pointer.Int32Ptr(tc.Spec.Master.Replicas + int32(failureReplicas)),
+			// TODO: support failover later
+			// Replicas: pointer.Int32Ptr(tc.Spec.Master.Replicas + int32(failureReplicas)),
 			Selector: stsLabels.LabelSelector(),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
