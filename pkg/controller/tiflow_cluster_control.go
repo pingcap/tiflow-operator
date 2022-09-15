@@ -12,7 +12,6 @@ import (
 	"github.com/pingcap/tiflow-operator/pkg/condition"
 	"github.com/pingcap/tiflow-operator/pkg/manager"
 	"github.com/pingcap/tiflow-operator/pkg/manager/member"
-	"github.com/pingcap/tiflow-operator/pkg/status"
 )
 
 // ControlInterface implements the control logic for updating TiflowClusters and their children StatefulSets.
@@ -31,7 +30,6 @@ func NewDefaultTiflowClusterControl(cli client.Client, clientSet kubernetes.Inte
 		member.NewMasterMemberManager(cli, clientSet),
 		member.NewExecutorMemberManager(cli, clientSet),
 		&condition.RealConditionUpdater{},
-		status.NewRealStatusUpdater(cli),
 	}
 }
 
@@ -40,7 +38,6 @@ type defaultTiflowClusterControl struct {
 	masterMemberManager   manager.TiflowManager
 	executorMemberManager manager.TiflowManager
 	conditionUpdater      condition.ConditionUpdater
-	statusUpdater         status.StatusUpdater
 }
 
 // UpdateTiflowCluster executes the core logic loop for a tiflowcluster.
@@ -65,10 +62,6 @@ func (c *defaultTiflowClusterControl) UpdateTiflowCluster(ctx context.Context, t
 
 	if apiequality.Semantic.DeepEqual(&tc.Status, oldStatus) {
 		return errorutils.NewAggregate(errs)
-	}
-
-	if _, err := c.statusUpdater.UpdateTiflowCluster(tc); err != nil {
-		errs = append(errs, err)
 	}
 
 	return errorutils.NewAggregate(errs)

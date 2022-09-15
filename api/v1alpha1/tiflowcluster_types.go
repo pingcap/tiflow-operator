@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/pingcap/tiflow-operator/pkg/condition"
 	apps "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -525,9 +526,9 @@ type ExecutorStatus struct {
 // TiflowClusterCondition is tiflow cluster condition
 type TiflowClusterCondition struct {
 	// Type of the condition.
-	Type string `json:"type"`
+	Type condition.TiflowClusterConditionType `json:"type"`
 	// Status of the condition, one of True, False, Unknown.
-	Status corev1.ConditionStatus `json:"status"`
+	Status metav1.ConditionStatus `json:"status"`
 	// The last time this condition was updated.
 	// +nullable
 	LastUpdateTime metav1.Time `json:"lastUpdateTime,omitempty"`
@@ -543,6 +544,21 @@ type TiflowClusterCondition struct {
 	Message string `json:"message,omitempty"`
 }
 
+type TiflowClusterAction struct {
+	// Type/Name of the action
+	// +required
+	Type ActionType `json:"type"`
+	// (Optional) Message related to the status of the action
+	// +optional
+	Message string `json:"message,omitempty"`
+	// Action status: Failed, Finished or Unknown
+	// +required
+	Status string `json:"status"`
+	// The time when the condition was updated
+	// +required
+	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
+}
+
 // TiflowClusterStatus defines the observed state of TiflowCluster
 type TiflowClusterStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
@@ -553,7 +569,9 @@ type TiflowClusterStatus struct {
 	// +optional
 	// +nullable
 	Conditions []TiflowClusterCondition `json:"conditions,omitempty"`
-	// OperatorStatus represent the status of the operator(Failed, Starting, Running or Other)
+	// todo: support operator sync actions
+	OperatorActions []TiflowClusterAction `json:"operatorActions,omitempty"`
+	// ClusterStatus represent the status of the operator(Failed, Starting, Running or Other)
 	// +optional
 	ClusterStatus string `json:"clusterStatus,omitempty"`
 }

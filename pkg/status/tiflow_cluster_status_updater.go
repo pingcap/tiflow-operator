@@ -3,7 +3,7 @@ package status
 import (
 	"context"
 	"fmt"
-
+	"github.com/pingcap/tiflow-operator/pkg/result"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/util/retry"
@@ -15,7 +15,7 @@ import (
 
 // StatusUpdater updates Tiflow cluster's status
 type StatusUpdater interface {
-	UpdateTiflowCluster(*v1alpha1.TiflowCluster) (*v1alpha1.TiflowCluster, error)
+	UpdateTiflowCluster(context.Context, *v1alpha1.TiflowCluster) error
 }
 
 type realStatusUpdater struct {
@@ -29,7 +29,7 @@ func NewRealStatusUpdater(cli client.Client) StatusUpdater {
 	}
 }
 
-func (c *realStatusUpdater) UpdateTiflowCluster(tc *v1alpha1.TiflowCluster) (*v1alpha1.TiflowCluster, error) {
+func (c *realStatusUpdater) UpdateTiflowCluster(ctx context.Context, tc *v1alpha1.TiflowCluster) error {
 	ns := tc.GetNamespace()
 	tcName := tc.GetName()
 
@@ -40,7 +40,7 @@ func (c *realStatusUpdater) UpdateTiflowCluster(tc *v1alpha1.TiflowCluster) (*v1
 		var updateErr error
 		// tc will be updated in Update function, must use cli.Status().Update instead of cli.Update here,
 		//  see https://book-v1.book.kubebuilder.io/basics/status_subresource.html
-		updateErr = c.cli.Status().Update(context.TODO(), tc)
+		updateErr = c.cli.Status().Update(ctx, tc)
 
 		if updateErr == nil {
 			klog.Infof("tiflow cluster: [%s/%s] updated successfully", ns, tcName)
@@ -49,11 +49,11 @@ func (c *realStatusUpdater) UpdateTiflowCluster(tc *v1alpha1.TiflowCluster) (*v1
 		klog.Infof("failed to update tiflow cluster: [%s/%s], error: %v", ns, tcName, updateErr)
 
 		updated := &v1alpha1.TiflowCluster{}
-		if err := c.cli.Get(context.TODO(), types.NamespacedName{
+		if err := c.cli.Get(ctx, types.NamespacedName{
 			Namespace: ns,
 			Name:      tcName,
 		}, updated); err == nil {
-			// make a copy so we don't mutate the shared cache
+			// make a copy, so we don't mutate the shared cache
 			tc = updated.DeepCopy()
 			tc.Status = *status
 		} else {
@@ -64,6 +64,8 @@ func (c *realStatusUpdater) UpdateTiflowCluster(tc *v1alpha1.TiflowCluster) (*v1
 	})
 	if err != nil {
 		klog.Errorf("failed to update tiflow cluster: [%s/%s], error: %v", ns, tcName, err)
+		return result.UpdateClusterStatus{Err: err}
 	}
-	return tc, err
+
+	return nil
 }

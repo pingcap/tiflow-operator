@@ -65,7 +65,7 @@ func NewTiflowClusterReconciler(cli client.Client, clientSet kubernetes.Interfac
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
+// Modify the Reconcile function to compare the state specified by
 // the TiflowCluster object against the actual cluster state, and then
 // perform operations to make the cluster state reflect the state specified by
 // the user.
@@ -96,27 +96,31 @@ func (r *TiflowClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	err := r.Control.UpdateTiflowCluster(ctx, tc)
 	switch err.(type) {
 	case result.SyncStatusErr:
+		logger.Error(err, "failed to sync tiflow cluster status")
 		return result.RequeueAfter(result.ShortPauseTime, err(result.SyncStatusErr{}))
 	case result.ValidationErr:
-		logger.Error(err, "failed to reconcile tiflow cluster")
+		logger.Error(err, "validation of tiflow cluster is failed")
 		return result.RequeueImmediately()
 	case result.NotReadyErr:
+		logger.Error(err, "master of tiflow cluster is not ready")
 		return result.RequeueAfter(result.LongPauseTime, err(result.NotReadyErr{}))
 	case result.NormalErr:
+		logger.Error(err, "failed to reconcile tiflow cluster")
 		return result.RequeueIfError(err)
 	default:
 		logger.V(int(zapcore.InfoLevel)).Info("reconciling tiflow cluster completed successfully")
 	}
 
 	if err = r.updateTiflowClusterStatus(ctx, tc); err != nil {
-		logger.Error(err, "update tiflow Cluster Status")
+		logger.Error(err, "failed to update tiflow Cluster Status")
 		return result.RequeueIfError(err)
 	}
 
 	return result.NoRequeue()
 }
 func (r *TiflowClusterReconciler) updateTiflowClusterStatus(ctx context.Context, tc *pingcapcomv1alpha1.TiflowCluster) error {
-	panic("not implemented")
+	tc.SetTiflowClusterStatus()
+	return status.NewRealStatusUpdater(r.Client).UpdateTiflowCluster(ctx, tc)
 }
 
 // SetupWithManager sets up the controller with the Manager.
