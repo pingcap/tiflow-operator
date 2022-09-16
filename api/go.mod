@@ -5,10 +5,10 @@ go 1.18
 require (
 	github.com/BurntSushi/toml v1.2.0
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
-	github.com/pingcap/errors v0.11.4
-	k8s.io/api v0.25.0
-	k8s.io/apimachinery v0.25.0
-	sigs.k8s.io/controller-runtime v0.13.0
+	github.com/pingcap/errors v0.11.0
+	k8s.io/api v0.24.0
+	k8s.io/apimachinery v0.24.0
+	sigs.k8s.io/controller-runtime v0.12.1
 )
 
 require (
