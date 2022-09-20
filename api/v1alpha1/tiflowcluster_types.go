@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"github.com/pingcap/tiflow-operator/pkg/condition"
 	apps "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -443,17 +442,6 @@ const (
 	ScalePhase MemberPhase = "Scale"
 )
 
-// MasterStatus defines the desired state of Tiflow-master
-type MasterStatus struct {
-	Synced         bool                    `json:"synced"`
-	Phase          MemberPhase             `json:"phase,omitempty"`
-	StatefulSet    *apps.StatefulSetStatus `json:"statefulSet,omitempty"`
-	Members        map[string]MasterMember `json:"members,omitempty"`
-	Leader         MasterMember            `json:"leader,omitempty"`
-	FailureMembers map[string]MasterMember `json:"failureMembers,omitempty"`
-	Image          string                  `json:"image,omitempty"`
-}
-
 // MasterMember is Tiflow-master member status
 type MasterMember struct {
 	Id       string `json:"id,omitempty"`
@@ -510,70 +498,76 @@ type StorageVolumeStatus struct {
 	Name StorageVolumeName `json:"name"`
 }
 
+// // ClusterSyncType represents master or executor cluster's status as it is perceived by the operator
+// type ClusterSyncType struct {
+// 	// Type/Name of the action
+// 	// +required
+// 	Type SyncType `json:"type"`
+// 	// Action status: Failed, Finished or Unknown
+// 	// +required
+// 	Status string `json:"status"`
+// 	// The time when the condition was updated
+// 	// +required
+// 	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
+// }
+
+// MasterStatus defines the desired state of Tiflow-master
+type MasterStatus struct {
+	Synced         bool                    `json:"synced"`
+	Image          string                  `json:"image,omitempty"`
+	Leader         MasterMember            `json:"leader,omitempty"`
+	Members        map[string]MasterMember `json:"members,omitempty"`
+	FailureMembers map[string]MasterMember `json:"failureMembers,omitempty"`
+	StatefulSet    *apps.StatefulSetStatus `json:"statefulSet,omitempty"`
+
+	Phase MemberPhase `json:"phase,omitempty"`
+	// SyncActions []ClusterSyncType `json:"syncActions,omitempty"`
+}
+
 // ExecutorStatus defines the desired state of Tiflow-executor
 type ExecutorStatus struct {
 	Synced         bool                      `json:"synced"`
-	Phase          MemberPhase               `json:"phase,omitempty"`
+	Image          string                    `json:"image,omitempty"`
 	StatefulSet    *apps.StatefulSetStatus   `json:"statefulSet,omitempty"`
 	Members        map[string]ExecutorMember `json:"members,omitempty"`
 	FailureMembers map[string]ExecutorMember `json:"failureMembers,omitempty"`
 	FailoverUID    types.UID                 `json:"failoverUID,omitempty"`
-	Image          string                    `json:"image,omitempty"`
 	// Volumes contains the status of all volumes.
 	Volumes map[string]*StorageVolumeStatus `json:"volumes,omitempty"`
+
+	Phase MemberPhase `json:"phase,omitempty"`
+	// SyncActions []ClusterSyncType `json:"syncActions,omitempty"`
 }
 
 // TiflowClusterCondition is tiflow cluster condition
 type TiflowClusterCondition struct {
 	// Type of the condition.
-	Type condition.TiflowClusterConditionType `json:"type"`
+	Type TiflowClusterConditionType `json:"type"`
 	// Status of the condition, one of True, False, Unknown.
 	Status metav1.ConditionStatus `json:"status"`
-	// The last time this condition was updated.
-	// +nullable
-	LastUpdateTime metav1.Time `json:"lastUpdateTime,omitempty"`
 	// Last time the condition transitioned from one status to another.
 	// +nullable
 	// +optional
 	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
-	// The reason for the condition's last transition.
-	// +optional
-	Reason string `json:"reason,omitempty"`
-	// A human readable message indicating details about the transition.
-	// +optional
-	Message string `json:"message,omitempty"`
-}
-
-type TiflowClusterAction struct {
-	// Type/Name of the action
-	// +required
-	Type ActionType `json:"type"`
-	// (Optional) Message related to the status of the action
-	// +optional
-	Message string `json:"message,omitempty"`
-	// Action status: Failed, Finished or Unknown
-	// +required
-	Status string `json:"status"`
-	// The time when the condition was updated
-	// +required
-	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
 }
 
 // TiflowClusterStatus defines the observed state of TiflowCluster
 type TiflowClusterStatus struct {
+	Hetero bool `json:"hetero,omitempty"`
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 	Master   MasterStatus   `json:"master,omitempty"`
 	Executor ExecutorStatus `json:"executor,omitempty"`
-	// Represents the latest available observations of a tiflow cluster's state.
+	// ClusterConditions List of conditions representing the current status of the tiflow engine resource
+	// Interact between Master and Executor, and will update each other
 	// +optional
 	// +nullable
-	Conditions []TiflowClusterCondition `json:"conditions,omitempty"`
-	// todo: support operator sync actions
-	OperatorActions []TiflowClusterAction `json:"operatorActions,omitempty"`
-	// ClusterStatus represent the status of the operator(Failed, Starting, Running or Other)
+	ClusterConditions []TiflowClusterCondition `json:"cluster_conditions,omitempty"`
+	// ClusterStatus represents the observed state of a tiflow cluster
+	// Update by master's phase and executor's phase
 	// +optional
-	ClusterStatus string `json:"clusterStatus,omitempty"`
+	// +nullable
+	ClusterStatus TiflowClusterPhaseType `json:"cluster_status"`
 }
 
 // +kubebuilder:object:root=true

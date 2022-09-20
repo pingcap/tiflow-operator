@@ -1,42 +1,51 @@
 package v1alpha1
 
-type TiflowClusterConditionType string
+// TiflowClusterPhaseType type alias
+type TiflowClusterPhaseType string
 
 const (
-	ClusterStarting    TiflowClusterConditionType = "Starting"
-	ClusterReconciling TiflowClusterConditionType = "Reconciling"
-	ClusterCompleted   TiflowClusterConditionType = "Completed"
-	ClusterPending     TiflowClusterConditionType = "Pending"
-	ClusterUnknown     TiflowClusterConditionType = "Unknown"
-	ClusterFailed      TiflowClusterConditionType = "Failed"
+	// ClusterStarting indicates the state of operator is starting
+	ClusterStarting TiflowClusterPhaseType = "Starting"
+	// ClusterReconciling indicates the state of operator is reconciling
+	ClusterReconciling TiflowClusterPhaseType = "Reconciling"
+	// ClusterCompleted indicates the state of operator is completed
+	ClusterCompleted TiflowClusterPhaseType = "Completed"
+	// ClusterPending indicates the state of operator is pending
+	ClusterPending TiflowClusterPhaseType = "Pending"
+	// ClusterUnknown indicates the state of operator is unknown
+	ClusterUnknown TiflowClusterPhaseType = "Unknown"
+	// ClusterFailed indicates the state of operator is failed
+	ClusterFailed TiflowClusterPhaseType = "Failed"
 )
 
-type MasterConditionType string
+// MasterPhaseType indicates the cluster's state of masters
+type MasterPhaseType string
 
 const (
-	MasterRunning       MasterConditionType = "Running"
-	MasterCreating      MasterConditionType = "Creating"
-	MasterUpgrading     MasterConditionType = "Upgrading"
-	MasterPending       MasterConditionType = "Pending"
-	MasterScalingOut    MasterConditionType = "ScalingOut"
-	MasterScalingIn     MasterConditionType = "ScalingIn"
-	MasterScalingUp     MasterConditionType = "ScalingUp"
-	MasterScalingDown   MasterConditionType = "ScalingDown"
-	MasterDeleting      MasterConditionType = "Deleting"
-	MasterDeletePending MasterConditionType = "DeletePending"
+	MasterRunning       MasterPhaseType = "Running"
+	MasterCreating      MasterPhaseType = "Creating"
+	MasterUpgrading     MasterPhaseType = "Upgrading"
+	MasterPending       MasterPhaseType = "Pending"
+	MasterScalingOut    MasterPhaseType = "ScalingOut"
+	MasterScalingIn     MasterPhaseType = "ScalingIn"
+	MasterScalingUp     MasterPhaseType = "ScalingUp"
+	MasterScalingDown   MasterPhaseType = "ScalingDown"
+	MasterDeleting      MasterPhaseType = "Deleting"
+	MasterDeletePending MasterPhaseType = "DeletePending"
 )
 
-type ExecutorConditionType string
+// ExecutorPhaseType indicates the cluster's state of executors
+type ExecutorPhaseType string
 
 const (
-	ExecutorRunning       ExecutorConditionType = "Running"
-	ExecutorCreating      ExecutorConditionType = "Creating"
-	ExecutorUpgrade       ExecutorConditionType = "Upgrading"
-	ExecutorPending       ExecutorConditionType = "Pending"
-	ExecutorScalingOut    ExecutorConditionType = "ScalingOut"
-	ExecutorScalingIn     ExecutorConditionType = "ScalingIn"
-	ExecutorScalingUp     ExecutorConditionType = "ScalingUp"
-	ExecutorScalingDown   ExecutorConditionType = "ScalingDown"
-	ExecutorDeleting      ExecutorConditionType = "Deleting"
-	ExecutorDeletePending ExecutorConditionType = "DeletePending"
+	ExecutorRunning       ExecutorPhaseType = "Running"
+	ExecutorCreating      ExecutorPhaseType = "Creating"
+	ExecutorUpgrade       ExecutorPhaseType = "Upgrading"
+	ExecutorPending       ExecutorPhaseType = "Pending"
+	ExecutorScalingOut    ExecutorPhaseType = "ScalingOut"
+	ExecutorScalingIn     ExecutorPhaseType = "ScalingIn"
+	ExecutorScalingUp     ExecutorPhaseType = "ScalingUp"
+	ExecutorScalingDown   ExecutorPhaseType = "ScalingDown"
+	ExecutorDeleting      ExecutorPhaseType = "Deleting"
+	ExecutorDeletePending ExecutorPhaseType = "DeletePending"
 )

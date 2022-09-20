@@ -2,7 +2,6 @@ package v1alpha1
 
 import (
 	"fmt"
-	"github.com/pingcap/tiflow-operator/pkg/status"
 
 	"github.com/pingcap/tiflow-operator/api/config"
 	"github.com/pingcap/tiflow-operator/api/label"
@@ -142,6 +141,6 @@ func NewGenericConfig() *config.GenericConfig {
 	return config.New(map[string]interface{}{})
 }
 
-func (tc TiflowCluster) SetTiflowClusterStatus() {
-	status.SetTiflowClusterStatus(&tc.Status)
-}
+// func (tc TiflowCluster) SetTiflowClusterStatus() {
+// 	status.SetTiflowClusterStatus(&tc.Status)
+// }
