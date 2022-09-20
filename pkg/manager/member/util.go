@@ -13,9 +13,9 @@ import (
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/pingcap/tiflow-operator/api/label"
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
 	"github.com/pingcap/tiflow-operator/pkg/controller"
-	"github.com/pingcap/tiflow-operator/pkg/label"
 )
 
 const (
@@ -31,7 +31,7 @@ func getNodePort(svc *v1alpha1.ServiceSpec) int32 {
 
 // TODO: check whether do we need this func
 // getStsAnnotations gets annotations for statefulset of given component.
-//func getStsAnnotations(tcAnns map[string]string, component string) map[string]string {
+// func getStsAnnotations(tcAnns map[string]string, component string) map[string]string {
 //	anns := map[string]string{}
 //	if tcAnns == nil {
 //		return anns
@@ -52,7 +52,7 @@ func getNodePort(svc *v1alpha1.ServiceSpec) int32 {
 //	}
 //
 //	return anns
-//}
+// }
 
 func annotationsMountVolume() (corev1.VolumeMount, corev1.Volume) {
 	m := corev1.VolumeMount{Name: "annotations", ReadOnly: true, MountPath: "/etc/podinfo"}
@@ -169,7 +169,7 @@ func mergeConfigMapFunc(existing, desired client.Object) error {
 }
 
 func getStsAnnotations(tcAnns map[string]string, component string) map[string]string {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 

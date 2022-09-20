@@ -10,8 +10,8 @@ import (
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/pingcap/tiflow-operator/api/label"
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
-	"github.com/pingcap/tiflow-operator/pkg/label"
 	"github.com/pingcap/tiflow-operator/pkg/util"
 )
 

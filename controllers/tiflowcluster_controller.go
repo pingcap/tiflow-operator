@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+
 	"github.com/lithammer/shortuuid/v3"
 	"go.uber.org/zap/zapcore"
 	appsv1 "k8s.io/api/apps/v1"
@@ -119,7 +120,7 @@ func (r *TiflowClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	return result.NoRequeue()
 }
 func (r *TiflowClusterReconciler) updateTiflowClusterStatus(ctx context.Context, tc *pingcapcomv1alpha1.TiflowCluster) error {
-	tc.SetTiflowClusterStatus()
+	// tc.SetTiflowClusterStatus()
 	return status.NewRealStatusUpdater(r.Client).UpdateTiflowCluster(ctx, tc)
 }
 

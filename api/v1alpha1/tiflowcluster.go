@@ -5,7 +5,7 @@ import (
 	"github.com/pingcap/tiflow-operator/pkg/status"
 
 	"github.com/pingcap/tiflow-operator/api/config"
-	"github.com/pingcap/tiflow-operator/pkg/label"
+	"github.com/pingcap/tiflow-operator/api/label"
 )
 
 func (tc *TiflowCluster) GetInstanceName() string {

@@ -20,10 +20,10 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/pingcap/tiflow-operator/api/label"
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
 	"github.com/pingcap/tiflow-operator/pkg/component"
 	"github.com/pingcap/tiflow-operator/pkg/controller"
-	"github.com/pingcap/tiflow-operator/pkg/label"
 	"github.com/pingcap/tiflow-operator/pkg/manager"
 	mngerutils "github.com/pingcap/tiflow-operator/pkg/manager/utils"
 	"github.com/pingcap/tiflow-operator/pkg/tiflowapi"
@@ -440,7 +440,7 @@ func (m *executorMemberManager) getNewExecutorPVCTemp(tc *v1alpha1.TiflowCluster
 
 	instanceName := tc.GetInstanceName()
 	pvcLabels := label.New().Instance(instanceName).TiflowExecutor()
-	//pvcAnnotations := tc.Annotations
+	// pvcAnnotations := tc.Annotations
 
 	// todo: Need to be modified soon
 	pvc := []corev1.PersistentVolumeClaim{
@@ -450,7 +450,7 @@ func (m *executorMemberManager) getNewExecutorPVCTemp(tc *v1alpha1.TiflowCluster
 				Namespace:       tc.GetNamespace(),
 				Labels:          pvcLabels,
 				OwnerReferences: []metav1.OwnerReference{controller.GetOwnerRef(tc)},
-				//Annotations: pvcAnnotations,
+				// Annotations: pvcAnnotations,
 			},
 			Spec: corev1.PersistentVolumeClaimSpec{
 				AccessModes: []corev1.PersistentVolumeAccessMode{
@@ -467,9 +467,9 @@ func (m *executorMemberManager) getNewExecutorPVCTemp(tc *v1alpha1.TiflowCluster
 	// If it is a stateful executor, set its OwnerReference to delete both its pvc and bound pv when deleting statefulSet.
 	// Instead, just delete the statefulSet and keep the pvc and pv.
 	// todo: The pvc and pv need to be handled
-	//if tc.Spec.Executor.Stateful {
+	// if tc.Spec.Executor.Stateful {
 	//	pvc[0].ObjectMeta.Finalizers = []string{}
-	//}
+	// }
 
 	return pvc, nil
 }
@@ -673,7 +673,7 @@ func (m *executorMemberManager) syncExecutorStatus(tc *v1alpha1.TiflowCluster, s
 
 	// todo: Need to get the info of volumes which running container has bound
 	// todo: Waiting for discussion
-	//m.syncVolsStatus(tc,sts)
+	// m.syncVolsStatus(tc,sts)
 	tc.Status.Executor.Volumes = nil
 
 	return nil
