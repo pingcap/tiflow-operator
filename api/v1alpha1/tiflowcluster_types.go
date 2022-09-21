@@ -533,7 +533,10 @@ type MasterStatus struct {
 	// Phase represents the observed state of a tiflow master
 	// Update by sync types
 	// +required
-	Phase     MasterPhaseType   `json:"phase,omitempty"`
+	Phase MasterPhaseType `json:"phase,omitempty"`
+	// (Optional) Message related to the status of the Sync
+	// +optional
+	Message   string            `json:"message,omitempty"`
 	SyncTypes []ClusterSyncType `json:"SyncTypes,omitempty"`
 	// LastTransitionTime means the time when the status of Master Phase
 	// transitioned from one to another
@@ -561,7 +564,10 @@ type ExecutorStatus struct {
 	// Phase represents the observed state of a tiflow executor
 	// Update by sync types
 	// +required
-	Phase     ExecutorPhaseType `json:"phase,omitempty"`
+	Phase ExecutorPhaseType `json:"phase,omitempty"`
+	// (Optional) Message related to the status of the Sync
+	// +optional
+	Message   string            `json:"message,omitempty"`
 	SyncTypes []ClusterSyncType `json:"syncTypes,omitempty"`
 	// LastTransitionTime means the time when the status of Executor Phase
 	// transitioned from one to another.

@@ -1,39 +1,40 @@
 package status
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
 )
 
+// SetTiflowClusterStatusOnFirstReconcile will set phase of TiflowCluster as Starting on reconcile first
 func SetTiflowClusterStatusOnFirstReconcile(status *v1alpha1.TiflowClusterStatus) {
-	// InitOperatorActionsIfNeeded(status)
-	if status.ClusterStatus != "" {
+	if status.ClusterPhase != "" {
 		return
 	}
-
-	// status.ClusterStatus = v1alpha1.Starting.String()
+	SetMasterClusterStatusOnFirstReconcile(&status.Master)
+	SetExecutorClusterStatusOnFirstReconcile(&status.Executor)
+	status.ClusterPhase = v1alpha1.ClusterStarting
+	status.LastTransitionTime = metav1.Now()
 }
 
-/*func SetTiflowClusterStatus(status *v1alpha1.TiflowClusterStatus) {
-	InitOperatorActionsIfNeeded(status)
-	for _, action := range status.OperatorActions {
-		if action.Status == v1alpha1.Failed.String() {
-			status.ClusterStatus = v1alpha1.Failed.String()
-			return
-		}
-		if action.Status == v1alpha1.Unknown.String() {
-			status.ClusterStatus = v1alpha1.Unknown.String()
-			return
-		}
+func SetTiflowClusterStatus(status *v1alpha1.TiflowClusterStatus) {
+	SetMasterClusterStatus(&status.Master)
+	SetExecutorClusterStatus(&status.Executor)
 
-		status.ClusterStatus = v1alpha1.Failed.String()
-		return
+	masterPhase, executorPhase := status.Master.Phase, status.Executor.Phase
+	switch {
+	case masterPhase == "" || executorPhase == "":
+		status.ClusterPhase = v1alpha1.ClusterPending
+	case masterPhase == v1alpha1.MasterFailed || executorPhase == v1alpha1.ExecutorFailed:
+		status.ClusterPhase = v1alpha1.ClusterFailed
+	case masterPhase == v1alpha1.MasterUnknown || executorPhase == v1alpha1.ExecutorUnknown:
+		status.ClusterPhase = v1alpha1.ClusterUnknown
+	case masterPhase == v1alpha1.MasterRunning && executorPhase == v1alpha1.ExecutorRunning:
+		status.ClusterPhase = v1alpha1.ClusterCompleted
+	default:
+		status.ClusterPhase = v1alpha1.ClusterReconciling
 	}
 
-	status.ClusterStatus = v1alpha1.Failed.String()
+	status.LastTransitionTime = metav1.Now()
+	return
 }
-
-func InitOperatorActionsIfNeeded(status *v1alpha1.TiflowClusterStatus) {
-	if status.OperatorActions == nil {
-		status.OperatorActions = []v1alpha1.TiflowClusterAction{}
-	}
-}*/

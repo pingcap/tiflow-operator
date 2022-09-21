@@ -85,7 +85,7 @@ func (r *TiflowClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return result.RequeueIfError(client.IgnoreNotFound(err))
 	}
 
-	if tc.Status.ClusterStatus == "" {
+	if tc.Status.ClusterPhase == "" {
 		status.SetTiflowClusterStatusOnFirstReconcile(&tc.Status)
 		if err := r.updateTiflowClusterStatus(ctx, tc); err != nil {
 			logger.Error(err, "failed to update tiflow cluster status")
@@ -120,7 +120,7 @@ func (r *TiflowClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	return result.NoRequeue()
 }
 func (r *TiflowClusterReconciler) updateTiflowClusterStatus(ctx context.Context, tc *pingcapcomv1alpha1.TiflowCluster) error {
-	// tc.SetTiflowClusterStatus()
+	status.SetTiflowClusterStatus(&tc.Status)
 	return status.NewRealStatusUpdater(r.Client).UpdateTiflowCluster(ctx, tc)
 }
 

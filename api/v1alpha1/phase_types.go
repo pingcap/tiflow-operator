@@ -23,6 +23,7 @@ type MasterPhaseType string
 
 const (
 	MasterRunning       MasterPhaseType = "Running"
+	MasterStarting      MasterPhaseType = "Starting"
 	MasterCreating      MasterPhaseType = "Creating"
 	MasterUpgrading     MasterPhaseType = "Upgrading"
 	MasterPending       MasterPhaseType = "Pending"
@@ -32,6 +33,8 @@ const (
 	MasterScalingDown   MasterPhaseType = "ScalingDown"
 	MasterDeleting      MasterPhaseType = "Deleting"
 	MasterDeletePending MasterPhaseType = "DeletePending"
+	MasterFailed        MasterPhaseType = "Failed"
+	MasterUnknown       MasterPhaseType = "Unknown"
 )
 
 // ExecutorPhaseType indicates the cluster's state of executors
@@ -39,8 +42,9 @@ type ExecutorPhaseType string
 
 const (
 	ExecutorRunning       ExecutorPhaseType = "Running"
+	ExecutorStarting      ExecutorPhaseType = "Starting"
 	ExecutorCreating      ExecutorPhaseType = "Creating"
-	ExecutorUpgrade       ExecutorPhaseType = "Upgrading"
+	ExecutorUpgrading     ExecutorPhaseType = "Upgrading"
 	ExecutorPending       ExecutorPhaseType = "Pending"
 	ExecutorScalingOut    ExecutorPhaseType = "ScalingOut"
 	ExecutorScalingIn     ExecutorPhaseType = "ScalingIn"
@@ -48,4 +52,6 @@ const (
 	ExecutorScalingDown   ExecutorPhaseType = "ScalingDown"
 	ExecutorDeleting      ExecutorPhaseType = "Deleting"
 	ExecutorDeletePending ExecutorPhaseType = "DeletePending"
+	ExecutorFailed        ExecutorPhaseType = "Failed"
+	ExecutorUnknown       ExecutorPhaseType = "Unknown"
 )

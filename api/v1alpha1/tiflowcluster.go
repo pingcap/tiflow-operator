@@ -144,7 +144,3 @@ func (mt MemberType) String() string {
 func NewGenericConfig() *config.GenericConfig {
 	return config.New(map[string]interface{}{})
 }
-
-// func (tc TiflowCluster) SetTiflowClusterStatus() {
-// 	status.SetTiflowClusterStatus(&tc.Status)
-// }
