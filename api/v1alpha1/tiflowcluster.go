@@ -62,11 +62,13 @@ func (tc *TiflowCluster) AllExecutorMembersReady() bool {
 }
 
 func (tc *TiflowCluster) ExecutorUpgrading() bool {
-	return tc.Status.Executor.Phase == UpgradePhase
+	// return tc.Status.Executor.Phase == UpgradePhase
+	panic("implement me")
 }
 
 func (tc *TiflowCluster) ExecutorScaling() bool {
-	return tc.Status.Executor.Phase == ScalePhase
+	// return tc.Status.Executor.Phase == ScalePhase
+	panic("implement me")
 }
 
 func (tc *TiflowCluster) ExecutorStsActualReplicas() int32 {
@@ -87,11 +89,13 @@ func (tc *TiflowCluster) ExecutorStsDesiredReplicas() int32 {
 }
 
 func (tc *TiflowCluster) MasterUpgrading() bool {
-	return tc.Status.Master.Phase == UpgradePhase
+	// return tc.Status.Master.Phase == UpgradePhase
+	panic("implement me")
 }
 
 func (tc *TiflowCluster) MasterScaling() bool {
-	return tc.Status.Master.Phase == ScalePhase
+	// return tc.Status.Master.Phase == ScalePhase
+	panic("implement me")
 }
 
 func (tc *TiflowCluster) MasterStsActualReplicas() int32 {

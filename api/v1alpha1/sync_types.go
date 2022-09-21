@@ -1,17 +1,36 @@
 package v1alpha1
 
-// SyncType type alias
-type SyncType string
+// SyncTypeName type alias
+type SyncTypeName int
 
-// All possible sync types
+// All possible Sync type's name
 const (
-	CreatType   SyncType = "Create"
-	UpdateType  SyncType = "Update"
-	ScaleOut    SyncType = "ScaleOut"
-	ScaleIn     SyncType = "ScaleIn"
-	ScaleUp     SyncType = "ScaleUp"
-	ScaleDown   SyncType = "ScaleDown"
-	DeleteType  SyncType = "Delete"
-	UnknownType SyncType = "Unknown"
-	RunType     SyncType = "Run"
+	CreateType SyncTypeName = iota
+	UpdateType
+	ScaleOutType
+	ScaleInType
+	ScaleUpType
+	ScaleDownType
+	DeleteTypeType
+	RunType
+	UnknownType
 )
+
+var syncNames []string = []string{
+	"Create",
+	"Update",
+	"ScaleOut",
+	"ScaleIn",
+	"ScaleUp",
+	"ScaleDown",
+	"Delete",
+	"Run",
+	"Unknown",
+}
+
+func (a SyncTypeName) String() string {
+	if a < CreateType || a > RunType {
+		return "Unknown"
+	}
+	return syncNames[a]
+}

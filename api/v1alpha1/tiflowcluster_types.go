@@ -216,6 +216,9 @@ type ServiceSpec struct {
 	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType `json:"externalTrafficPolicy,omitempty"` // Expose the tidb cluster mysql port to MySQLNodePort
 }
 
+// +k8s:openapi-gen=true
+// +k8s:deepcopy-gen=true
+
 // MasterSpec defines the desired state of tiflow master
 type MasterSpec struct {
 	ComponentSpec               `json:",inline"`
@@ -252,6 +255,9 @@ type MasterSpec struct {
 	// +kubebuilder:validation:XPreserveUnknownFields
 	Config *config.GenericConfig `json:"config,omitempty"`
 }
+
+// +k8s:openapi-gen=true
+// +k8s:deepcopy-gen=true
 
 // ExecutorSpec defines the desired state of tiflow executor
 type ExecutorSpec struct {
@@ -317,6 +323,8 @@ type ExecutorSpec struct {
 }
 
 // +k8s:openapi-gen=true
+// +k8s:deepcopy-gen=true
+
 // ClusterRef reference to a TiflowCluster
 type ClusterRef struct {
 	// Namespace is the namespace that TiflowCluster object locates
@@ -330,6 +338,9 @@ type ClusterRef struct {
 	// +optional
 	ClusterDomain string `json:"clusterDomain,omitempty"`
 }
+
+// +k8s:openapi-gen=true
+// +k8s:deepcopy-gen=true
 
 // TiflowClusterSpec defines the desired state of TiflowCluster
 type TiflowClusterSpec struct {
@@ -430,18 +441,6 @@ type TiflowClusterSpec struct {
 	PodManagementPolicy apps.PodManagementPolicyType `json:"podManagementPolicy,omitempty"`
 }
 
-// MemberPhase is the current state of member
-type MemberPhase string
-
-const (
-	// NormalPhase represents normal state of TiDB cluster.
-	NormalPhase MemberPhase = "Normal"
-	// UpgradePhase represents the upgrade state of TiDB cluster.
-	UpgradePhase MemberPhase = "Upgrade"
-	// ScalePhase represents the scaling state of TiDB cluster.
-	ScalePhase MemberPhase = "Scale"
-)
-
 // MasterMember is Tiflow-master member status
 type MasterMember struct {
 	Id       string `json:"id,omitempty"`
@@ -498,20 +497,28 @@ type StorageVolumeStatus struct {
 	Name StorageVolumeName `json:"name"`
 }
 
-// // ClusterSyncType represents master or executor cluster's status as it is perceived by the operator
-// type ClusterSyncType struct {
-// 	// Type/Name of the action
-// 	// +required
-// 	Type SyncType `json:"type"`
-// 	// Action status: Failed, Finished or Unknown
-// 	// +required
-// 	Status string `json:"status"`
-// 	// The time when the condition was updated
-// 	// +required
-// 	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
-// }
+// +k8s:deepcopy-gen=true
 
-// MasterStatus defines the desired state of Tiflow-master
+// ClusterSyncType represents master or executor cluster's sync status as it is perceived by the operator\
+type ClusterSyncType struct {
+	// Name of the Sync type
+	// +required
+	Name SyncTypeName `json:"name"`
+	// (Optional) Message related to the status of the Sync
+	// +optional
+	Message string `json:"message,omitempty"`
+	// Status of SyncType: Failed, Ongoing, Completed or Unknown
+	// +required
+	Status SyncTypeStatus `json:"status"`
+	// LastUpdateTime means the time when the status of Sync was updated
+	// +required
+	LastUpdateTime metav1.Time `json:"lastUpdateTime"`
+}
+
+// +k8s:openapi-gen=true
+// +k8s:deepcopy-gen=true
+
+// MasterStatus defines the desired state of tiflow master
 type MasterStatus struct {
 	Synced         bool                    `json:"synced"`
 	Image          string                  `json:"image,omitempty"`
@@ -519,12 +526,25 @@ type MasterStatus struct {
 	Members        map[string]MasterMember `json:"members,omitempty"`
 	FailureMembers map[string]MasterMember `json:"failureMembers,omitempty"`
 	StatefulSet    *apps.StatefulSetStatus `json:"statefulSet,omitempty"`
+	// LastUpdateTime means the time when the status of Master cluster's info was updated
+	// +required
+	LastUpdateTime metav1.Time `json:"lastUpdateTime"`
 
-	Phase MemberPhase `json:"phase,omitempty"`
-	// SyncActions []ClusterSyncType `json:"syncActions,omitempty"`
+	// Phase represents the observed state of a tiflow master
+	// Update by sync types
+	// +required
+	Phase     MasterPhaseType   `json:"phase,omitempty"`
+	SyncTypes []ClusterSyncType `json:"SyncTypes,omitempty"`
+	// LastTransitionTime means the time when the status of Master Phase
+	// transitioned from one to another
+	// +required
+	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
 }
 
-// ExecutorStatus defines the desired state of Tiflow-executor
+// +k8s:openapi-gen=true
+// +k8s:deepcopy-gen=true
+
+// ExecutorStatus defines the desired state of tiflow executor
 type ExecutorStatus struct {
 	Synced         bool                      `json:"synced"`
 	Image          string                    `json:"image,omitempty"`
@@ -534,10 +554,23 @@ type ExecutorStatus struct {
 	FailoverUID    types.UID                 `json:"failoverUID,omitempty"`
 	// Volumes contains the status of all volumes.
 	Volumes map[string]*StorageVolumeStatus `json:"volumes,omitempty"`
+	// LastUpdateTime means the time when the status of Executor cluster's info was updated
+	// +required
+	LastUpdateTime metav1.Time `json:"lastUpdateTime"`
 
-	Phase MemberPhase `json:"phase,omitempty"`
-	// SyncActions []ClusterSyncType `json:"syncActions,omitempty"`
+	// Phase represents the observed state of a tiflow executor
+	// Update by sync types
+	// +required
+	Phase     ExecutorPhaseType `json:"phase,omitempty"`
+	SyncTypes []ClusterSyncType `json:"syncTypes,omitempty"`
+	// LastTransitionTime means the time when the status of Executor Phase
+	// transitioned from one to another.
+	// +required
+	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
 }
+
+// +k8s:openapi-gen=true
+// +k8s:deepcopy-gen=true
 
 // TiflowClusterCondition is tiflow cluster condition
 type TiflowClusterCondition struct {
@@ -545,29 +578,36 @@ type TiflowClusterCondition struct {
 	Type TiflowClusterConditionType `json:"type"`
 	// Status of the condition, one of True, False, Unknown.
 	Status metav1.ConditionStatus `json:"status"`
-	// Last time the condition transitioned from one status to another.
+	// LastTransitionTime means last time the condition transitioned from one status to another.
 	// +nullable
 	// +optional
 	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 }
 
+// +k8s:openapi-gen=true
+// +k8s:deepcopy-gen=true
+
 // TiflowClusterStatus defines the observed state of TiflowCluster
 type TiflowClusterStatus struct {
-	Hetero bool `json:"hetero,omitempty"`
+	// Hetero means that the current instance is a heterogeneous cluster
+	// +required
+	Hetero bool `json:"hetero"`
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 	Master   MasterStatus   `json:"master,omitempty"`
 	Executor ExecutorStatus `json:"executor,omitempty"`
-	// ClusterConditions List of conditions representing the current status of the tiflow engine resource
+	// ClusterConditions list of conditions representing the current status of the tiflow engine resource
 	// Interact between Master and Executor, and will update each other
 	// +optional
 	// +nullable
-	ClusterConditions []TiflowClusterCondition `json:"cluster_conditions,omitempty"`
-	// ClusterStatus represents the observed state of a tiflow cluster
+	ClusterConditions []TiflowClusterCondition `json:"clusterConditions,omitempty"`
+	// ClusterPhase represents the observed state of a tiflow cluster
 	// Update by master's phase and executor's phase
-	// +optional
-	// +nullable
-	ClusterStatus TiflowClusterPhaseType `json:"cluster_status"`
+	// +required
+	ClusterPhase TiflowClusterPhaseType `json:"clusterStatus"`
+	// LastTransitionTime means last time the ClusterPhase transitioned from one to another
+	// +required
+	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
 }
 
 // +kubebuilder:object:root=true
@@ -575,6 +615,7 @@ type TiflowClusterStatus struct {
 
 // TiflowCluster is the Schema for the tiflowclusters API
 // +k8s:openapi-gen=true
+// +k8s:deepcopy-gen=true
 // +kubebuilder:resource:shortName="tfc"
 type TiflowCluster struct {
 	metav1.TypeMeta   `json:",inline"`

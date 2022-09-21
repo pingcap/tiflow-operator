@@ -12489,29 +12489,18 @@ spec:
           status:
             description: TiflowClusterStatus defines the observed state of TiflowCluster
             properties:
-              conditions:
-                description: Represents the latest available observations of a tiflow
-                  cluster's state.
+              clusterConditions:
+                description: ClusterConditions list of conditions representing the
+                  current status of the tiflow engine resource Interact between Master
+                  and Executor, and will update each other
                 items:
                   description: TiflowClusterCondition is tiflow cluster condition
                   properties:
                     lastTransitionTime:
-                      description: Last time the condition transitioned from one status
-                        to another.
+                      description: LastTransitionTime means last time the condition
+                        transitioned from one status to another.
                       format: date-time
                       nullable: true
-                      type: string
-                    lastUpdateTime:
-                      description: The last time this condition was updated.
-                      format: date-time
-                      nullable: true
-                      type: string
-                    message:
-                      description: A human readable message indicating details about
-                        the transition.
-                      type: string
-                    reason:
-                      description: The reason for the condition's last transition.
                       type: string
                     status:
                       description: Status of the condition, one of True, False, Unknown.
@@ -12525,8 +12514,12 @@ spec:
                   type: object
                 nullable: true
                 type: array
+              clusterStatus:
+                description: ClusterPhase represents the observed state of a tiflow
+                  cluster Update by master's phase and executor's phase
+                type: string
               executor:
-                description: ExecutorStatus defines the desired state of Tiflow-executor
+                description: ExecutorStatus defines the desired state of tiflow executor
                 properties:
                   failoverUID:
                     description: UID is a type that holds unique ID values, including
@@ -12557,6 +12550,16 @@ spec:
                     type: object
                   image:
                     type: string
+                  lastTransitionTime:
+                    description: LastTransitionTime means the time when the status
+                      of Executor Phase transitioned from one to another.
+                    format: date-time
+                    type: string
+                  lastUpdateTime:
+                    description: LastUpdateTime means the time when the status of
+                      Executor cluster's info was updated
+                    format: date-time
+                    type: string
                   members:
                     additionalProperties:
                       description: ExecutorMember is Tiflow-executor member status
@@ -12579,7 +12582,8 @@ spec:
                       type: object
                     type: object
                   phase:
-                    description: MemberPhase is the current state of member
+                    description: Phase represents the observed state of a tiflow executor
+                      Update by sync types
                     type: string
                   statefulSet:
                     description: StatefulSetStatus represents the current state of
@@ -12671,6 +12675,33 @@ spec:
                     required:
                     - replicas
                     type: object
+                  syncTypes:
+                    items:
+                      description: ClusterSyncType represents master or executor cluster's
+                        sync status as it is perceived by the operator\
+                      properties:
+                        lastUpdateTime:
+                          description: LastUpdateTime means the time when the status
+                            of Sync was updated
+                          format: date-time
+                          type: string
+                        message:
+                          description: (Optional) Message related to the status of
+                            the Sync
+                          type: string
+                        name:
+                          description: Name of the Sync type
+                          type: integer
+                        status:
+                          description: 'Status of SyncType: Failed, Ongoing, Completed
+                            or Unknown'
+                          type: integer
+                      required:
+                      - lastUpdateTime
+                      - name
+                      - status
+                      type: object
+                    type: array
                   synced:
                     type: boolean
                   volumes:
@@ -12719,13 +12750,51 @@ spec:
                     description: Volumes contains the status of all volumes.
                     type: object
                 required:
+                - lastTransitionTime
+                - lastUpdateTime
                 - synced
                 type: object
+              hetero:
+                description: Hetero means that the current instance is a heterogeneous
+                  cluster
+                type: boolean
+              lastTransitionTime:
+                description: LastTransitionTime means last time the ClusterPhase transitioned
+                  from one to another
+                format: date-time
+                type: string
               master:
                 description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
                   of cluster Important: Run "make" to regenerate code after modifying
                   this file'
                 properties:
+                  SyncTypes:
+                    items:
+                      description: ClusterSyncType represents master or executor cluster's
+                        sync status as it is perceived by the operator\
+                      properties:
+                        lastUpdateTime:
+                          description: LastUpdateTime means the time when the status
+                            of Sync was updated
+                          format: date-time
+                          type: string
+                        message:
+                          description: (Optional) Message related to the status of
+                            the Sync
+                          type: string
+                        name:
+                          description: Name of the Sync type
+                          type: integer
+                        status:
+                          description: 'Status of SyncType: Failed, Ongoing, Completed
+                            or Unknown'
+                          type: integer
+                      required:
+                      - lastUpdateTime
+                      - name
+                      - status
+                      type: object
+                    type: array
                   failureMembers:
                     additionalProperties:
                       description: MasterMember is Tiflow-master member status
@@ -12759,6 +12828,16 @@ spec:
                       type: object
                     type: object
                   image:
+                    type: string
+                  lastTransitionTime:
+                    description: LastTransitionTime means the time when the status
+                      of Master Phase transitioned from one to another
+                    format: date-time
+                    type: string
+                  lastUpdateTime:
+                    description: LastUpdateTime means the time when the status of
+                      Master cluster's info was updated
+                    format: date-time
                     type: string
                   leader:
                     description: MasterMember is Tiflow-master member status
@@ -12823,7 +12902,8 @@ spec:
                       type: object
                     type: object
                   phase:
-                    description: MemberPhase is the current state of member
+                    description: Phase represents the observed state of a tiflow master
+                      Update by sync types
                     type: string
                   statefulSet:
                     description: StatefulSetStatus represents the current state of
@@ -12918,8 +12998,14 @@ spec:
                   synced:
                     type: boolean
                 required:
+                - lastTransitionTime
+                - lastUpdateTime
                 - synced
                 type: object
+            required:
+            - clusterStatus
+            - hetero
+            - lastTransitionTime
             type: object
         type: object
     served: true
