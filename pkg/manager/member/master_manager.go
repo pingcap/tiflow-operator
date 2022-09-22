@@ -3,7 +3,6 @@ package member
 import (
 	"context"
 	"fmt"
-	"k8s.io/client-go/kubernetes"
 	"strings"
 	"time"
 
@@ -13,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,6 +23,7 @@ import (
 	"github.com/pingcap/tiflow-operator/pkg/controller"
 	"github.com/pingcap/tiflow-operator/pkg/manager"
 	mngerutils "github.com/pingcap/tiflow-operator/pkg/manager/utils"
+	"github.com/pingcap/tiflow-operator/pkg/status"
 	"github.com/pingcap/tiflow-operator/pkg/tiflowapi"
 	"github.com/pingcap/tiflow-operator/pkg/util"
 )
@@ -226,6 +227,7 @@ func (m *masterMemberManager) syncMasterHeadlessServiceForTiflowCluster(ctx cont
 func (m *masterMemberManager) syncMasterStatefulSetForTiflowCluster(ctx context.Context, tc *pingcapcomv1alpha1.TiflowCluster) error {
 	ns := tc.GetNamespace()
 	tcName := tc.GetName()
+	state := status.NewMasterSyncTypeManager(&tc.Status.Master)
 
 	oldMasterSetTmp := &apps.StatefulSet{}
 	err := m.cli.Get(ctx, types.NamespacedName{
@@ -256,20 +258,27 @@ func (m *masterMemberManager) syncMasterStatefulSetForTiflowCluster(ctx context.
 		return err
 	}
 	if setNotExist {
+		state.SetClusterSyncTypeOngoing(pingcapcomv1alpha1.CreateType,
+			fmt.Sprintf("start to create master cluster [%s/%s]", ns, tcName))
 		err = mngerutils.SetStatefulSetLastAppliedConfigAnnotation(newMasterSet)
 		if err != nil {
 			return err
 		}
 		if err := m.cli.Create(ctx, newMasterSet); err != nil {
+			state.SetClusterSyncTypeFailed(pingcapcomv1alpha1.CreateType,
+				fmt.Sprintf("create master cluster [%s/%s] failed", ns, tcName))
 			return err
 		}
 		tc.Status.Master.StatefulSet = &apps.StatefulSetStatus{}
+		state.SetClusterSyncTypeComplied(pingcapcomv1alpha1.CreateType,
+			fmt.Sprintf("create master cluster [%s/%s] completed", ns, tcName))
+
 		return controller.RequeueErrorf("tiflow cluster: [%s/%s], waiting for tiflow-master cluster running", ns, tcName)
 	}
 
 	// Force update takes precedence over scaling because force upgrade won't take effect when cluster gets stuck at scaling
 	if !tc.Status.Master.Synced && NeedForceUpgrade(tc.Annotations) {
-		tc.Status.Master.Phase = pingcapcomv1alpha1.UpgradePhase
+		tc.Status.Master.Phase = pingcapcomv1alpha1.MasterUpgrading
 		mngerutils.SetUpgradePartition(newMasterSet, 0)
 		errSTS := mngerutils.UpdateStatefulSet(ctx, m.cli, newMasterSet, oldMasterSet)
 		return controller.RequeueErrorf("tiflow cluster: [%s/%s]'s tiflow-master needs force upgrade, %v", ns, tcName, errSTS)
@@ -299,8 +308,11 @@ func (m *masterMemberManager) syncMasterStatefulSetForTiflowCluster(ctx context.
 	//	}
 	// }
 
-	if !templateEqual(newMasterSet, oldMasterSet) || tc.Status.Master.Phase == pingcapcomv1alpha1.UpgradePhase {
+	if !templateEqual(newMasterSet, oldMasterSet) || tc.Status.Master.Phase == pingcapcomv1alpha1.MasterUpgrading {
 		if err := m.upgrader.Upgrade(tc, oldMasterSet, newMasterSet); err != nil {
+			state.SetClusterSyncTypeFailed(pingcapcomv1alpha1.UpgradeType,
+				fmt.Sprintf("tiflow master [%s/%s] upgrading failed", ns, tcName))
+
 			return err
 		}
 	}
@@ -624,11 +636,14 @@ func (m *masterMemberManager) syncTiflowClusterStatus(tc *pingcapcomv1alpha1.Tif
 
 	// Scaling takes precedence over upgrading.
 	if tc.MasterStsDesiredReplicas() != *set.Spec.Replicas {
-		tc.Status.Master.Phase = pingcapcomv1alpha1.ScalePhase
+		if tc.MasterStsDesiredReplicas() > *set.Spec.Replicas {
+			tc.Status.Master.Phase = pingcapcomv1alpha1.MasterScalingOut
+		}
+		tc.Status.Master.Phase = pingcapcomv1alpha1.MasterScalingIn
 	} else if upgrading {
-		tc.Status.Master.Phase = pingcapcomv1alpha1.UpgradePhase
+		tc.Status.Master.Phase = pingcapcomv1alpha1.MasterUpgrading
 	} else {
-		tc.Status.Master.Phase = pingcapcomv1alpha1.NormalPhase
+		tc.Status.Master.Phase = pingcapcomv1alpha1.MasterRunning
 	}
 
 	// TODO: add status info after tiflow master interface stable

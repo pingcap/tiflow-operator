@@ -121,7 +121,7 @@ func (r *TiflowClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 }
 func (r *TiflowClusterReconciler) updateTiflowClusterStatus(ctx context.Context, tc *pingcapcomv1alpha1.TiflowCluster) error {
 	status.SetTiflowClusterStatus(&tc.Status)
-	return status.NewRealStatusUpdater(r.Client).UpdateTiflowCluster(ctx, tc)
+	return status.NewRealStatusUpdater(r.Client).Update(ctx, tc)
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -129,7 +129,6 @@ func (r *TiflowClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&pingcapcomv1alpha1.TiflowCluster{}).
 		Owns(&appsv1.StatefulSet{}).
-		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
 		Owns(&corev1.ConfigMap{}).
 		Complete(r)

@@ -3,6 +3,7 @@ package member
 import (
 	"context"
 	"fmt"
+	"github.com/pingcap/tiflow-operator/pkg/status"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -56,6 +57,10 @@ func (s *executorScaler) ScaleOut(meta metav1.Object, actual *appsv1.StatefulSet
 	tcName := tc.GetName()
 	stsName := actual.GetName()
 
+	state := status.NewExecutorSyncTypeManager(&tc.Status.Executor)
+	state.SetClusterSyncTypeOngoing(v1alpha1.ScaleOutType,
+		fmt.Sprintf("tiflow executor [%s/%s] sacling out...", ns, tcName))
+
 	ctx := context.TODO()
 	// skip this logic if Executor is stateful
 	if !tc.Spec.Executor.Stateful {
@@ -67,6 +72,9 @@ func (s *executorScaler) ScaleOut(meta metav1.Object, actual *appsv1.StatefulSet
 	}
 
 	if !tc.Status.Executor.Synced {
+		state.SetClusterSyncTypeFailed(v1alpha1.ScaleOutType,
+			fmt.Sprintf("tiflow executor [%s/%s] sacling out failed", ns, tcName))
+
 		return fmt.Errorf("tiflow cluster: [%s/%s]'s tiflow-executor status sync failed, can't scale up now",
 			ns, tcName)
 	}
@@ -100,6 +108,9 @@ func (s *executorScaler) ScaleOut(meta metav1.Object, actual *appsv1.StatefulSet
 	klog.Infof("scaling up is done, tiflow-executor statefulSet %s for [%s/%s], current: %d, desired: %d",
 		stsName, ns, tcName, current, *desired.Spec.Replicas)
 
+	state.SetClusterSyncTypeComplied(v1alpha1.ScaleOutType,
+		fmt.Sprintf("tiflow executor [%s/%s] sacling out completed", ns, tcName))
+
 	return nil
 }
 
@@ -113,7 +124,14 @@ func (s *executorScaler) ScaleIn(meta metav1.Object, actual *appsv1.StatefulSet,
 	tcName := tc.GetName()
 	stsName := actual.GetName()
 
+	state := status.NewExecutorSyncTypeManager(&tc.Status.Executor)
+	state.SetClusterSyncTypeOngoing(v1alpha1.ScaleInType,
+		fmt.Sprintf("tiflow executor [%s/%s] sacling in...", ns, tcName))
+
 	if !tc.Status.Executor.Synced {
+		state.SetClusterSyncTypeFailed(v1alpha1.ScaleInType,
+			fmt.Sprintf("tiflow executor [%s/%s] sacling in failed", ns, tcName))
+
 		return fmt.Errorf("tiflow cluster: [%s/%s]'s tiflow-executor status sync failed, can't scale down now",
 			ns, tcName)
 	}
@@ -152,6 +170,9 @@ func (s *executorScaler) ScaleIn(meta metav1.Object, actual *appsv1.StatefulSet,
 		}
 	}
 
+	state.SetClusterSyncTypeComplied(v1alpha1.ScaleOutType,
+		fmt.Sprintf("tiflow executor [%s/%s] sacling in completed", ns, tcName))
+
 	return nil
 }
 
@@ -175,14 +196,14 @@ func (s *executorScaler) SetReplicas(ctx context.Context, actual *appsv1.Statefu
 
 // WaitUntilRunning blocks until the tiflow-executor statefulset has the expected number of pods running but not necessarily ready
 func (s *executorScaler) WaitUntilRunning(ctx context.Context) error {
-	//TODO implement me
-	//panic("implement me")
+	// TODO implement me
+	// panic("implement me")
 	return nil
 }
 
 // WaitUntilHealthy blocks until the tiflow-executor stateful set has exactly `prune` healthy replicas.
 func (s *executorScaler) WaitUntilHealthy(ctx context.Context, scale uint) error {
-	//TODO implement me
-	//panic("implement me")
+	// TODO implement me
+	// panic("implement me")
 	return nil
 }

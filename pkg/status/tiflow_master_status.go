@@ -6,7 +6,33 @@ import (
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
 )
 
-func SetMasterClusterStatusOnFirstReconcile(masterStatus *v1alpha1.MasterStatus) {
+type MasterSyncManager struct {
+	Status *v1alpha1.MasterStatus
+}
+
+func NewMasterSyncTypeManager(status *v1alpha1.MasterStatus) SyncTypeManager {
+	return &MasterSyncManager{
+		Status: status,
+	}
+}
+
+func (mm *MasterSyncManager) SetClusterSyncTypeOngoing(syncName v1alpha1.SyncTypeName, message string) {
+	mm.setMasterSyncTypeStatus(syncName, v1alpha1.Ongoing, message, metav1.Now())
+}
+
+func (mm *MasterSyncManager) SetClusterSyncTypeComplied(syncName v1alpha1.SyncTypeName, message string) {
+	mm.setMasterSyncTypeStatus(syncName, v1alpha1.Completed, message, metav1.Now())
+}
+
+func (mm *MasterSyncManager) SetClusterSyncTypeFailed(syncName v1alpha1.SyncTypeName, message string) {
+	mm.setMasterSyncTypeStatus(syncName, v1alpha1.Failed, message, metav1.Now())
+}
+
+func (mm *MasterSyncManager) SetClusterSyncTypeUnknown(syncName v1alpha1.SyncTypeName, message string) {
+	mm.setMasterSyncTypeStatus(syncName, v1alpha1.Unknown, message, metav1.Now())
+}
+
+func setMasterClusterStatusOnFirstReconcile(masterStatus *v1alpha1.MasterStatus) {
 	InitMasterClusterSyncTypesIfNeed(masterStatus)
 	if masterStatus.Phase != "" {
 		return
@@ -28,7 +54,7 @@ func InitMasterClusterSyncTypesIfNeed(masterStatus *v1alpha1.MasterStatus) {
 // SetMasterClusterStatus
 // todo: need to check for all OperatorActions or for just the 0th element
 // This depends on our logic for updating Status
-func SetMasterClusterStatus(masterStatus *v1alpha1.MasterStatus) {
+func setMasterClusterStatus(masterStatus *v1alpha1.MasterStatus) {
 	InitMasterClusterSyncTypesIfNeed(masterStatus)
 	for _, sync := range masterStatus.SyncTypes {
 		switch sync.Status {
@@ -53,25 +79,25 @@ func SetMasterClusterStatus(masterStatus *v1alpha1.MasterStatus) {
 	return
 }
 
-func setMasterSyncTypeStatus(syncName v1alpha1.SyncTypeName, syncStatus v1alpha1.SyncTypeStatus, message string, now metav1.Time, status *v1alpha1.MasterStatus) {
-	sync := findOrCreateMasterSyncType(syncName, status, message)
+func (mm *MasterSyncManager) setMasterSyncTypeStatus(syncName v1alpha1.SyncTypeName, syncStatus v1alpha1.SyncTypeStatus, message string, now metav1.Time) {
+	sync := mm.findOrCreateMasterSyncType(syncName, message)
 	sync.Status = syncStatus
 	sync.LastUpdateTime = now
 }
 
-func findOrCreateMasterSyncType(syncName v1alpha1.SyncTypeName, status *v1alpha1.MasterStatus, message string) *v1alpha1.ClusterSyncType {
-	pos := findPos(syncName, status.SyncTypes)
+func (mm *MasterSyncManager) findOrCreateMasterSyncType(syncName v1alpha1.SyncTypeName, message string) *v1alpha1.ClusterSyncType {
+	pos := findPos(syncName, mm.Status.SyncTypes)
 	if pos >= 0 {
-		status.SyncTypes[pos].Message = message
-		return &status.SyncTypes[pos]
+		mm.Status.SyncTypes[pos].Message = message
+		return &mm.Status.SyncTypes[pos]
 	}
 
-	status.SyncTypes = append(status.SyncTypes, v1alpha1.ClusterSyncType{
+	mm.Status.SyncTypes = append(mm.Status.SyncTypes, v1alpha1.ClusterSyncType{
 		Name:           syncName,
 		Message:        message,
 		Status:         v1alpha1.Unknown,
 		LastUpdateTime: metav1.Now(),
 	})
 
-	return &status.SyncTypes[len(status.SyncTypes)-1]
+	return &mm.Status.SyncTypes[len(mm.Status.SyncTypes)-1]
 }

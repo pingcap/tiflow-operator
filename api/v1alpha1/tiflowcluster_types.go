@@ -534,9 +534,10 @@ type MasterStatus struct {
 	// Update by sync types
 	// +required
 	Phase MasterPhaseType `json:"phase,omitempty"`
-	// (Optional) Message related to the status of the Sync
+	// (Optional) Message related to the status of the MasterCluster
 	// +optional
-	Message   string            `json:"message,omitempty"`
+	Message string `json:"message,omitempty"`
+	// +nullable
 	SyncTypes []ClusterSyncType `json:"SyncTypes,omitempty"`
 	// LastTransitionTime means the time when the status of Master Phase
 	// transitioned from one to another
@@ -565,9 +566,10 @@ type ExecutorStatus struct {
 	// Update by sync types
 	// +required
 	Phase ExecutorPhaseType `json:"phase,omitempty"`
-	// (Optional) Message related to the status of the Sync
+	// (Optional) Message related to the status of the ExecutorCluster
 	// +optional
-	Message   string            `json:"message,omitempty"`
+	Message string `json:"message,omitempty"`
+	// +nullable
 	SyncTypes []ClusterSyncType `json:"syncTypes,omitempty"`
 	// LastTransitionTime means the time when the status of Executor Phase
 	// transitioned from one to another.
@@ -611,6 +613,9 @@ type TiflowClusterStatus struct {
 	// Update by master's phase and executor's phase
 	// +required
 	ClusterPhase TiflowClusterPhaseType `json:"clusterStatus"`
+	// (Optional) Message related to the status of the MasterCluster
+	// +optional
+	Message string `json:"message,omitempty"`
 	// LastTransitionTime means last time the ClusterPhase transitioned from one to another
 	// +required
 	LastTransitionTime metav1.Time `json:"lastTransitionTime"`

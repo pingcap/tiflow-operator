@@ -7,15 +7,14 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/client-go/kubernetes"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,6 +25,7 @@ import (
 	"github.com/pingcap/tiflow-operator/pkg/controller"
 	"github.com/pingcap/tiflow-operator/pkg/manager"
 	mngerutils "github.com/pingcap/tiflow-operator/pkg/manager/utils"
+	"github.com/pingcap/tiflow-operator/pkg/status"
 	"github.com/pingcap/tiflow-operator/pkg/tiflowapi"
 	"github.com/pingcap/tiflow-operator/pkg/util"
 )
@@ -160,6 +160,8 @@ func (m *executorMemberManager) syncExecutorStatefulSetForTiflowCluster(ctx cont
 	ns := tc.GetNamespace()
 	tcName := tc.GetName()
 
+	state := status.NewExecutorSyncTypeManager(&tc.Status.Executor)
+
 	oldStsTmp := &appsv1.StatefulSet{}
 	err := m.cli.Get(ctx, types.NamespacedName{
 		Namespace: ns,
@@ -205,20 +207,28 @@ func (m *executorMemberManager) syncExecutorStatefulSetForTiflowCluster(ctx cont
 	}
 
 	if stsNotExist {
+		state.SetClusterSyncTypeOngoing(v1alpha1.CreateType,
+			fmt.Sprintf("start to create executor cluster [%s/%s]", ns, tcName))
+
 		err = mngerutils.SetStatefulSetLastAppliedConfigAnnotation(newSts)
 		if err != nil {
 			return err
 		}
 		if err := m.cli.Create(ctx, newSts); err != nil {
+			state.SetClusterSyncTypeFailed(v1alpha1.CreateType,
+				fmt.Sprintf("start to create executor cluster [%s/%s] failed", ns, tcName))
 			return err
 		}
 		tc.Status.Executor.StatefulSet = &appsv1.StatefulSetStatus{}
+		state.SetClusterSyncTypeComplied(v1alpha1.CreateType,
+			fmt.Sprintf("start to create executor cluster [%s/%s] completed", ns, tcName))
+
 		return controller.RequeueErrorf("tiflow cluster: [%s/%s], waiting for tiflow-executor cluster running", ns, tcName)
 	}
 
 	// Force Update takes precedence over Scaling
 	if !tc.Status.Executor.Synced && NeedForceUpgrade(tc.Annotations) {
-		tc.Status.Executor.Phase = v1alpha1.UpgradePhase
+		tc.Status.Executor.Phase = v1alpha1.ExecutorUpgrading
 		mngerutils.SetUpgradePartition(newSts, 0)
 		errSts := mngerutils.UpdateStatefulSet(ctx, m.cli, newSts, oldSts)
 		return controller.RequeueErrorf("tiflow cluster: [%s/%s]'s tiflow-executor needs force upgrade, %v", ns, tcName, errSts)
@@ -233,8 +243,10 @@ func (m *executorMemberManager) syncExecutorStatefulSetForTiflowCluster(ctx cont
 		return err
 	}
 
-	if !templateEqual(newSts, oldSts) || tc.Status.Executor.Phase == v1alpha1.UpgradePhase {
+	if !templateEqual(newSts, oldSts) || tc.Status.Executor.Phase == v1alpha1.ExecutorUpgrading {
 		if err := m.upgrader.Upgrade(tc, oldSts, newSts); err != nil {
+			state.SetClusterSyncTypeFailed(v1alpha1.UpgradeType,
+				fmt.Sprintf("tiflow executor [%s/%s] upgrading failed", ns, tcName))
 			return err
 		}
 	}
@@ -651,12 +663,16 @@ func (m *executorMemberManager) syncExecutorStatus(tc *v1alpha1.TiflowCluster, s
 		return err
 	}
 
+	// todo: may be handled by status
 	if tc.ExecutorStsDesiredReplicas() != *sts.Spec.Replicas {
-		tc.Status.Executor.Phase = v1alpha1.ScalePhase
+		if tc.ExecutorStsDesiredReplicas() > *sts.Spec.Replicas {
+			tc.Status.Executor.Phase = v1alpha1.ExecutorScalingOut
+		}
+		tc.Status.Executor.Phase = v1alpha1.ExecutorScalingIn
 	} else if upgrading {
-		tc.Status.Executor.Phase = v1alpha1.UpgradePhase
+		tc.Status.Executor.Phase = v1alpha1.ExecutorUpgrading
 	} else {
-		tc.Status.Executor.Phase = v1alpha1.NormalPhase
+		tc.Status.Executor.Phase = v1alpha1.ExecutorRunning
 	}
 
 	tc.Status.Executor.Members, err = m.syncExecutorMembersStatus(tc)

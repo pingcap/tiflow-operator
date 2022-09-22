@@ -6,6 +6,7 @@ import (
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
 	"github.com/pingcap/tiflow-operator/pkg/controller"
 	mngerutils "github.com/pingcap/tiflow-operator/pkg/manager/utils"
+	"github.com/pingcap/tiflow-operator/pkg/status"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -33,6 +34,10 @@ func (u *executorUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSts, n
 	ns := tc.GetNamespace()
 	tcName := tc.GetName()
 
+	state := status.NewExecutorSyncTypeManager(&tc.Status.Executor)
+	state.SetClusterSyncTypeOngoing(v1alpha1.UpgradeType,
+		fmt.Sprintf("tiflow executor [%s/%s] upgrading...", ns, tcName))
+
 	if !tc.Status.Executor.Synced {
 		return fmt.Errorf("tiflowCluster: [%s/%s]'s tiflow-executor status sync failed,"+
 			"can not to be upgraded", ns, tcName)
@@ -49,7 +54,7 @@ func (u *executorUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSts, n
 		return nil
 	}
 
-	tc.Status.Executor.Phase = v1alpha1.UpgradePhase
+	tc.Status.Executor.Phase = v1alpha1.ExecutorUpgrading
 	if !templateEqual(newSts, oldSts) {
 		return nil
 	}
@@ -100,6 +105,10 @@ func (u *executorUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSts, n
 		mngerutils.SetUpgradePartition(newSts, i)
 		return nil
 	}
+
+	state.SetClusterSyncTypeComplied(v1alpha1.UpgradeType,
+		fmt.Sprintf("tiflow executor [%s/%s] completed", ns, tcName))
+
 	return nil
 }
 

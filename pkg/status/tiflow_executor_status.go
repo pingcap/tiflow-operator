@@ -6,7 +6,33 @@ import (
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
 )
 
-func SetExecutorClusterStatusOnFirstReconcile(executorStatus *v1alpha1.ExecutorStatus) {
+type ExecutorSyncTypeManger struct {
+	Status *v1alpha1.ExecutorStatus
+}
+
+func NewExecutorSyncTypeManager(status *v1alpha1.ExecutorStatus) SyncTypeManager {
+	return &ExecutorSyncTypeManger{
+		Status: status,
+	}
+}
+
+func (em *ExecutorSyncTypeManger) SetClusterSyncTypeOngoing(syncName v1alpha1.SyncTypeName, message string) {
+	em.setExecutorSyncTypeStatus(syncName, v1alpha1.Ongoing, message, metav1.Now())
+}
+
+func (em *ExecutorSyncTypeManger) SetClusterSyncTypeComplied(syncName v1alpha1.SyncTypeName, message string) {
+	em.setExecutorSyncTypeStatus(syncName, v1alpha1.Completed, message, metav1.Now())
+}
+
+func (em *ExecutorSyncTypeManger) SetClusterSyncTypeUnknown(syncName v1alpha1.SyncTypeName, message string) {
+	em.setExecutorSyncTypeStatus(syncName, v1alpha1.Unknown, message, metav1.Now())
+}
+
+func (em *ExecutorSyncTypeManger) SetClusterSyncTypeFailed(syncName v1alpha1.SyncTypeName, message string) {
+	em.setExecutorSyncTypeStatus(syncName, v1alpha1.Failed, message, metav1.Now())
+}
+
+func setExecutorClusterStatusOnFirstReconcile(executorStatus *v1alpha1.ExecutorStatus) {
 	InitExecutorClusterSyncTypesIfNeed(executorStatus)
 	if executorStatus.Phase != "" {
 		return
@@ -28,7 +54,7 @@ func InitExecutorClusterSyncTypesIfNeed(executorStatus *v1alpha1.ExecutorStatus)
 // SetExecutorClusterStatus
 // todo: need to check for all OperatorActions or for just the 0th element
 // This depends on our logic for updating Status
-func SetExecutorClusterStatus(executorStatus *v1alpha1.ExecutorStatus) {
+func setExecutorClusterStatus(executorStatus *v1alpha1.ExecutorStatus) {
 	InitExecutorClusterSyncTypesIfNeed(executorStatus)
 	for _, sync := range executorStatus.SyncTypes {
 		switch sync.Status {
@@ -53,25 +79,25 @@ func SetExecutorClusterStatus(executorStatus *v1alpha1.ExecutorStatus) {
 	return
 }
 
-func setExecutorSyncTypeStatus(syncName v1alpha1.SyncTypeName, syncStatus v1alpha1.SyncTypeStatus, message string, now metav1.Time, status *v1alpha1.ExecutorStatus) {
-	sync := findOrCreateExecutorSyncType(syncName, status, message)
+func (em *ExecutorSyncTypeManger) setExecutorSyncTypeStatus(syncName v1alpha1.SyncTypeName, syncStatus v1alpha1.SyncTypeStatus, message string, now metav1.Time) {
+	sync := em.findOrCreateExecutorSyncType(syncName, message)
 	sync.Status = syncStatus
 	sync.LastUpdateTime = now
 }
 
-func findOrCreateExecutorSyncType(syncName v1alpha1.SyncTypeName, status *v1alpha1.ExecutorStatus, message string) *v1alpha1.ClusterSyncType {
-	pos := findPos(syncName, status.SyncTypes)
+func (em *ExecutorSyncTypeManger) findOrCreateExecutorSyncType(syncName v1alpha1.SyncTypeName, message string) *v1alpha1.ClusterSyncType {
+	pos := findPos(syncName, em.Status.SyncTypes)
 	if pos >= 0 {
-		status.SyncTypes[pos].Message = message
-		return &status.SyncTypes[pos]
+		em.Status.SyncTypes[pos].Message = message
+		return &em.Status.SyncTypes[pos]
 	}
 
-	status.SyncTypes = append(status.SyncTypes, v1alpha1.ClusterSyncType{
+	em.Status.SyncTypes = append(em.Status.SyncTypes, v1alpha1.ClusterSyncType{
 		Name:           syncName,
 		Message:        message,
 		Status:         v1alpha1.Unknown,
 		LastUpdateTime: metav1.Now(),
 	})
 
-	return &status.SyncTypes[len(status.SyncTypes)-1]
+	return &em.Status.SyncTypes[len(em.Status.SyncTypes)-1]
 }

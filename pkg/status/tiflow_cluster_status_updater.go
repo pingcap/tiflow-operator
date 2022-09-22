@@ -3,7 +3,7 @@ package status
 import (
 	"context"
 	"fmt"
-	"github.com/pingcap/tiflow-operator/pkg/result"
+
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/util/retry"
@@ -11,25 +11,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
+	"github.com/pingcap/tiflow-operator/pkg/result"
 )
-
-// StatusUpdater updates Tiflow cluster's status
-type StatusUpdater interface {
-	UpdateTiflowCluster(context.Context, *v1alpha1.TiflowCluster) error
-}
 
 type realStatusUpdater struct {
 	cli client.Client
 }
 
-// NewRealStatusUpdater creates a new TiflowClusterControlInterface
-func NewRealStatusUpdater(cli client.Client) StatusUpdater {
+func NewRealStatusUpdater(cli client.Client) Updater {
 	return &realStatusUpdater{
 		cli,
 	}
 }
 
-func (c *realStatusUpdater) UpdateTiflowCluster(ctx context.Context, tc *v1alpha1.TiflowCluster) error {
+func (c *realStatusUpdater) Update(ctx context.Context, tc *v1alpha1.TiflowCluster) error {
 	ns := tc.GetNamespace()
 	tcName := tc.GetName()
 

@@ -12581,6 +12581,9 @@ spec:
                           type: string
                       type: object
                     type: object
+                  message:
+                    description: (Optional) Message related to the status of the ExecutorCluster
+                    type: string
                   phase:
                     description: Phase represents the observed state of a tiflow executor
                       Update by sync types
@@ -12701,6 +12704,7 @@ spec:
                       - name
                       - status
                       type: object
+                    nullable: true
                     type: array
                   synced:
                     type: boolean
@@ -12794,6 +12798,7 @@ spec:
                       - name
                       - status
                       type: object
+                    nullable: true
                     type: array
                   failureMembers:
                     additionalProperties:
@@ -12901,6 +12906,9 @@ spec:
                       - health
                       type: object
                     type: object
+                  message:
+                    description: (Optional) Message related to the status of the MasterCluster
+                    type: string
                   phase:
                     description: Phase represents the observed state of a tiflow master
                       Update by sync types
@@ -13002,6 +13010,9 @@ spec:
                 - lastUpdateTime
                 - synced
                 type: object
+              message:
+                description: (Optional) Message related to the status of the MasterCluster
+                type: string
             required:
             - clusterStatus
             - hetero

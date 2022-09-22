@@ -3,6 +3,7 @@ package member
 import (
 	"context"
 	"fmt"
+	"github.com/pingcap/tiflow-operator/pkg/status"
 	"time"
 
 	apps "k8s.io/api/apps/v1"
@@ -53,7 +54,14 @@ func (s masterScaler) ScaleOut(meta metav1.Object, actual *apps.StatefulSet, des
 	tcName := tc.GetName()
 	stsName := actual.GetName()
 
+	state := status.NewMasterSyncTypeManager(&tc.Status.Master)
+	state.SetClusterSyncTypeOngoing(v1alpha1.ScaleOutType,
+		fmt.Sprintf("tiflow master [%s/%s] sacling out...", ns, tcName))
+
 	if !tc.Status.Master.Synced {
+		state.SetClusterSyncTypeFailed(v1alpha1.ScaleOutType,
+			fmt.Sprintf("tiflow master [%s/%s] sacling out failed", ns, tcName))
+
 		return fmt.Errorf("tiflow cluster: [%s/%s]'s tiflow-master status sync failed, can't scale up now",
 			ns, tcName)
 	}
@@ -88,6 +96,9 @@ func (s masterScaler) ScaleOut(meta metav1.Object, actual *apps.StatefulSet, des
 	klog.Infof("scaling up is done, tiflow-master statefulSet %s for [%s/%s], current: %d, desired: %d",
 		stsName, ns, tcName, current, *desired.Spec.Replicas)
 
+	state.SetClusterSyncTypeComplied(v1alpha1.ScaleOutType,
+		fmt.Sprintf("tiflow master [%s/%s] sacling out completed", ns, tcName))
+
 	return nil
 }
 
@@ -101,7 +112,14 @@ func (s masterScaler) ScaleIn(meta metav1.Object, actual *apps.StatefulSet, desi
 	tcName := tc.GetName()
 	stsName := actual.GetName()
 
+	state := status.NewMasterSyncTypeManager(&tc.Status.Master)
+	state.SetClusterSyncTypeOngoing(v1alpha1.ScaleInType,
+		fmt.Sprintf("tiflow master [%s/%s] sacling in...", ns, tcName))
+
 	if !tc.Status.Master.Synced {
+		state.SetClusterSyncTypeFailed(v1alpha1.ScaleInType,
+			fmt.Sprintf("tiflow master [%s/%s] sacling in failed", ns, tcName))
+
 		return fmt.Errorf("tiflow cluster: %s/%s's tiflow-master status sync failed, can't scale out now",
 			ns, tcName)
 	}
@@ -135,6 +153,9 @@ func (s masterScaler) ScaleIn(meta metav1.Object, actual *apps.StatefulSet, desi
 
 	klog.Infof("scaling down is done, tiflow-master statefulSet %s for [%s/%s], current: %d, desired: %d",
 		stsName, ns, tcName, current, *desired.Spec.Replicas)
+
+	state.SetClusterSyncTypeComplied(v1alpha1.ScaleOutType,
+		fmt.Sprintf("tiflow master [%s/%s] sacling in completed", ns, tcName))
 
 	return nil
 }
@@ -182,14 +203,14 @@ func (s *masterScaler) SetReplicas(ctx context.Context, actual *apps.StatefulSet
 
 // WaitUntilRunning blocks until the tiflow-mater statefulset has the expected number of pods running but not necessarily ready
 func (s *masterScaler) WaitUntilRunning(ctx context.Context) error {
-	//TODO implement me
-	//panic("implement me")
+	// TODO implement me
+	// panic("implement me")
 	return nil
 }
 
 // WaitUntilHealthy blocks until the tiflow-master stateful set has exactly `prune` healthy replicas.
 func (s *masterScaler) WaitUntilHealthy(ctx context.Context, scale uint) error {
-	//TODO implement me
-	//panic("implement me")
+	// TODO implement me
+	// panic("implement me")
 	return nil
 }
