@@ -12748,10 +12748,7 @@ spec:
                           type: string
                         memberDeleted:
                           type: boolean
-                        podName:
-                          description: member id is actually an uint64, but apimachinery's
-                            json only treats numbers as int64/float64 so uint64 may
-                            overflow int64 and thus convert to float64
+                        name:
                           type: string
                       required:
                       - clientURL
@@ -12781,10 +12778,7 @@ spec:
                         type: string
                       memberDeleted:
                         type: boolean
-                      podName:
-                        description: member id is actually an uint64, but apimachinery's
-                          json only treats numbers as int64/float64 so uint64 may
-                          overflow int64 and thus convert to float64
+                      name:
                         type: string
                     required:
                     - clientURL
@@ -12812,10 +12806,36 @@ spec:
                           type: string
                         memberDeleted:
                           type: boolean
-                        podName:
-                          description: member id is actually an uint64, but apimachinery's
-                            json only treats numbers as int64/float64 so uint64 may
-                            overflow int64 and thus convert to float64
+                        name:
+                          type: string
+                      required:
+                      - clientURL
+                      - health
+                      type: object
+                    type: object
+                  peerMembers:
+                    additionalProperties:
+                      description: MasterMember is Tiflow-master member status
+                      properties:
+                        address:
+                          type: string
+                        clientURL:
+                          type: string
+                        health:
+                          type: boolean
+                        id:
+                          type: string
+                        is_leader:
+                          type: boolean
+                        lastTransitionTime:
+                          description: Last time the health transitioned from one
+                            to another.
+                          format: date-time
+                          nullable: true
+                          type: string
+                        memberDeleted:
+                          type: boolean
+                        name:
                           type: string
                       required:
                       - clientURL

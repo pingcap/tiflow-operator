@@ -58,7 +58,10 @@ fi
 # Use HOSTNAME if POD_NAME is unset for backward compatibility.
 POD_NAME=${POD_NAME:-$HOSTNAME}
 
-ARGS="--addr=:10240 \
+name=${POD_NAME}.${NAMESPACE}
+
+ARGS="--name $name \
+--addr=:10240 \
 --advertise-addr=${POD_NAME}.${PEER_SERVICE_NAME}.${NAMESPACE}.svc{{ .FormatClusterDomain }}:10240 \
 --config=/etc/tiflow-master/tiflow-master.toml \
 "
@@ -109,8 +112,10 @@ fi
 
 # Use HOSTNAME if POD_NAME is unset for backward compatibility.
 POD_NAME=${POD_NAME:-$HOSTNAME}
+name=${POD_NAME}.${NAMESPACE}
 
-ARGS="--join={{ .MasterAddress }} \
+ARGS="--name $name \
+--join={{ .MasterAddress }} \
 --addr=:10241 \
 --advertise-addr=${POD_NAME}.${PEER_SERVICE_NAME}.${NAMESPACE}.svc{{ .FormatClusterDomain }}:10241 \
 --config={{ .DataDir }}/tiflow-executor.toml \
