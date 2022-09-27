@@ -3,9 +3,9 @@ package member
 import (
 	"context"
 	"fmt"
-	"k8s.io/client-go/kubernetes"
 	"strings"
-	"time"
+
+	"k8s.io/client-go/kubernetes"
 
 	apps "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -655,27 +655,25 @@ func (m *masterMemberManager) syncTiflowClusterStatus(tc *pingcapcomv1alpha1.Tif
 
 	// TODO: WIP, need to get the information of memberDeleted and LastTransitionTime
 	members := make(map[string]pingcapcomv1alpha1.MasterMember)
+	peerMembers := make(map[string]pingcapcomv1alpha1.MasterMember)
 	for _, master := range mastersInfo.Masters {
-		// TODO: WIP
-		if !strings.Contains(master.Address, ns) {
-			continue
-		}
-
-		masterName, err := formatMasterName(master.Address)
-		if err != nil {
-			return err
-		}
-
-		members[masterName] = pingcapcomv1alpha1.MasterMember{
+		member := pingcapcomv1alpha1.MasterMember{
 			Id:                 master.ID,
 			Address:            master.Address,
 			IsLeader:           master.IsLeader,
-			PodName:            master.Name,
+			Name:               master.Name,
 			Health:             true,
-			LastTransitionTime: metav1.NewTime(time.Now()),
+			LastTransitionTime: metav1.Now(),
+		}
+		clusterName, ordinal, namespace, err2 := getOrdinalFromName(master.Name, pingcapcomv1alpha1.TiFlowMasterMemberType)
+		if err2 == nil && clusterName == tcName && namespace == ns && ordinal < tc.MasterStsDesiredReplicas() {
+			members[master.Name] = member
+		} else {
+			peerMembers[master.Name] = member
 		}
 	}
 	tc.Status.Master.Members = members
+	tc.Status.Master.PeerMembers = peerMembers
 
 	leader, err := tiflowClient.GetLeader()
 	if err != nil {
@@ -685,8 +683,9 @@ func (m *masterMemberManager) syncTiflowClusterStatus(tc *pingcapcomv1alpha1.Tif
 
 	tc.Status.Master.Synced = true
 	tc.Status.Master.Leader = pingcapcomv1alpha1.MasterMember{
-		ClientURL: leader.AdvertiseAddr,
-		Health:    true,
+		ClientURL:          leader.AdvertiseAddr,
+		Health:             true,
+		LastTransitionTime: metav1.Now(),
 	}
 	tc.Status.Master.Image = ""
 	c := findContainerByName(set, "tiflow-master")

@@ -448,6 +448,7 @@ type MasterStatus struct {
 	Phase          MemberPhase             `json:"phase,omitempty"`
 	StatefulSet    *apps.StatefulSetStatus `json:"statefulSet,omitempty"`
 	Members        map[string]MasterMember `json:"members,omitempty"`
+	PeerMembers    map[string]MasterMember `json:"peerMembers,omitempty"`
 	Leader         MasterMember            `json:"leader,omitempty"`
 	FailureMembers map[string]MasterMember `json:"failureMembers,omitempty"`
 	Image          string                  `json:"image,omitempty"`
@@ -455,12 +456,10 @@ type MasterStatus struct {
 
 // MasterMember is Tiflow-master member status
 type MasterMember struct {
-	Id       string `json:"id,omitempty"`
-	Address  string `json:"address,omitempty"`
-	IsLeader bool   `json:"is_leader,omitempty"`
-	// member id is actually an uint64, but apimachinery's json only treats numbers as int64/float64
-	// so uint64 may overflow int64 and thus convert to float64
-	PodName       string `json:"podName,omitempty"`
+	Id            string `json:"id,omitempty"`
+	Address       string `json:"address,omitempty"`
+	IsLeader      bool   `json:"is_leader,omitempty"`
+	Name          string `json:"name,omitempty"`
 	ClientURL     string `json:"clientURL"`
 	Health        bool   `json:"health"`
 	MemberDeleted bool   `json:"memberDeleted,omitempty"`
@@ -515,6 +514,7 @@ type ExecutorStatus struct {
 	Phase          MemberPhase               `json:"phase,omitempty"`
 	StatefulSet    *apps.StatefulSetStatus   `json:"statefulSet,omitempty"`
 	Members        map[string]ExecutorMember `json:"members,omitempty"`
+	PeerMembers    map[string]ExecutorMember `json:"peerMembers,omitempty"`
 	FailureMembers map[string]ExecutorMember `json:"failureMembers,omitempty"`
 	FailoverUID    types.UID                 `json:"failoverUID,omitempty"`
 	Image          string                    `json:"image,omitempty"`

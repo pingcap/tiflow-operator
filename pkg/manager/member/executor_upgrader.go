@@ -3,15 +3,17 @@ package member
 import (
 	"context"
 	"fmt"
-	"github.com/pingcap/tiflow-operator/api/v1alpha1"
-	"github.com/pingcap/tiflow-operator/pkg/controller"
-	mngerutils "github.com/pingcap/tiflow-operator/pkg/manager/utils"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 	podutil "k8s.io/kubernetes/pkg/api/v1/pod"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/pingcap/tiflow-operator/api/v1alpha1"
+	"github.com/pingcap/tiflow-operator/pkg/controller"
+	mngerutils "github.com/pingcap/tiflow-operator/pkg/manager/utils"
 )
 
 type executorUpgrader struct {
@@ -90,7 +92,7 @@ func (u *executorUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSts, n
 					ns, tcName, podName)
 			}
 			// todo: Need to be modified
-			if _, exist := tc.Status.Executor.Members[podName]; !exist {
+			if _, exist := tc.Status.Executor.Members[podName+"."+ns]; !exist {
 				return controller.RequeueErrorf("tiflowCluster: [%s/%s]'s upgrade tiflow-executor pod: [%s] is not exist",
 					ns, tcName, podName)
 			}
