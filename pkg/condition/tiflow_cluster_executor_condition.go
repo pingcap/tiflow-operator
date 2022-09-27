@@ -32,7 +32,8 @@ func NewExecutorConditionManager(cli client.Client, clientSet kubernetes.Interfa
 }
 
 func (ecm *ExecutorConditionManager) Update(ctx context.Context) error {
-	SetFalse(v1alpha1.MasterSynced, &ecm.cluster.Status, metav1.Now())
+	SetFalse(v1alpha1.ExecutorSynced, &ecm.cluster.Status, metav1.Now())
+	SetFalse(v1alpha1.ExecutorsInfoUpdatedChecked, &ecm.cluster.Status, metav1.Now())
 
 	if err := ecm.update(ctx); err != nil {
 		return result.SyncStatusErr{
@@ -40,7 +41,7 @@ func (ecm *ExecutorConditionManager) Update(ctx context.Context) error {
 		}
 	}
 
-	return ecm.Check()
+	return nil
 }
 
 func (ecm *ExecutorConditionManager) update(ctx context.Context) error {
@@ -225,38 +226,6 @@ func (ecm *ExecutorConditionManager) pvcCheck() bool {
 func (ecm *ExecutorConditionManager) versionCheck() bool {
 	return statefulSetUpToDate(ecm.cluster.Status.Executor.StatefulSet, true)
 }
-
-// func (ecm *ExecutorConditionManager) statsfulSetIsUpgrading(ctx context.Context, sts *appsv1.StatefulSet) (bool, error) {
-// 	if mngerutils.StatefulSetIsUpgrading(sts) {
-// 		return true, nil
-// 	}
-//
-// 	ns := ecm.cluster.GetNamespace()
-// 	instanceName := ecm.cluster.GetInstanceName()
-// 	selector, err := metav1.LabelSelectorAsSelector(sts.Spec.Selector)
-// 	if err != nil {
-// 		return false, fmt.Errorf("executor [%s/%s] condition converting selector error: %v",
-// 			ns, instanceName, err)
-// 	}
-// 	executorPods, err := ecm.clientSet.CoreV1().Pods(ns).List(ctx, metav1.ListOptions{
-// 		LabelSelector: selector.String(),
-// 	})
-// 	if err != nil {
-// 		return false, fmt.Errorf("executor [%s/%s] condition listing master's pods error: %v",
-// 			ns, instanceName, err)
-// 	}
-//
-// 	for _, pod := range executorPods.Items {
-// 		revisionHash, exist := pod.Labels[appsv1.ControllerRevisionHashLabelKey]
-// 		if !exist {
-// 			return false, nil
-// 		}
-// 		if revisionHash != ecm.cluster.Status.Master.StatefulSet.UpdateRevision {
-// 			return true, nil
-// 		}
-// 	}
-// 	return false, nil
-// }
 
 func handleCapability(o string) (int64, error) {
 	var i interface{}

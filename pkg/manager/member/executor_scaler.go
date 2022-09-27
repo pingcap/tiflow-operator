@@ -108,9 +108,6 @@ func (s *executorScaler) ScaleOut(meta metav1.Object, actual *appsv1.StatefulSet
 	klog.Infof("scaling out is done, tiflow-executor statefulSet %s for [%s/%s], current: %d, desired: %d",
 		stsName, ns, tcName, current, *desired.Spec.Replicas)
 
-	syncState.Complied(v1alpha1.ScaleOutType,
-		fmt.Sprintf("tiflow executor [%s/%s] sacling out completed", ns, tcName))
-
 	return nil
 }
 
@@ -168,9 +165,6 @@ func (s *executorScaler) ScaleIn(meta metav1.Object, actual *appsv1.StatefulSet,
 			return err
 		}
 	}
-
-	syncState.Complied(v1alpha1.ScaleOutType,
-		fmt.Sprintf("tiflow executor [%s/%s] sacling in completed", ns, tcName))
 
 	return nil
 }

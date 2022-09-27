@@ -60,9 +60,9 @@ func setConditionStatus(ctype v1alpha1.TiflowClusterConditionType, status metav1
 }
 
 func findOrCreate(ctype v1alpha1.TiflowClusterConditionType, clusterStatus *v1alpha1.TiflowClusterStatus) *v1alpha1.TiflowClusterCondition {
-	pos := pos(ctype, clusterStatus.ClusterConditions)
-	if pos >= 0 {
-		return &clusterStatus.ClusterConditions[pos]
+	index := pos(ctype, clusterStatus.ClusterConditions)
+	if index >= 0 {
+		return &clusterStatus.ClusterConditions[index]
 	}
 
 	clusterStatus.ClusterConditions = append(clusterStatus.ClusterConditions, v1alpha1.TiflowClusterCondition{

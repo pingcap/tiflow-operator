@@ -11,7 +11,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
-	"github.com/pingcap/tiflow-operator/pkg/result"
 )
 
 type realStatusUpdater struct {
@@ -59,7 +58,8 @@ func (c *realStatusUpdater) Update(ctx context.Context, tc *v1alpha1.TiflowClust
 	})
 	if err != nil {
 		klog.Errorf("failed to update tiflow cluster: [%s/%s], error: %v", ns, tcName, err)
-		return result.UpdateClusterStatus{Err: err}
+		// return result.UpdateClusterStatus{Err: err}
+		return err
 	}
 
 	return nil

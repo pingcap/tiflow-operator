@@ -2,6 +2,7 @@ package status
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
 )
@@ -51,12 +52,20 @@ func InitExecutorClusterSyncTypesIfNeed(executorStatus *v1alpha1.ExecutorStatus)
 	return
 }
 
-// updateExecutorClusterStatus
+// UpdateClusterStatus
 // todo: need to check for all OperatorActions or for just the 0th element
 // This depends on our logic for updating Status
-func updateExecutorClusterStatus(executorStatus *v1alpha1.ExecutorStatus) {
+func (em *ExecutorSyncTypeManger) UpdateClusterStatus(clientSet kubernetes.Interface, tc *v1alpha1.TiflowCluster) {
+	executorStatus := &tc.Status.Executor
 	InitExecutorClusterSyncTypesIfNeed(executorStatus)
+
+	em.syncExecutorPhaseFromCluster(clientSet, tc)
+
 	for _, sync := range executorStatus.SyncTypes {
+		if sync.Status == v1alpha1.Completed {
+			continue
+		}
+
 		switch sync.Status {
 		case v1alpha1.Failed:
 			executorStatus.Phase = v1alpha1.ExecutorFailed
@@ -100,4 +109,72 @@ func (em *ExecutorSyncTypeManger) findOrCreateExecutorSyncType(syncName v1alpha1
 	})
 
 	return &em.Status.SyncTypes[len(em.Status.SyncTypes)-1]
+}
+
+func (em *ExecutorSyncTypeManger) syncExecutorPhaseFromCluster(clientSet kubernetes.Interface, tc *v1alpha1.TiflowCluster) {
+
+	// upgrading, err := masterIsUpgrading(clientSet, tc)
+	// if err != nil {
+	// 	syncState.Unknown(v1alpha1.UpgradeType, err.Error())
+	// }
+	//
+	// if upgrading {
+	// 	syncState.Ongoing(v1alpha1.UpgradeType, "")
+	// } else {
+	// 	syncState.Complied(v1alpha1.UpgradeType, "")
+	// }
+
+}
+func (em *ExecutorSyncTypeManger) syncExecutorCreatPhase(clientSet kubernetes.Interface, tc *v1alpha1.TiflowCluster) {
+	panic("implement me")
+}
+
+func (em *ExecutorSyncTypeManger) syncExecutorScalePhase(clientSet kubernetes.Interface, tc *v1alpha1.TiflowCluster) {
+	panic("implement me")
+}
+
+func (em *ExecutorSyncTypeManger) syncExecutorUpgradePhase(clientSet kubernetes.Interface, tc *v1alpha1.TiflowCluster) {
+	// ns := tc.GetNamespace
+	// tcName := tc.GetName()
+	// instanceName := tc.GetInstanceName()
+	//
+	// sts, err := clientSet.AppsV1().StatefulSets(ns).
+	// 	Get(context.TODO(), masterMemberName(tcName), metav1.GetOptions{})
+	// if err != nil {
+	// 	if errors.IsNotFound(err) {
+	// 		return false, nil
+	// 	} else {
+	// 		return false, fmt.Errorf("master [%s/%s] status get satatefulSet error: %v",
+	// 			ns, tcName, err)
+	// 	}
+	// }
+	//
+	// if isUpgrading(sts) {
+	// 	return true, nil
+	// }
+	//
+	// selector, err := metav1.LabelSelectorAsSelector(sts.Spec.Selector)
+	// if err != nil {
+	// 	return false, fmt.Errorf("master [%s/%s] condition listing master's pods error: %v",
+	// 		ns, instanceName, err)
+	// }
+	//
+	// masterPods, err := clientSet.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{
+	// 	LabelSelector: selector.String(),
+	// })
+	// if err != nil {
+	// 	return false, fmt.Errorf("master [%s/%s] condition listing master's pods error: %v",
+	// 		ns, instanceName, err)
+	// }
+	//
+	// for _, pod := range masterPods.Items {
+	// 	revisionHash, exist := pod.Labels[appsv1.ControllerRevisionHashLabelKey]
+	// 	if !exist {
+	// 		return false, nil
+	// 	}
+	// 	if revisionHash != tc.Status.Master.StatefulSet.UpdateRevision {
+	// 		return true, nil
+	// 	}
+	// }
+	// return false, nil
 }

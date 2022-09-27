@@ -96,9 +96,6 @@ func (s masterScaler) ScaleOut(meta metav1.Object, actual *apps.StatefulSet, des
 	klog.Infof("scaling out is done, tiflow-master statefulSet %s for [%s/%s], current: %d, desired: %d",
 		stsName, ns, tcName, current, *desired.Spec.Replicas)
 
-	syncState.Complied(v1alpha1.ScaleOutType,
-		fmt.Sprintf("tiflow master [%s/%s] sacling out completed", ns, tcName))
-
 	return nil
 }
 
@@ -152,9 +149,6 @@ func (s masterScaler) ScaleIn(meta metav1.Object, actual *apps.StatefulSet, desi
 
 	klog.Infof("scaling in is done, tiflow-master statefulSet %s for [%s/%s], current: %d, desired: %d",
 		stsName, ns, tcName, current, *desired.Spec.Replicas)
-
-	syncState.Complied(v1alpha1.ScaleOutType,
-		fmt.Sprintf("tiflow master [%s/%s] sacling in completed", ns, tcName))
 
 	return nil
 }

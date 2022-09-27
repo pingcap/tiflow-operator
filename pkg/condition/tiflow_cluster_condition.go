@@ -39,6 +39,15 @@ func (tcm *TiflowClusterConditionManager) Sync(ctx context.Context) error {
 }
 
 func (tcm *TiflowClusterConditionManager) Apply() error {
+
+	if err := tcm.masterCondition.Check(); err != nil {
+		return err
+	}
+
+	if err := tcm.executorCondition.Check(); err != nil {
+		return err
+	}
+
 	SetTrue(v1alpha1.VersionChecked, &tcm.cluster.Status, metav1.Now())
 	SetTrue(v1alpha1.MasterSynced, &tcm.cluster.Status, metav1.Now())
 	SetTrue(v1alpha1.ExecutorSynced, &tcm.cluster.Status, metav1.Now())

@@ -272,9 +272,6 @@ func (m *masterMemberManager) syncMasterStatefulSetForTiflowCluster(ctx context.
 		}
 
 		tc.Status.Master.StatefulSet = &apps.StatefulSetStatus{}
-		syncState.Complied(pingcapcomv1alpha1.CreateType,
-			fmt.Sprintf("create master cluster [%s/%s] completed", ns, tcName))
-
 		return nil
 	}
 

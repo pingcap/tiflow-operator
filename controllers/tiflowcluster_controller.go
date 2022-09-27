@@ -127,7 +127,7 @@ func (r *TiflowClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	return result.NoRequeue()
 }
 func (r *TiflowClusterReconciler) updateTiflowClusterStatus(ctx context.Context, tc *pingcapcomv1alpha1.TiflowCluster) error {
-	status.UpdateTiflowClusterStatus(&tc.Status)
+	// status.UpdateTiflowClusterStatus(r.ClientSet, tc)
 	return status.NewRealStatusUpdater(r.Client).Update(ctx, tc)
 }
 

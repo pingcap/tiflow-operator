@@ -104,9 +104,6 @@ func (u *masterUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSet *app
 		return u.upgradeMasterPod(tc, i, newSet)
 	}
 
-	syncState.Complied(v1alpha1.UpgradeType,
-		fmt.Sprintf("tiflow master [%s/%s] upgrading completed...", ns, tcName))
-
 	return nil
 }
 

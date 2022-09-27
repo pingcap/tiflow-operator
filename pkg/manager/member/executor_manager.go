@@ -211,9 +211,6 @@ func (m *executorMemberManager) syncExecutorStatefulSetForTiflowCluster(ctx cont
 		}
 
 		tc.Status.Executor.StatefulSet = &appsv1.StatefulSetStatus{}
-		syncState.Complied(v1alpha1.CreateType,
-			fmt.Sprintf("start to create executor cluster [%s/%s] completed", ns, tcName))
-
 		return nil
 	}
 

@@ -105,9 +105,6 @@ func (u *executorUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSts, n
 		return nil
 	}
 
-	syncState.Complied(v1alpha1.UpgradeType,
-		fmt.Sprintf("tiflow executor [%s/%s] upgrading completed", ns, tcName))
-
 	return nil
 }
 
