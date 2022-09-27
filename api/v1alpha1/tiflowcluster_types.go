@@ -520,7 +520,6 @@ type ClusterSyncType struct {
 
 // MasterStatus defines the desired state of tiflow master
 type MasterStatus struct {
-	Synced         bool                    `json:"synced"`
 	Image          string                  `json:"image,omitempty"`
 	Leader         MasterMember            `json:"leader,omitempty"`
 	Members        map[string]MasterMember `json:"members,omitempty"`
@@ -550,7 +549,6 @@ type MasterStatus struct {
 
 // ExecutorStatus defines the desired state of tiflow executor
 type ExecutorStatus struct {
-	Synced         bool                      `json:"synced"`
 	Image          string                    `json:"image,omitempty"`
 	StatefulSet    *apps.StatefulSetStatus   `json:"statefulSet,omitempty"`
 	Members        map[string]ExecutorMember `json:"members,omitempty"`

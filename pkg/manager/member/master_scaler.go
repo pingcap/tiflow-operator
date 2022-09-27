@@ -3,7 +3,6 @@ package member
 import (
 	"context"
 	"fmt"
-	"github.com/pingcap/tiflow-operator/pkg/status"
 	"time"
 
 	apps "k8s.io/api/apps/v1"
@@ -14,7 +13,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
+	"github.com/pingcap/tiflow-operator/pkg/condition"
 	"github.com/pingcap/tiflow-operator/pkg/controller"
+	"github.com/pingcap/tiflow-operator/pkg/status"
 	"github.com/pingcap/tiflow-operator/pkg/tiflowapi"
 )
 
@@ -58,7 +59,7 @@ func (s masterScaler) ScaleOut(meta metav1.Object, actual *apps.StatefulSet, des
 	state.SetClusterSyncTypeOngoing(v1alpha1.ScaleOutType,
 		fmt.Sprintf("tiflow master [%s/%s] sacling out...", ns, tcName))
 
-	if !tc.Status.Master.Synced {
+	if condition.False(v1alpha1.MasterSynced, tc.Status.ClusterConditions) {
 		state.SetClusterSyncTypeFailed(v1alpha1.ScaleOutType,
 			fmt.Sprintf("tiflow master [%s/%s] sacling out failed", ns, tcName))
 
@@ -116,7 +117,7 @@ func (s masterScaler) ScaleIn(meta metav1.Object, actual *apps.StatefulSet, desi
 	state.SetClusterSyncTypeOngoing(v1alpha1.ScaleInType,
 		fmt.Sprintf("tiflow master [%s/%s] sacling in...", ns, tcName))
 
-	if !tc.Status.Master.Synced {
+	if condition.False(v1alpha1.MasterSynced, tc.Status.ClusterConditions) {
 		state.SetClusterSyncTypeFailed(v1alpha1.ScaleInType,
 			fmt.Sprintf("tiflow master [%s/%s] sacling in failed", ns, tcName))
 

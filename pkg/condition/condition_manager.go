@@ -5,9 +5,8 @@ import (
 )
 
 type Condition interface {
-	CheckCondition
 	Sync(context.Context) error
-	Apply(context.Context) error
+	Apply() error
 }
 
 type ClusterCondition interface {
@@ -20,5 +19,5 @@ type UpdateCondition interface {
 }
 
 type CheckCondition interface {
-	Check(context.Context) error
+	Check() error
 }

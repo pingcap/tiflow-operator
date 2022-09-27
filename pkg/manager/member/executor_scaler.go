@@ -3,7 +3,6 @@ package member
 import (
 	"context"
 	"fmt"
-	"github.com/pingcap/tiflow-operator/pkg/status"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -13,7 +12,9 @@ import (
 	"k8s.io/klog/v2"
 
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
+	"github.com/pingcap/tiflow-operator/pkg/condition"
 	"github.com/pingcap/tiflow-operator/pkg/manager/member/prune"
+	"github.com/pingcap/tiflow-operator/pkg/status"
 )
 
 const defaultSleepTime = 10 * time.Second
@@ -71,7 +72,7 @@ func (s *executorScaler) ScaleOut(meta metav1.Object, actual *appsv1.StatefulSet
 		}
 	}
 
-	if !tc.Status.Executor.Synced {
+	if condition.False(v1alpha1.ExecutorSynced, tc.Status.ClusterConditions) {
 		state.SetClusterSyncTypeFailed(v1alpha1.ScaleOutType,
 			fmt.Sprintf("tiflow executor [%s/%s] sacling out failed", ns, tcName))
 
@@ -128,7 +129,7 @@ func (s *executorScaler) ScaleIn(meta metav1.Object, actual *appsv1.StatefulSet,
 	state.SetClusterSyncTypeOngoing(v1alpha1.ScaleInType,
 		fmt.Sprintf("tiflow executor [%s/%s] sacling in...", ns, tcName))
 
-	if !tc.Status.Executor.Synced {
+	if condition.False(v1alpha1.ExecutorSynced, tc.Status.ClusterConditions) {
 		state.SetClusterSyncTypeFailed(v1alpha1.ScaleInType,
 			fmt.Sprintf("tiflow executor [%s/%s] sacling in failed", ns, tcName))
 

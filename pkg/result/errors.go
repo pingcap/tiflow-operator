@@ -32,10 +32,18 @@ func (e SyncStatusErr) Error() string {
 	return e.Err.Error()
 }
 
-type UpdateClusterStatus struct {
+type SyncConditionErr struct {
 	Err error
 }
 
-func (e UpdateClusterStatus) Error() string {
+func (e SyncConditionErr) Error() string {
+	return e.Err.Error()
+}
+
+type SyncPhaseErr struct {
+	Err error
+}
+
+func (e SyncPhaseErr) Error() string {
 	return e.Err.Error()
 }

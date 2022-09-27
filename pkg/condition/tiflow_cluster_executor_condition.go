@@ -13,8 +13,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
-	"github.com/pingcap/tiflow-operator/pkg/controller"
-	mngerutils "github.com/pingcap/tiflow-operator/pkg/manager/utils"
 	"github.com/pingcap/tiflow-operator/pkg/result"
 	"github.com/pingcap/tiflow-operator/pkg/tiflowapi"
 )
@@ -35,13 +33,12 @@ func NewExecutorConditionManager(cli client.Client, clientSet kubernetes.Interfa
 
 func (ecm *ExecutorConditionManager) Update(ctx context.Context) error {
 	SetFalse(v1alpha1.MasterSynced, &ecm.cluster.Status, metav1.Now())
-	ecm.cluster.Status.Executor.Synced = false
 
 	ns := ecm.cluster.GetNamespace()
 	tcName := ecm.cluster.GetName()
 
 	sts, err := ecm.clientSet.AppsV1().StatefulSets(ns).
-		Get(ctx, controller.TiflowExecutorMemberName(tcName), metav1.GetOptions{})
+		Get(ctx, executorMemberName(tcName), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil
@@ -49,22 +46,6 @@ func (ecm *ExecutorConditionManager) Update(ctx context.Context) error {
 			return fmt.Errorf("executor [%s/%s] codition get satatefulSet error: %v",
 				ns, tcName, err)
 		}
-	}
-
-	upgrading, err := ecm.statsfulSetIsUpgrading(ctx, sts)
-	if err != nil {
-		return err
-	}
-	// todo: remove this logic to status pkg
-	if ecm.cluster.ExecutorStsDesiredReplicas() != *sts.Spec.Replicas {
-		if ecm.cluster.ExecutorStsDesiredReplicas() > *sts.Spec.Replicas {
-			ecm.cluster.Status.Executor.Phase = v1alpha1.ExecutorScalingOut
-		}
-		ecm.cluster.Status.Executor.Phase = v1alpha1.ExecutorScalingIn
-	} else if upgrading {
-		ecm.cluster.Status.Executor.Phase = v1alpha1.ExecutorUpgrading
-	} else {
-		ecm.cluster.Status.Executor.Phase = v1alpha1.ExecutorRunning
 	}
 
 	if err = ecm.syncMembersStatus(ctx, sts); err != nil {
@@ -85,12 +66,11 @@ func (ecm *ExecutorConditionManager) Update(ctx context.Context) error {
 	return nil
 }
 
-func (ecm *ExecutorConditionManager) Check(ctx context.Context) error {
+func (ecm *ExecutorConditionManager) Check() error {
 	if ecm.cluster.Spec.Executor == nil {
 		// todo: more gracefully
 		SetTrue(v1alpha1.ExecutorNumChecked, &ecm.cluster.Status, metav1.Now())
 		SetTrue(v1alpha1.ExecutorReadyChecked, &ecm.cluster.Status, metav1.Now())
-		SetTrue(v1alpha1.ExecutorSynced, &ecm.cluster.Status, metav1.Now())
 		return nil
 	}
 
@@ -99,7 +79,7 @@ func (ecm *ExecutorConditionManager) Check(ctx context.Context) error {
 
 	infosUpdateChecked := True(v1alpha1.ExecutorsInfoUpdatedChecked, ecm.cluster.Status.ClusterConditions)
 	if !infosUpdateChecked {
-		return result.UpdateClusterStatus{
+		return result.SyncConditionErr{
 			Err: fmt.Errorf("executor [%s/%s] check: information update failed", ns, tcName),
 		}
 	}
@@ -158,12 +138,12 @@ func (ecm *ExecutorConditionManager) syncMembersStatus(ctx context.Context, sts 
 			})
 		if epErr != nil {
 			return fmt.Errorf("executor [%s/%s] codition failed to get endpoints %s , err: %s, epErr %s",
-				ns, tcName, controller.TiflowExecutorMemberName(tcName), err, epErr)
+				ns, tcName, executorMemberName(tcName), err, epErr)
 		}
 
 		// tiflow-executor service has no endpoints
 		if eps != nil && eps.Items != nil && len(eps.Items[0].Subsets) == 0 {
-			return fmt.Errorf("%s, service %s/%s has no endpoints", err, ns, controller.TiflowExecutorMemberName(tcName))
+			return fmt.Errorf("%s, service %s/%s has no endpoints", err, ns, executorMemberName(tcName))
 		}
 
 		return err
@@ -188,7 +168,7 @@ func (ecm *ExecutorConditionManager) updateMembersInfo(executorsInfo tiflowapi.E
 			return err
 		}
 
-		memberName, err := formatExecutorName(e.Address)
+		memberName, err := formatName(e.Address)
 		if err != nil {
 			return err
 		}
@@ -206,37 +186,37 @@ func (ecm *ExecutorConditionManager) updateMembersInfo(executorsInfo tiflowapi.E
 	return nil
 }
 
-func (ecm *ExecutorConditionManager) statsfulSetIsUpgrading(ctx context.Context, sts *appsv1.StatefulSet) (bool, error) {
-	if mngerutils.StatefulSetIsUpgrading(sts) {
-		return true, nil
-	}
-
-	ns := ecm.cluster.GetNamespace()
-	instanceName := ecm.cluster.GetInstanceName()
-	selector, err := metav1.LabelSelectorAsSelector(sts.Spec.Selector)
-	if err != nil {
-		return false, fmt.Errorf("executor [%s/%s] condition converting selector error: %v",
-			ns, instanceName, err)
-	}
-	executorPods, err := ecm.clientSet.CoreV1().Pods(ns).List(ctx, metav1.ListOptions{
-		LabelSelector: selector.String(),
-	})
-	if err != nil {
-		return false, fmt.Errorf("executor [%s/%s] condition listing master's pods error: %v",
-			ns, instanceName, err)
-	}
-
-	for _, pod := range executorPods.Items {
-		revisionHash, exist := pod.Labels[appsv1.ControllerRevisionHashLabelKey]
-		if !exist {
-			return false, nil
-		}
-		if revisionHash != ecm.cluster.Status.Master.StatefulSet.UpdateRevision {
-			return true, nil
-		}
-	}
-	return false, nil
-}
+// func (ecm *ExecutorConditionManager) statsfulSetIsUpgrading(ctx context.Context, sts *appsv1.StatefulSet) (bool, error) {
+// 	if mngerutils.StatefulSetIsUpgrading(sts) {
+// 		return true, nil
+// 	}
+//
+// 	ns := ecm.cluster.GetNamespace()
+// 	instanceName := ecm.cluster.GetInstanceName()
+// 	selector, err := metav1.LabelSelectorAsSelector(sts.Spec.Selector)
+// 	if err != nil {
+// 		return false, fmt.Errorf("executor [%s/%s] condition converting selector error: %v",
+// 			ns, instanceName, err)
+// 	}
+// 	executorPods, err := ecm.clientSet.CoreV1().Pods(ns).List(ctx, metav1.ListOptions{
+// 		LabelSelector: selector.String(),
+// 	})
+// 	if err != nil {
+// 		return false, fmt.Errorf("executor [%s/%s] condition listing master's pods error: %v",
+// 			ns, instanceName, err)
+// 	}
+//
+// 	for _, pod := range executorPods.Items {
+// 		revisionHash, exist := pod.Labels[appsv1.ControllerRevisionHashLabelKey]
+// 		if !exist {
+// 			return false, nil
+// 		}
+// 		if revisionHash != ecm.cluster.Status.Master.StatefulSet.UpdateRevision {
+// 			return true, nil
+// 		}
+// 	}
+// 	return false, nil
+// }
 
 func handleCapability(o string) (int64, error) {
 	var i interface{}
@@ -253,15 +233,5 @@ func handleCapability(o string) (int64, error) {
 		return -1, err
 	}
 
-	return res, nil
-}
-
-func formatExecutorName(name string) (string, error) {
-	nameSlice := strings.Split(name, ".")
-	if len(nameSlice) != 4 {
-		return "", fmt.Errorf("split name %s error", name)
-	}
-
-	res := fmt.Sprintf("%s.%s", nameSlice[0], nameSlice[2])
 	return res, nil
 }

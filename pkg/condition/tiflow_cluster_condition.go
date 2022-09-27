@@ -28,39 +28,31 @@ func NewTiflowCLusterConditionManager(cli client.Client, clientSet kubernetes.In
 func (tcm *TiflowClusterConditionManager) Sync(ctx context.Context) error {
 
 	if err := tcm.masterCondition.Update(ctx); err != nil {
-		return result.UpdateClusterStatus{
+		return result.SyncStatusErr{
 			Err: err,
 		}
+	}
+
+	if err := tcm.masterCondition.Check(); err != nil {
+		return err
 	}
 
 	if err := tcm.executorCondition.Update(ctx); err != nil {
-		return result.UpdateClusterStatus{
+		return result.SyncStatusErr{
 			Err: err,
 		}
 	}
 
-	return tcm.Check(ctx)
-}
-
-func (tcm *TiflowClusterConditionManager) Check(ctx context.Context) error {
-	if err := tcm.masterCondition.Check(ctx); err != nil {
+	if err := tcm.executorCondition.Check(); err != nil {
 		return err
 	}
 
-	if err := tcm.executorCondition.Check(ctx); err != nil {
-		return err
-	}
-
-	return tcm.Apply(ctx)
+	return tcm.Apply()
 }
 
-func (tcm *TiflowClusterConditionManager) Apply(ctx context.Context) error {
-	tcm.cluster.Status.Master.Synced = true
+func (tcm *TiflowClusterConditionManager) Apply() error {
 	SetTrue(v1alpha1.MasterSynced, &tcm.cluster.Status, metav1.Now())
-
-	tcm.cluster.Status.Executor.Synced = true
 	SetTrue(v1alpha1.ExecutorSynced, &tcm.cluster.Status, metav1.Now())
-
 	SetTrue(v1alpha1.VersionChecked, &tcm.cluster.Status, metav1.Now())
 	SetTrue(v1alpha1.InitializedCondition, &tcm.cluster.Status, metav1.Now())
 
