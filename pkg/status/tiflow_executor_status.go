@@ -16,19 +16,19 @@ func NewExecutorSyncTypeManager(status *v1alpha1.ExecutorStatus) SyncTypeManager
 	}
 }
 
-func (em *ExecutorSyncTypeManger) SetClusterSyncTypeOngoing(syncName v1alpha1.SyncTypeName, message string) {
+func (em *ExecutorSyncTypeManger) Ongoing(syncName v1alpha1.SyncTypeName, message string) {
 	em.setExecutorSyncTypeStatus(syncName, v1alpha1.Ongoing, message, metav1.Now())
 }
 
-func (em *ExecutorSyncTypeManger) SetClusterSyncTypeComplied(syncName v1alpha1.SyncTypeName, message string) {
+func (em *ExecutorSyncTypeManger) Complied(syncName v1alpha1.SyncTypeName, message string) {
 	em.setExecutorSyncTypeStatus(syncName, v1alpha1.Completed, message, metav1.Now())
 }
 
-func (em *ExecutorSyncTypeManger) SetClusterSyncTypeUnknown(syncName v1alpha1.SyncTypeName, message string) {
+func (em *ExecutorSyncTypeManger) Unknown(syncName v1alpha1.SyncTypeName, message string) {
 	em.setExecutorSyncTypeStatus(syncName, v1alpha1.Unknown, message, metav1.Now())
 }
 
-func (em *ExecutorSyncTypeManger) SetClusterSyncTypeFailed(syncName v1alpha1.SyncTypeName, message string) {
+func (em *ExecutorSyncTypeManger) Failed(syncName v1alpha1.SyncTypeName, message string) {
 	em.setExecutorSyncTypeStatus(syncName, v1alpha1.Failed, message, metav1.Now())
 }
 
@@ -51,10 +51,10 @@ func InitExecutorClusterSyncTypesIfNeed(executorStatus *v1alpha1.ExecutorStatus)
 	return
 }
 
-// SetExecutorClusterStatus
+// updateExecutorClusterStatus
 // todo: need to check for all OperatorActions or for just the 0th element
 // This depends on our logic for updating Status
-func setExecutorClusterStatus(executorStatus *v1alpha1.ExecutorStatus) {
+func updateExecutorClusterStatus(executorStatus *v1alpha1.ExecutorStatus) {
 	InitExecutorClusterSyncTypesIfNeed(executorStatus)
 	for _, sync := range executorStatus.SyncTypes {
 		switch sync.Status {

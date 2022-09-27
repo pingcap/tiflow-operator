@@ -26,18 +26,19 @@ type ControlInterface interface {
 // implements the documented semantics for tiflowClusters.
 func NewDefaultTiflowClusterControl(cli client.Client, clientSet kubernetes.Interface) ControlInterface {
 	return &defaultTiflowClusterControl{
-		cli,
-		member.NewMasterMemberManager(cli, clientSet),
-		member.NewExecutorMemberManager(cli, clientSet),
-		&condition.RealConditionUpdater{},
+		cli:                   cli,
+		clientSet:             clientSet,
+		masterMemberManager:   member.NewMasterMemberManager(cli, clientSet),
+		executorMemberManager: member.NewExecutorMemberManager(cli, clientSet),
 	}
 }
 
 type defaultTiflowClusterControl struct {
 	cli                   client.Client
+	clientSet             kubernetes.Interface
 	masterMemberManager   manager.TiflowManager
 	executorMemberManager manager.TiflowManager
-	conditionUpdater      condition.ConditionUpdater
+	conditionUpdater      condition.Condition
 }
 
 // UpdateTiflowCluster executes the core logic loop for a tiflowcluster.
@@ -47,6 +48,8 @@ func (c *defaultTiflowClusterControl) UpdateTiflowCluster(ctx context.Context, t
 	//	return nil // fatal error, no need to retry on invalid object
 	// }
 
+	c.conditionUpdater = condition.NewTiflowCLusterConditionManager(c.cli, c.clientSet, tc)
+
 	var errs []error
 	oldStatus := tc.Status.DeepCopy()
 
@@ -54,9 +57,7 @@ func (c *defaultTiflowClusterControl) UpdateTiflowCluster(ctx context.Context, t
 		errs = append(errs, err)
 	}
 
-	// TODO: add WaitUntilRunning here to make sure newly added nodes work now
-
-	if err := c.conditionUpdater.Update(tc); err != nil {
+	if err := c.conditionUpdater.Sync(ctx); err != nil {
 		errs = append(errs, err)
 	}
 

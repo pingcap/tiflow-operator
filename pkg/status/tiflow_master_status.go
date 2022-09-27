@@ -16,19 +16,19 @@ func NewMasterSyncTypeManager(status *v1alpha1.MasterStatus) SyncTypeManager {
 	}
 }
 
-func (mm *MasterSyncManager) SetClusterSyncTypeOngoing(syncName v1alpha1.SyncTypeName, message string) {
+func (mm *MasterSyncManager) Ongoing(syncName v1alpha1.SyncTypeName, message string) {
 	mm.setMasterSyncTypeStatus(syncName, v1alpha1.Ongoing, message, metav1.Now())
 }
 
-func (mm *MasterSyncManager) SetClusterSyncTypeComplied(syncName v1alpha1.SyncTypeName, message string) {
+func (mm *MasterSyncManager) Complied(syncName v1alpha1.SyncTypeName, message string) {
 	mm.setMasterSyncTypeStatus(syncName, v1alpha1.Completed, message, metav1.Now())
 }
 
-func (mm *MasterSyncManager) SetClusterSyncTypeFailed(syncName v1alpha1.SyncTypeName, message string) {
+func (mm *MasterSyncManager) Failed(syncName v1alpha1.SyncTypeName, message string) {
 	mm.setMasterSyncTypeStatus(syncName, v1alpha1.Failed, message, metav1.Now())
 }
 
-func (mm *MasterSyncManager) SetClusterSyncTypeUnknown(syncName v1alpha1.SyncTypeName, message string) {
+func (mm *MasterSyncManager) Unknown(syncName v1alpha1.SyncTypeName, message string) {
 	mm.setMasterSyncTypeStatus(syncName, v1alpha1.Unknown, message, metav1.Now())
 }
 
@@ -51,10 +51,10 @@ func InitMasterClusterSyncTypesIfNeed(masterStatus *v1alpha1.MasterStatus) {
 	return
 }
 
-// SetMasterClusterStatus
+// updateMasterClusterStatus
 // todo: need to check for all OperatorActions or for just the 0th element
 // This depends on our logic for updating Status
-func setMasterClusterStatus(masterStatus *v1alpha1.MasterStatus) {
+func updateMasterClusterStatus(masterStatus *v1alpha1.MasterStatus) {
 	InitMasterClusterSyncTypesIfNeed(masterStatus)
 	for _, sync := range masterStatus.SyncTypes {
 		switch sync.Status {

@@ -30,9 +30,9 @@ func SetTiflowClusterStatusOnFirstReconcile(status *v1alpha1.TiflowClusterStatus
 	status.LastTransitionTime = metav1.Now()
 }
 
-func SetTiflowClusterStatus(status *v1alpha1.TiflowClusterStatus) {
-	setMasterClusterStatus(&status.Master)
-	setExecutorClusterStatus(&status.Executor)
+func UpdateTiflowClusterStatus(status *v1alpha1.TiflowClusterStatus) {
+	updateMasterClusterStatus(&status.Master)
+	updateExecutorClusterStatus(&status.Executor)
 
 	masterPhase, executorPhase := status.Master.Phase, status.Executor.Phase
 	switch {

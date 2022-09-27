@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-
 	"github.com/lithammer/shortuuid/v3"
 	"go.uber.org/zap/zapcore"
 	appsv1 "k8s.io/api/apps/v1"
@@ -38,15 +37,17 @@ import (
 // TiflowClusterReconciler reconciles a TiflowCluster object
 type TiflowClusterReconciler struct {
 	client.Client
-	Scheme  *runtime.Scheme
-	Control tiflowcluster.ControlInterface
+	ClientSet kubernetes.Interface
+	Scheme    *runtime.Scheme
+	Control   tiflowcluster.ControlInterface
 }
 
 func NewTiflowClusterReconciler(cli client.Client, clientSet kubernetes.Interface, scheme *runtime.Scheme) *TiflowClusterReconciler {
 	return &TiflowClusterReconciler{
-		Client:  cli,
-		Scheme:  scheme,
-		Control: tiflowcluster.NewDefaultTiflowClusterControl(cli, clientSet),
+		Client:    cli,
+		ClientSet: clientSet,
+		Scheme:    scheme,
+		Control:   tiflowcluster.NewDefaultTiflowClusterControl(cli, clientSet),
 	}
 }
 
@@ -94,25 +95,31 @@ func (r *TiflowClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return result.RequeueImmediately()
 	}
 
-	err := r.Control.UpdateTiflowCluster(ctx, tc)
-	switch err.(type) {
-	case result.SyncStatusErr:
-		logger.Error(err, "failed to sync tiflow cluster status")
-		return result.RequeueAfter(result.ShortPauseTime, err(result.SyncStatusErr{}))
-	case result.ValidationErr:
-		logger.Error(err, "validation of tiflow cluster is failed")
-		return result.RequeueImmediately()
-	case result.NotReadyErr:
-		logger.Error(err, "master of tiflow cluster is not ready")
-		return result.RequeueAfter(result.LongPauseTime, err(result.NotReadyErr{}))
-	case result.NormalErr:
-		logger.Error(err, "failed to reconcile tiflow cluster")
-		return result.RequeueIfError(err)
-	default:
-		logger.V(int(zapcore.InfoLevel)).Info("reconciling tiflow cluster completed successfully")
+	if err := r.Control.UpdateTiflowCluster(ctx, tc); err != nil {
+		logger.Info("Error on TiflowCluster Reconcile ...")
+
+		defer func(ctx context.Context, tc *pingcapcomv1alpha1.TiflowCluster) {
+			if err := r.updateTiflowClusterStatus(ctx, tc); err != nil {
+				logger.Error(err, "failed to update tiflow cluster status")
+			}
+		}(ctx, tc)
+
+		switch err.(type) {
+		case result.SyncConditionErr:
+			logger.Error(err, "failed to sync condition")
+			return result.RequeueImmediately()
+		case result.SyncStatusErr:
+			logger.Error(err, "can not sync master or executor cluster's status")
+			return result.RequeueAfter(result.ShortPauseTime, err(result.SyncStatusErr{}))
+		case result.NotReadyErr:
+			logger.Error(err, "master or executor cluster are not ready")
+			return result.RequeueAfter(result.LongPauseTime, err(result.NotReadyErr{}))
+		default:
+			return result.RequeueIfError(err)
+		}
 	}
 
-	if err = r.updateTiflowClusterStatus(ctx, tc); err != nil {
+	if err := r.updateTiflowClusterStatus(ctx, tc); err != nil {
 		logger.Error(err, "failed to update tiflow Cluster Status")
 		return result.RequeueIfError(err)
 	}
@@ -120,7 +127,7 @@ func (r *TiflowClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	return result.NoRequeue()
 }
 func (r *TiflowClusterReconciler) updateTiflowClusterStatus(ctx context.Context, tc *pingcapcomv1alpha1.TiflowCluster) error {
-	status.SetTiflowClusterStatus(&tc.Status)
+	status.UpdateTiflowClusterStatus(&tc.Status)
 	return status.NewRealStatusUpdater(r.Client).Update(ctx, tc)
 }
 

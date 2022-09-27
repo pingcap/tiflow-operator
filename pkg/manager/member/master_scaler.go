@@ -45,7 +45,7 @@ func (s masterScaler) Scale(meta metav1.Object, oldSts *apps.StatefulSet, newSts
 	return nil
 }
 
-func (s masterScaler) ScaleOut(meta metav1.Object, actual *apps.StatefulSet, desired *apps.StatefulSet) error {
+func (s masterScaler) ScaleOut(meta metav1.Object, actual *apps.StatefulSet, desired *apps.StatefulSet) (err error) {
 	tc, ok := meta.(*v1alpha1.TiflowCluster)
 	if !ok {
 		return nil
@@ -55,38 +55,37 @@ func (s masterScaler) ScaleOut(meta metav1.Object, actual *apps.StatefulSet, des
 	tcName := tc.GetName()
 	stsName := actual.GetName()
 
-	state := status.NewMasterSyncTypeManager(&tc.Status.Master)
-	state.SetClusterSyncTypeOngoing(v1alpha1.ScaleOutType,
+	condition.SetFalse(v1alpha1.MasterSynced, &tc.Status, metav1.Now())
+	syncState := status.NewMasterSyncTypeManager(&tc.Status.Master)
+	syncState.Ongoing(v1alpha1.ScaleOutType,
 		fmt.Sprintf("tiflow master [%s/%s] sacling out...", ns, tcName))
+	defer func() {
+		if err != nil {
+			syncState.Failed(v1alpha1.ScaleOutType,
+				fmt.Sprintf("tiflow master [%s/%s] scaling out failed", ns, tcName))
+		}
+	}()
 
-	if condition.False(v1alpha1.MasterSynced, tc.Status.ClusterConditions) {
-		state.SetClusterSyncTypeFailed(v1alpha1.ScaleOutType,
-			fmt.Sprintf("tiflow master [%s/%s] sacling out failed", ns, tcName))
-
-		return fmt.Errorf("tiflow cluster: [%s/%s]'s tiflow-master status sync failed, can't scale up now",
-			ns, tcName)
-	}
-
-	klog.Infof("start to scaling up tiflow-master statefulSet %s for [%s/%s], actual: %d, desired: %d",
+	klog.Infof("start to scaling out tiflow-master statefulSet %s for [%s/%s], actual: %d, desired: %d",
 		stsName, ns, tcName, *actual.Spec.Replicas, *desired.Spec.Replicas)
 
-	up := *desired.Spec.Replicas - *actual.Spec.Replicas
+	out := *desired.Spec.Replicas - *actual.Spec.Replicas
 	current := *actual.Spec.Replicas
 	ctx := context.TODO()
 
-	for i := up; i > 0; i-- {
-		klog.Infof("scaling up statefulSet %s of master, current: %d, desired: %d",
+	for i := out; i > 0; i-- {
+		klog.Infof("scaling out statefulSet %s of master, current: %d, desired: %d",
 			stsName, current, current+1)
 
-		if err := s.SetReplicas(ctx, actual, uint(current+1)); err != nil {
+		if err = s.SetReplicas(ctx, actual, uint(current+1)); err != nil {
 			return err
 		}
 
-		if err := s.WaitUntilRunning(ctx); err != nil {
+		if err = s.WaitUntilRunning(ctx); err != nil {
 			return err
 		}
 
-		if err := s.WaitUntilHealthy(ctx, uint(current+1)); err != nil {
+		if err = s.WaitUntilHealthy(ctx, uint(current+1)); err != nil {
 			return err
 		}
 
@@ -94,16 +93,16 @@ func (s masterScaler) ScaleOut(meta metav1.Object, actual *apps.StatefulSet, des
 		time.Sleep(defaultSleepTime)
 	}
 
-	klog.Infof("scaling up is done, tiflow-master statefulSet %s for [%s/%s], current: %d, desired: %d",
+	klog.Infof("scaling out is done, tiflow-master statefulSet %s for [%s/%s], current: %d, desired: %d",
 		stsName, ns, tcName, current, *desired.Spec.Replicas)
 
-	state.SetClusterSyncTypeComplied(v1alpha1.ScaleOutType,
+	syncState.Complied(v1alpha1.ScaleOutType,
 		fmt.Sprintf("tiflow master [%s/%s] sacling out completed", ns, tcName))
 
 	return nil
 }
 
-func (s masterScaler) ScaleIn(meta metav1.Object, actual *apps.StatefulSet, desired *apps.StatefulSet) error {
+func (s masterScaler) ScaleIn(meta metav1.Object, actual *apps.StatefulSet, desired *apps.StatefulSet) (err error) {
 	tc, ok := meta.(*v1alpha1.TiflowCluster)
 	if !ok {
 		return nil
@@ -113,38 +112,37 @@ func (s masterScaler) ScaleIn(meta metav1.Object, actual *apps.StatefulSet, desi
 	tcName := tc.GetName()
 	stsName := actual.GetName()
 
-	state := status.NewMasterSyncTypeManager(&tc.Status.Master)
-	state.SetClusterSyncTypeOngoing(v1alpha1.ScaleInType,
+	condition.SetFalse(v1alpha1.MasterSynced, &tc.Status, metav1.Now())
+	syncState := status.NewMasterSyncTypeManager(&tc.Status.Master)
+	syncState.Ongoing(v1alpha1.ScaleInType,
 		fmt.Sprintf("tiflow master [%s/%s] sacling in...", ns, tcName))
+	defer func() {
+		if err != nil {
+			syncState.Failed(v1alpha1.ScaleOutType,
+				fmt.Sprintf("tiflow master [%s/%s] scaling in failed", ns, tcName))
+		}
+	}()
 
-	if condition.False(v1alpha1.MasterSynced, tc.Status.ClusterConditions) {
-		state.SetClusterSyncTypeFailed(v1alpha1.ScaleInType,
-			fmt.Sprintf("tiflow master [%s/%s] sacling in failed", ns, tcName))
-
-		return fmt.Errorf("tiflow cluster: %s/%s's tiflow-master status sync failed, can't scale out now",
-			ns, tcName)
-	}
-
-	klog.Infof("start to scaling down tiflow-master statefulSet %s for [%s/%s], actual: %d, desired: %d",
+	klog.Infof("start to scaling in tiflow-master statefulSet %s for [%s/%s], actual: %d, desired: %d",
 		stsName, ns, tcName, *actual.Spec.Replicas, *desired.Spec.Replicas)
 
-	down := *actual.Spec.Replicas - *desired.Spec.Replicas
+	in := *actual.Spec.Replicas - *desired.Spec.Replicas
 	current := *actual.Spec.Replicas
 	ctx := context.TODO()
 
-	for i := down; i > 0; i-- {
-		klog.Infof("scaling down statefulSet %s of master, current: %d, desired: %d",
+	for i := in; i > 0; i-- {
+		klog.Infof("scaling in statefulSet %s of master, current: %d, desired: %d",
 			stsName, current, current-1)
 
-		if err := s.EvictLeader(tc, current-1); err != nil {
+		if err = s.EvictLeader(tc, current-1); err != nil {
 			return err
 		}
 
-		if err := s.SetReplicas(ctx, actual, uint(current-1)); err != nil {
+		if err = s.SetReplicas(ctx, actual, uint(current-1)); err != nil {
 			return err
 		}
 
-		if err := s.WaitUntilHealthy(ctx, uint(current-1)); err != nil {
+		if err = s.WaitUntilHealthy(ctx, uint(current-1)); err != nil {
 			return err
 		}
 
@@ -152,10 +150,10 @@ func (s masterScaler) ScaleIn(meta metav1.Object, actual *apps.StatefulSet, desi
 		time.Sleep(defaultSleepTime)
 	}
 
-	klog.Infof("scaling down is done, tiflow-master statefulSet %s for [%s/%s], current: %d, desired: %d",
+	klog.Infof("scaling in is done, tiflow-master statefulSet %s for [%s/%s], current: %d, desired: %d",
 		stsName, ns, tcName, current, *desired.Spec.Replicas)
 
-	state.SetClusterSyncTypeComplied(v1alpha1.ScaleOutType,
+	syncState.Complied(v1alpha1.ScaleOutType,
 		fmt.Sprintf("tiflow master [%s/%s] sacling in completed", ns, tcName))
 
 	return nil

@@ -34,6 +34,16 @@ func NewExecutorConditionManager(cli client.Client, clientSet kubernetes.Interfa
 func (ecm *ExecutorConditionManager) Update(ctx context.Context) error {
 	SetFalse(v1alpha1.MasterSynced, &ecm.cluster.Status, metav1.Now())
 
+	if err := ecm.update(ctx); err != nil {
+		return result.SyncStatusErr{
+			Err: err,
+		}
+	}
+
+	return ecm.Check()
+}
+
+func (ecm *ExecutorConditionManager) update(ctx context.Context) error {
 	ns := ecm.cluster.GetNamespace()
 	tcName := ecm.cluster.GetName()
 
@@ -47,6 +57,7 @@ func (ecm *ExecutorConditionManager) Update(ctx context.Context) error {
 				ns, tcName, err)
 		}
 	}
+	ecm.cluster.Status.Executor.StatefulSet = &sts.Status
 
 	if err = ecm.syncMembersStatus(ctx, sts); err != nil {
 		return err
@@ -84,6 +95,25 @@ func (ecm *ExecutorConditionManager) Check() error {
 		}
 	}
 
+	if ecm.versionCheck() {
+		SetTrue(v1alpha1.ExecutorVersionChecked, &ecm.cluster.Status, metav1.Now())
+	} else {
+		SetFalse(v1alpha1.ExecutorVersionChecked, &ecm.cluster.Status, metav1.Now())
+		return result.NotReadyErr{
+			Err: fmt.Errorf("executor [%s/%s] check: version are not up-to-date", ns, tcName),
+		}
+	}
+
+	// todo: need to check this
+	if ecm.pvcCheck() {
+		SetTrue(v1alpha1.ExecutorPVCChecked, &ecm.cluster.Status, metav1.Now())
+	} else {
+		SetFalse(v1alpha1.ExecutorPVCChecked, &ecm.cluster.Status, metav1.Now())
+		return result.NotReadyErr{
+			Err: fmt.Errorf("executor [%s/%s] check: pvc's status is abnormal", ns, tcName),
+		}
+	}
+
 	actual := int32(len(ecm.cluster.Status.Master.Members))
 	desired := ecm.cluster.ExecutorStsDesiredReplicas()
 	// todo: need to handle failureMembers
@@ -98,12 +128,13 @@ func (ecm *ExecutorConditionManager) Check() error {
 		}
 	}
 
-	if ecm.cluster.AllMasterMembersReady() {
+	// todo: need to check this
+	if ecm.cluster.AllExecutorMembersReady() {
 		SetTrue(v1alpha1.ExecutorReadyChecked, &ecm.cluster.Status, metav1.Now())
 	} else {
 		SetFalse(v1alpha1.ExecutorReadyChecked, &ecm.cluster.Status, metav1.Now())
 		return result.NotReadyErr{
-			Err: fmt.Errorf("executor [%s/%s] check: executor not reday", ns, tcName),
+			Err: fmt.Errorf("executor [%s/%s] check: cluster are not reday", ns, tcName),
 		}
 	}
 
@@ -184,6 +215,15 @@ func (ecm *ExecutorConditionManager) updateMembersInfo(executorsInfo tiflowapi.E
 
 	ecm.cluster.Status.Executor.Members = members
 	return nil
+}
+
+func (ecm *ExecutorConditionManager) pvcCheck() bool {
+	// todo: need to check pvc's status here
+	return true
+}
+
+func (ecm *ExecutorConditionManager) versionCheck() bool {
+	return statefulSetUpToDate(ecm.cluster.Status.Executor.StatefulSet, true)
 }
 
 // func (ecm *ExecutorConditionManager) statsfulSetIsUpgrading(ctx context.Context, sts *appsv1.StatefulSet) (bool, error) {

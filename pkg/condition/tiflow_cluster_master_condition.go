@@ -30,12 +30,20 @@ func NewMasterConditionManager(cli client.Client, clientSet kubernetes.Interface
 }
 
 func (mcm *MasterConditionManager) Update(ctx context.Context) error {
+	if err := mcm.update(ctx); err != nil {
+		return result.SyncStatusErr{
+			Err: err,
+		}
+	}
+
+	return mcm.Check()
+}
+
+func (mcm *MasterConditionManager) update(ctx context.Context) error {
 	if mcm.cluster.Heterogeneous() {
 		SetTrue(v1alpha1.MastersInfoUpdatedChecked, &mcm.cluster.Status, metav1.Now())
 		return nil
 	}
-
-	SetFalse(v1alpha1.MasterSynced, &mcm.cluster.Status, metav1.Now())
 
 	ns := mcm.cluster.GetNamespace()
 	tcName := mcm.cluster.GetName()
@@ -50,6 +58,7 @@ func (mcm *MasterConditionManager) Update(ctx context.Context) error {
 				ns, tcName, err)
 		}
 	}
+	mcm.cluster.Status.Master.StatefulSet = &sts.Status
 
 	tiflowClient := tiflowapi.GetMasterClient(mcm.cli, ns, tcName, "", mcm.cluster.IsClusterTLSEnabled())
 	mastersInfo, err := tiflowClient.GetMasters()
@@ -121,6 +130,15 @@ func (mcm *MasterConditionManager) Check() error {
 		}
 	}
 
+	if mcm.versionCheck() {
+		SetTrue(v1alpha1.MasterVersionChecked, &mcm.cluster.Status, metav1.Now())
+	} else {
+		SetFalse(v1alpha1.MasterVersionChecked, &mcm.cluster.Status, metav1.Now())
+		return result.NotReadyErr{
+			Err: fmt.Errorf("master [%s/%s] check: version are not up-to-date", ns, tcName),
+		}
+	}
+
 	actual := int32(len(mcm.cluster.Status.Master.Members))
 	desired := mcm.cluster.MasterStsDesiredReplicas()
 	// todo: need to handle failureMembers
@@ -140,7 +158,7 @@ func (mcm *MasterConditionManager) Check() error {
 	} else {
 		SetFalse(v1alpha1.MasterReadyChecked, &mcm.cluster.Status, metav1.Now())
 		return result.NotReadyErr{
-			Err: fmt.Errorf("master [%s/%s] check: master not reday", ns, tcName),
+			Err: fmt.Errorf("master [%s/%s] check: cluster are not reday", ns, tcName),
 		}
 	}
 
@@ -175,6 +193,10 @@ func (mcm *MasterConditionManager) updateMembersInfo(mastersInfo tiflowapi.Maste
 
 	mcm.cluster.Status.Master.Members = members
 	return nil
+}
+
+func (mcm *MasterConditionManager) versionCheck() bool {
+	return statefulSetUpToDate(mcm.cluster.Status.Master.StatefulSet, true)
 }
 
 // func (mcm *MasterConditionManager) statefulSetIsUpgrading(ctx context.Context, sts *appsv1.StatefulSet) (bool, error) {

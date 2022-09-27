@@ -10,12 +10,6 @@ func InitConditionsIfNeed(status *v1alpha1.TiflowClusterStatus, now metav1.Time)
 	if status.ClusterConditions == nil {
 		status.ClusterConditions = []v1alpha1.TiflowClusterCondition{}
 	}
-
-	if len(status.ClusterConditions) == 0 {
-		SetFalse(v1alpha1.InitializedCondition, status, now)
-		SetFalse(v1alpha1.VersionChecked, status, now)
-	}
-
 	return
 }
 

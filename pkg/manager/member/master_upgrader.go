@@ -3,19 +3,21 @@ package member
 import (
 	"context"
 	"fmt"
-	"github.com/pingcap/tiflow-operator/pkg/status"
 	"strings"
 
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 	podutil "k8s.io/kubernetes/pkg/api/v1/pod"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
+	"github.com/pingcap/tiflow-operator/pkg/condition"
 	"github.com/pingcap/tiflow-operator/pkg/controller"
 	mngerutils "github.com/pingcap/tiflow-operator/pkg/manager/utils"
+	"github.com/pingcap/tiflow-operator/pkg/status"
 	"github.com/pingcap/tiflow-operator/pkg/tiflowapi"
 )
 
@@ -38,13 +40,10 @@ func (u *masterUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSet *app
 	ns := tc.GetNamespace()
 	tcName := tc.GetName()
 
-	state := status.NewMasterSyncTypeManager(&tc.Status.Master)
-	state.SetClusterSyncTypeOngoing(v1alpha1.UpgradeType,
+	condition.SetFalse(v1alpha1.MasterSynced, &tc.Status, metav1.Now())
+	syncState := status.NewMasterSyncTypeManager(&tc.Status.Master)
+	syncState.Ongoing(v1alpha1.UpgradeType,
 		fmt.Sprintf("tiflow master [%s/%s] upgrading...", ns, tcName))
-
-	if !tc.Status.Master.Synced {
-		return fmt.Errorf("tiflowcluster: [%s/%s]'s tiflow-master status sync failed, can not to be upgraded", ns, tcName)
-	}
 
 	if tc.MasterScaling() {
 		klog.Infof("TiflowCluster: [%s/%s]'s tiflow-master is scaling, can not upgrade tiflow-master", ns, tcName)
@@ -56,7 +55,6 @@ func (u *masterUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSet *app
 		return nil
 	}
 
-	tc.Status.Master.Phase = v1alpha1.MasterUpgrading
 	if !templateEqual(newSet, oldSet) {
 		return nil
 	}
@@ -106,8 +104,8 @@ func (u *masterUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSet *app
 		return u.upgradeMasterPod(tc, i, newSet)
 	}
 
-	state.SetClusterSyncTypeComplied(v1alpha1.UpgradeType,
-		fmt.Sprintf("tiflow master [%s/%s] completed...", ns, tcName))
+	syncState.Complied(v1alpha1.UpgradeType,
+		fmt.Sprintf("tiflow master [%s/%s] upgrading completed...", ns, tcName))
 
 	return nil
 }

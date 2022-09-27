@@ -35,3 +35,10 @@ func formatName(name string) (string, error) {
 	res := fmt.Sprintf("%s.%s", nameSlice[0], nameSlice[2])
 	return res, nil
 }
+
+func statefulSetUpToDate(sts *appsv1.StatefulSetStatus, requireExist bool) bool {
+	if sts == nil {
+		return !requireExist
+	}
+	return sts.CurrentRevision == sts.UpdateRevision
+}

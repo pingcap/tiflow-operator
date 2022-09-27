@@ -3,16 +3,20 @@ package member
 import (
 	"context"
 	"fmt"
-	"github.com/pingcap/tiflow-operator/api/v1alpha1"
-	"github.com/pingcap/tiflow-operator/pkg/controller"
-	mngerutils "github.com/pingcap/tiflow-operator/pkg/manager/utils"
-	"github.com/pingcap/tiflow-operator/pkg/status"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 	podutil "k8s.io/kubernetes/pkg/api/v1/pod"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/pingcap/tiflow-operator/api/v1alpha1"
+	"github.com/pingcap/tiflow-operator/pkg/condition"
+	"github.com/pingcap/tiflow-operator/pkg/controller"
+	mngerutils "github.com/pingcap/tiflow-operator/pkg/manager/utils"
+	"github.com/pingcap/tiflow-operator/pkg/status"
 )
 
 type executorUpgrader struct {
@@ -34,14 +38,10 @@ func (u *executorUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSts, n
 	ns := tc.GetNamespace()
 	tcName := tc.GetName()
 
-	state := status.NewExecutorSyncTypeManager(&tc.Status.Executor)
-	state.SetClusterSyncTypeOngoing(v1alpha1.UpgradeType,
+	condition.SetFalse(v1alpha1.ExecutorSynced, &tc.Status, metav1.Now())
+	syncState := status.NewExecutorSyncTypeManager(&tc.Status.Executor)
+	syncState.Ongoing(v1alpha1.UpgradeType,
 		fmt.Sprintf("tiflow executor [%s/%s] upgrading...", ns, tcName))
-
-	if !tc.Status.Executor.Synced {
-		return fmt.Errorf("tiflowCluster: [%s/%s]'s tiflow-executor status sync failed,"+
-			"can not to be upgraded", ns, tcName)
-	}
 
 	if tc.ExecutorScaling() {
 		klog.Infof("TiflowCluster: [%s/%s]'s tiflow-executor is scaling, can not upgrade tiflow-executor",
@@ -54,7 +54,6 @@ func (u *executorUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSts, n
 		return nil
 	}
 
-	tc.Status.Executor.Phase = v1alpha1.ExecutorUpgrading
 	if !templateEqual(newSts, oldSts) {
 		return nil
 	}
@@ -106,8 +105,8 @@ func (u *executorUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSts, n
 		return nil
 	}
 
-	state.SetClusterSyncTypeComplied(v1alpha1.UpgradeType,
-		fmt.Sprintf("tiflow executor [%s/%s] completed", ns, tcName))
+	syncState.Complied(v1alpha1.UpgradeType,
+		fmt.Sprintf("tiflow executor [%s/%s] upgrading completed", ns, tcName))
 
 	return nil
 }

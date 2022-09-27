@@ -12,11 +12,13 @@ const (
 	InitializedCondition TiflowClusterConditionType = "Initialized"
 
 	MastersInfoUpdatedChecked TiflowClusterConditionType = "MastersInfoUpdatedChecked"
+	MasterVersionChecked      TiflowClusterConditionType = "MasterVersionChecked"
 	MasterNumChecked          TiflowClusterConditionType = "MasterNumChecked"
 	MasterReadyChecked        TiflowClusterConditionType = "MasterReadyChecked"
 	MasterSynced              TiflowClusterConditionType = "MasterSynced"
 
 	ExecutorsInfoUpdatedChecked TiflowClusterConditionType = "ExecutorsInfoUpdatedCheck"
+	ExecutorVersionChecked      TiflowClusterConditionType = "ExecutorVersionChecked"
 	ExecutorNumChecked          TiflowClusterConditionType = "ExecutorNumChecked"
 	ExecutorReadyChecked        TiflowClusterConditionType = "ExecutorReadyChecked"
 	ExecutorSynced              TiflowClusterConditionType = "ExecutorSynced"
