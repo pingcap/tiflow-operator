@@ -12584,6 +12584,27 @@ spec:
                   message:
                     description: (Optional) Message related to the status of the ExecutorCluster
                     type: string
+                  peerMembers:
+                    additionalProperties:
+                      description: ExecutorMember is Tiflow-executor member status
+                      properties:
+                        addr:
+                          type: string
+                        capability:
+                          format: int64
+                          type: integer
+                        id:
+                          type: string
+                        lastTransitionTime:
+                          description: 'TODO: add cpu/memory/disk usage later Last
+                            time the health transitioned from one to another.'
+                          format: date-time
+                          nullable: true
+                          type: string
+                        name:
+                          type: string
+                      type: object
+                    type: object
                   phase:
                     description: Phase represents the observed state of a tiflow executor
                       Update by sync types

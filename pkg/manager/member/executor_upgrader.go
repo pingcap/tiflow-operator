@@ -93,7 +93,7 @@ func (u *executorUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSts, n
 					ns, tcName, podName)
 			}
 			// todo: Need to be modified
-			if _, exist := tc.Status.Executor.Members[podName]; !exist {
+			if _, exist := tc.Status.Executor.Members[podName+"."+ns]; !exist {
 				return controller.RequeueErrorf("tiflowCluster: [%s/%s]'s upgrade tiflow-executor pod: [%s] is not exist",
 					ns, tcName, podName)
 			}

@@ -448,7 +448,7 @@ type MasterMember struct {
 	IsLeader bool   `json:"is_leader,omitempty"`
 	// member id is actually an uint64, but apimachinery's json only treats numbers as int64/float64
 	// so uint64 may overflow int64 and thus convert to float64
-	PodName       string `json:"podName,omitempty"`
+	Name          string `json:"podName,omitempty"`
 	ClientURL     string `json:"clientURL"`
 	Health        bool   `json:"health"`
 	MemberDeleted bool   `json:"memberDeleted,omitempty"`
@@ -552,6 +552,7 @@ type ExecutorStatus struct {
 	Image          string                    `json:"image,omitempty"`
 	StatefulSet    *apps.StatefulSetStatus   `json:"statefulSet,omitempty"`
 	Members        map[string]ExecutorMember `json:"members,omitempty"`
+	PeerMembers    map[string]ExecutorMember `json:"peerMembers,omitempty"`
 	FailureMembers map[string]ExecutorMember `json:"failureMembers,omitempty"`
 	FailoverUID    types.UID                 `json:"failoverUID,omitempty"`
 	// Volumes contains the status of all volumes.
