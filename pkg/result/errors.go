@@ -31,3 +31,11 @@ type SyncPhaseErr struct {
 func (e SyncPhaseErr) Error() string {
 	return e.Err.Error()
 }
+
+type UpdateStatusErr struct {
+	Err error
+}
+
+func (e UpdateStatusErr) Error() string {
+	return e.Err.Error()
+}

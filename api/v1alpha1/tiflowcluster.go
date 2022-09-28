@@ -78,6 +78,22 @@ func (tc *TiflowCluster) ExecutorStsActualReplicas() int32 {
 	return stsStatus.Replicas
 }
 
+func (tc *TiflowCluster) ExecutorStsReadyReplicas() int32 {
+	stsStatus := tc.Status.Executor.StatefulSet
+	if stsStatus == nil {
+		return 0
+	}
+	return stsStatus.ReadyReplicas
+}
+
+func (tc *TiflowCluster) ExecutorStsCurrentReplicas() int32 {
+	stsStatus := tc.Status.Executor.StatefulSet
+	if stsStatus == nil {
+		return 0
+	}
+	return stsStatus.CurrentReplicas
+}
+
 func (tc *TiflowCluster) ExecutorStsDesiredReplicas() int32 {
 	if tc.Spec.Executor == nil {
 		return 0
@@ -100,6 +116,22 @@ func (tc *TiflowCluster) MasterStsActualReplicas() int32 {
 		return 0
 	}
 	return stsStatus.Replicas
+}
+
+func (tc *TiflowCluster) MasterStsReadyReplicas() int32 {
+	stsStatus := tc.Status.Master.StatefulSet
+	if stsStatus == nil {
+		return 0
+	}
+	return stsStatus.ReadyReplicas
+}
+
+func (tc *TiflowCluster) MasterStsCurrentReplicas() int32 {
+	stsStatus := tc.Status.Master.StatefulSet
+	if stsStatus == nil {
+		return 0
+	}
+	return stsStatus.CurrentReplicas
 }
 
 func (tc *TiflowCluster) MasterStsDesiredReplicas() int32 {
@@ -139,4 +171,36 @@ func (mt MemberType) String() string {
 
 func NewGenericConfig() *config.GenericConfig {
 	return config.New(map[string]interface{}{})
+}
+
+func (tc *TiflowCluster) GetClusterStatus() *TiflowClusterStatus {
+	return &tc.Status
+}
+
+func (tc *TiflowCluster) GetMasterStatus() *MasterStatus {
+	return &tc.Status.Master
+}
+
+func (tc *TiflowCluster) GetExecutorStatus() *ExecutorStatus {
+	return &tc.Status.Executor
+}
+
+func (tc *TiflowCluster) GetMasterSyncTypes() []ClusterSyncType {
+	return tc.Status.Master.SyncTypes
+}
+
+func (tc *TiflowCluster) GetExecutorSyncTypes() []ClusterSyncType {
+	return tc.Status.Executor.SyncTypes
+}
+
+func (tc *TiflowCluster) GetMasterPhase() MasterPhaseType {
+	return tc.Status.Master.Phase
+}
+
+func (tc *TiflowCluster) GetExecutorPhase() ExecutorPhaseType {
+	return tc.Status.Executor.Phase
+}
+
+func (tc *TiflowCluster) GetClusterPhase() TiflowClusterPhaseType {
+	return tc.Status.ClusterPhase
 }

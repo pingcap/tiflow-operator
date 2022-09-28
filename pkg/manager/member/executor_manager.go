@@ -24,7 +24,6 @@ import (
 	"github.com/pingcap/tiflow-operator/pkg/controller"
 	"github.com/pingcap/tiflow-operator/pkg/manager"
 	mngerutils "github.com/pingcap/tiflow-operator/pkg/manager/utils"
-	"github.com/pingcap/tiflow-operator/pkg/result"
 	"github.com/pingcap/tiflow-operator/pkg/status"
 	"github.com/pingcap/tiflow-operator/pkg/util"
 )
@@ -158,7 +157,6 @@ func (m *executorMemberManager) syncExecutorHeadlessServiceForTiflowCluster(ctx 
 func (m *executorMemberManager) syncExecutorStatefulSetForTiflowCluster(ctx context.Context, tc *v1alpha1.TiflowCluster) error {
 	ns := tc.GetNamespace()
 	tcName := tc.GetName()
-	syncState := status.NewExecutorSyncTypeManager(&tc.Status.Executor)
 
 	oldStsTmp := &appsv1.StatefulSet{}
 	err := m.cli.Get(ctx, types.NamespacedName{
@@ -196,7 +194,7 @@ func (m *executorMemberManager) syncExecutorStatefulSetForTiflowCluster(ctx cont
 
 	if stsNotExist {
 		condition.SetFalse(v1alpha1.ExecutorSynced, &tc.Status, metav1.Now())
-		syncState.Ongoing(v1alpha1.CreateType,
+		status.Ongoing(v1alpha1.CreateType, &tc.Status, v1alpha1.TiFlowExecutorMemberType,
 			fmt.Sprintf("start to create executor cluster [%s/%s]", ns, tcName))
 
 		err = mngerutils.SetStatefulSetLastAppliedConfigAnnotation(newSts)
@@ -205,7 +203,7 @@ func (m *executorMemberManager) syncExecutorStatefulSetForTiflowCluster(ctx cont
 		}
 
 		if err := m.cli.Create(ctx, newSts); err != nil {
-			syncState.Failed(v1alpha1.CreateType,
+			status.Failed(v1alpha1.CreateType, &tc.Status, v1alpha1.TiFlowExecutorMemberType,
 				fmt.Sprintf("start to create executor cluster [%s/%s] failed", ns, tcName))
 			return err
 		}
@@ -223,9 +221,8 @@ func (m *executorMemberManager) syncExecutorStatefulSetForTiflowCluster(ctx cont
 			return controller.RequeueErrorf("tiflow cluster: [%s/%s]'s tiflow-executor needs force upgrade, %v", ns, tcName, errSts)
 		}
 
-		return result.SyncStatusErr{
-			Err: fmt.Errorf("waiting for tiflow-executor's status sync"),
-		}
+		klog.Infof("waiting for tiflow-executor's status sync")
+		return nil
 	}
 
 	// Scaling takes precedence over normal upgrading because:
@@ -239,7 +236,7 @@ func (m *executorMemberManager) syncExecutorStatefulSetForTiflowCluster(ctx cont
 
 	if !templateEqual(newSts, oldSts) || tc.Status.Executor.Phase == v1alpha1.ExecutorUpgrading {
 		if err := m.upgrader.Upgrade(tc, oldSts, newSts); err != nil {
-			syncState.Failed(v1alpha1.UpgradeType,
+			status.Failed(v1alpha1.UpgradeType, &tc.Status, v1alpha1.TiFlowExecutorMemberType,
 				fmt.Sprintf("tiflow executor [%s/%s] upgrading failed", ns, tcName))
 			return err
 		}

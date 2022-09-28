@@ -59,12 +59,11 @@ func (s *executorScaler) ScaleOut(meta metav1.Object, actual *appsv1.StatefulSet
 	stsName := actual.GetName()
 
 	condition.SetFalse(v1alpha1.ExecutorSynced, &tc.Status, metav1.Now())
-	syncState := status.NewExecutorSyncTypeManager(&tc.Status.Executor)
-	syncState.Ongoing(v1alpha1.ScaleOutType,
+	status.Ongoing(v1alpha1.ScaleOutType, &tc.Status, v1alpha1.TiFlowExecutorMemberType,
 		fmt.Sprintf("tiflow executor [%s/%s] sacling out...", ns, tcName))
 	defer func() {
 		if err != nil {
-			syncState.Failed(v1alpha1.ScaleOutType,
+			status.Failed(v1alpha1.ScaleOutType, &tc.Status, v1alpha1.TiFlowExecutorMemberType,
 				fmt.Sprintf("tiflow executor [%s/%s] scaling out failed", ns, tcName))
 		}
 	}()
@@ -122,12 +121,11 @@ func (s *executorScaler) ScaleIn(meta metav1.Object, actual *appsv1.StatefulSet,
 	stsName := actual.GetName()
 
 	condition.SetFalse(v1alpha1.ExecutorSynced, &tc.Status, metav1.Now())
-	syncState := status.NewExecutorSyncTypeManager(&tc.Status.Executor)
-	syncState.Ongoing(v1alpha1.ScaleInType,
+	status.Ongoing(v1alpha1.ScaleInType, &tc.Status, v1alpha1.TiFlowExecutorMemberType,
 		fmt.Sprintf("tiflow executor [%s/%s] sacling in...", ns, tcName))
 	defer func() {
 		if err != nil {
-			syncState.Failed(v1alpha1.ScaleOutType,
+			status.Failed(v1alpha1.ScaleInType, &tc.Status, v1alpha1.TiFlowExecutorMemberType,
 				fmt.Sprintf("tiflow executor [%s/%s] scaling in failed", ns, tcName))
 		}
 	}()

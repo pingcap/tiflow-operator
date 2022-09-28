@@ -1,6 +1,7 @@
 package condition
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -14,6 +15,24 @@ func masterMemberName(clusterName string) string {
 
 func executorMemberName(clusterName string) string {
 	return fmt.Sprintf("%s-tiflow-executor", clusterName)
+}
+
+func handleCapability(o string) (int64, error) {
+	var i interface{}
+	d := json.NewDecoder(strings.NewReader(o))
+	d.UseNumber()
+
+	if err := d.Decode(&i); err != nil {
+		return -1, err
+	}
+
+	n := i.(json.Number)
+	res, err := n.Int64()
+	if err != nil {
+		return -1, err
+	}
+
+	return res, nil
 }
 
 // findContainerByName finds targetContainer by containerName, If not find, then return nil

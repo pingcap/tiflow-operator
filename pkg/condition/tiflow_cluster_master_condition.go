@@ -142,7 +142,7 @@ func (mcm *MasterConditionManager) Check() error {
 		}
 	}
 
-	actual := int32(len(mcm.cluster.Status.Master.Members))
+	actual := mcm.cluster.MasterStsCurrentReplicas()
 	desired := mcm.cluster.MasterStsDesiredReplicas()
 	// todo: need to handle failureMembers
 	// failed := len(mcm.cluster.Status.Master.FailureMembers)

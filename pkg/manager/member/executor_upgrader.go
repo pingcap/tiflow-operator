@@ -39,8 +39,7 @@ func (u *executorUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSts, n
 	tcName := tc.GetName()
 
 	condition.SetFalse(v1alpha1.ExecutorSynced, &tc.Status, metav1.Now())
-	syncState := status.NewExecutorSyncTypeManager(&tc.Status.Executor)
-	syncState.Ongoing(v1alpha1.UpgradeType,
+	status.Ongoing(v1alpha1.UpgradeType, &tc.Status, v1alpha1.TiFlowExecutorMemberType,
 		fmt.Sprintf("tiflow executor [%s/%s] upgrading...", ns, tcName))
 
 	if tc.ExecutorScaling() {

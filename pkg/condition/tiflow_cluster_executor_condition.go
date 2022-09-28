@@ -2,7 +2,6 @@ package condition
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -115,7 +114,7 @@ func (ecm *ExecutorConditionManager) Check() error {
 		}
 	}
 
-	actual := int32(len(ecm.cluster.Status.Master.Members))
+	actual := ecm.cluster.ExecutorStsCurrentReplicas()
 	desired := ecm.cluster.ExecutorStsDesiredReplicas()
 	// todo: need to handle failureMembers
 	// failed := len(ecm.cluster.Status.Executor.FailureMembers)
@@ -225,22 +224,4 @@ func (ecm *ExecutorConditionManager) pvcCheck() bool {
 
 func (ecm *ExecutorConditionManager) versionCheck() bool {
 	return statefulSetUpToDate(ecm.cluster.Status.Executor.StatefulSet, true)
-}
-
-func handleCapability(o string) (int64, error) {
-	var i interface{}
-	d := json.NewDecoder(strings.NewReader(o))
-	d.UseNumber()
-
-	if err := d.Decode(&i); err != nil {
-		return -1, err
-	}
-
-	n := i.(json.Number)
-	res, err := n.Int64()
-	if err != nil {
-		return -1, err
-	}
-
-	return res, nil
 }
