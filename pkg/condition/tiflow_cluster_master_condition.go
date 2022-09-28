@@ -3,8 +3,6 @@ package condition
 import (
 	"context"
 	"fmt"
-	"strings"
-
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -101,8 +99,9 @@ func (mcm *MasterConditionManager) update(ctx context.Context) error {
 	}
 
 	mcm.cluster.Status.Master.Leader = v1alpha1.MasterMember{
-		ClientURL: leader.AdvertiseAddr,
-		Health:    true,
+		ClientURL:          leader.AdvertiseAddr,
+		Health:             true,
+		LastTransitionTime: metav1.Now(),
 	}
 
 	mcm.cluster.Status.Master.Image = ""
@@ -111,6 +110,7 @@ func (mcm *MasterConditionManager) update(ctx context.Context) error {
 		mcm.cluster.Status.Master.Image = c.Image
 	}
 
+	mcm.cluster.Status.Master.LastUpdateTime = metav1.Now()
 	SetTrue(v1alpha1.MastersInfoUpdatedChecked, &mcm.cluster.Status, metav1.Now())
 	return nil
 }
@@ -173,28 +173,26 @@ func (mcm *MasterConditionManager) updateMembersInfo(mastersInfo tiflowapi.Maste
 
 	// TODO: WIP, need to get the information of memberDeleted and LastTransitionTime
 	members := make(map[string]v1alpha1.MasterMember)
+	peerMembers := make(map[string]v1alpha1.MasterMember)
 	for _, m := range mastersInfo.Masters {
-		// TODO: WIP
-		if !strings.Contains(m.Address, ns) {
-			continue
-		}
-
-		masterName, err := formatName(m.Address)
-		if err != nil {
-			return err
-		}
-
-		members[masterName] = v1alpha1.MasterMember{
+		member := v1alpha1.MasterMember{
 			Id:                 m.ID,
 			Address:            m.Address,
 			IsLeader:           m.IsLeader,
-			PodName:            m.Name,
+			Name:               m.Name,
 			Health:             true,
 			LastTransitionTime: metav1.Now(),
+		}
+		clusterName, ordinal, namespace, err2 := getOrdinalFromName(m.Name, v1alpha1.TiFlowMasterMemberType)
+		if err2 == nil && clusterName == mcm.cluster.GetName() && namespace == ns && ordinal < mcm.cluster.MasterStsDesiredReplicas() {
+			members[m.Name] = member
+		} else {
+			peerMembers[m.Name] = member
 		}
 	}
 
 	mcm.cluster.Status.Master.Members = members
+	mcm.cluster.Status.Master.PeerMembers = peerMembers
 	return nil
 }
 

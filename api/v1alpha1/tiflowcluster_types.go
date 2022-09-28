@@ -523,6 +523,7 @@ type MasterStatus struct {
 	Image          string                  `json:"image,omitempty"`
 	Leader         MasterMember            `json:"leader,omitempty"`
 	Members        map[string]MasterMember `json:"members,omitempty"`
+	PeerMembers    map[string]MasterMember `json:"peerMembers,omitempty"`
 	FailureMembers map[string]MasterMember `json:"failureMembers,omitempty"`
 	StatefulSet    *apps.StatefulSetStatus `json:"statefulSet,omitempty"`
 	// LastUpdateTime means the time when the status of Master cluster's info was updated

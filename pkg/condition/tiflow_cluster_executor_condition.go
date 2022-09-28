@@ -3,7 +3,6 @@ package condition
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -72,6 +71,7 @@ func (ecm *ExecutorConditionManager) update(ctx context.Context) error {
 	// todo: Need to get the info of volumes which running container has bound
 	// todo: Waiting for discussion
 	ecm.cluster.Status.Executor.Volumes = nil
+	ecm.cluster.Status.Executor.LastUpdateTime = metav1.Now()
 
 	SetTrue(v1alpha1.ExecutorsInfoUpdatedChecked, &ecm.cluster.Status, metav1.Now())
 	return nil
@@ -188,32 +188,31 @@ func (ecm *ExecutorConditionManager) updateMembersInfo(executorsInfo tiflowapi.E
 
 	// todo: WIP, get information about the FailureMembers and FailoverUID through the MasterClient
 	members := make(map[string]v1alpha1.ExecutorMember)
+	peerMembers := make(map[string]v1alpha1.ExecutorMember)
 	for _, e := range executorsInfo.Executors {
-		// todo: WIP
-		if !strings.Contains(e.Address, ns) {
-			continue
-		}
-
 		c, err := handleCapability(e.Capability)
 		if err != nil {
 			return err
 		}
 
-		memberName, err := formatName(e.Address)
-		if err != nil {
-			return err
-		}
-
-		members[memberName] = v1alpha1.ExecutorMember{
+		member := v1alpha1.ExecutorMember{
 			Id:                 e.ID,
 			Name:               e.Name,
 			Addr:               e.Address,
 			Capability:         c,
 			LastTransitionTime: metav1.Now(),
 		}
+
+		clusterName, ordinal, namespace, err2 := getOrdinalFromName(e.Name, v1alpha1.TiFlowExecutorMemberType)
+		if err2 == nil && clusterName == ecm.cluster.GetName() && namespace == ns && ordinal < ecm.cluster.Spec.Master.Replicas {
+			members[e.Name] = member
+		} else {
+			peerMembers[e.Name] = member
+		}
 	}
 
 	ecm.cluster.Status.Executor.Members = members
+	ecm.cluster.Status.Executor.PeerMembers = peerMembers
 	return nil
 }
 

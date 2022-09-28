@@ -395,6 +395,13 @@ func (in *MasterStatus) DeepCopyInto(out *MasterStatus) {
 			(*out)[key] = *val.DeepCopy()
 		}
 	}
+	if in.PeerMembers != nil {
+		in, out := &in.PeerMembers, &out.PeerMembers
+		*out = make(map[string]MasterMember, len(*in))
+		for key, val := range *in {
+			(*out)[key] = *val.DeepCopy()
+		}
+	}
 	if in.FailureMembers != nil {
 		in, out := &in.FailureMembers, &out.FailureMembers
 		*out = make(map[string]MasterMember, len(*in))
