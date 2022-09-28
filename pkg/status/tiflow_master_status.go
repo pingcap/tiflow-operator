@@ -34,6 +34,7 @@ func setMasterClusterStatusOnFirstReconcile(masterStatus *v1alpha1.MasterStatus)
 	masterStatus.Phase = v1alpha1.MasterStarting
 	masterStatus.Message = "Starting... tiflow-master on first reconcile. Just a moment"
 	masterStatus.LastTransitionTime = metav1.Now()
+	masterStatus.LastUpdateTime = metav1.Now()
 	return
 }
 

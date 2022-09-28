@@ -87,8 +87,8 @@ func (r *TiflowClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	if tc.Status.ClusterPhase == "" {
-		status.SetTiflowClusterStatusOnFirstReconcile(&tc.Status)
-		if err := r.updateTiflowClusterStatus(ctx, tc); err != nil {
+		logger.Info("reconciling tiflow cluster on first")
+		if err := r.updateTiflowClusterStatus(tc); err != nil {
 			logger.Error(err, "failed to update tiflow cluster status")
 			return result.RequeueIfError(err)
 		}
@@ -99,7 +99,7 @@ func (r *TiflowClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		logger.Info("Error on TiflowCluster Reconcile ...")
 
 		defer func(ctx context.Context, tc *pingcapcomv1alpha1.TiflowCluster) {
-			if err := r.updateTiflowClusterStatus(ctx, tc); err != nil {
+			if err := r.updateTiflowClusterStatus(tc); err != nil {
 				logger.Error(err, "failed to update tiflow cluster status")
 			}
 		}(ctx, tc)
@@ -110,23 +110,23 @@ func (r *TiflowClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			return result.RequeueImmediately()
 		case result.SyncStatusErr:
 			logger.Error(err, "can not sync master or executor cluster's status")
-			return result.RequeueAfter(result.ShortPauseTime, err(result.SyncStatusErr{}))
+			return result.RequeueAfter(result.ShortPauseTime, err)
 		case result.NotReadyErr:
 			logger.Error(err, "master or executor cluster are not ready")
-			return result.RequeueAfter(result.LongPauseTime, err(result.NotReadyErr{}))
+			return result.RequeueAfter(result.LongPauseTime, err)
 		default:
 			return result.RequeueIfError(err)
 		}
 	}
 
-	if err := r.updateTiflowClusterStatus(ctx, tc); err != nil {
+	if err := r.updateTiflowClusterStatus(tc); err != nil {
 		logger.Error(err, "failed to update tiflow Cluster Status")
 		return result.RequeueIfError(err)
 	}
 
 	return result.NoRequeue()
 }
-func (r *TiflowClusterReconciler) updateTiflowClusterStatus(ctx context.Context, tc *pingcapcomv1alpha1.TiflowCluster) error {
+func (r *TiflowClusterReconciler) updateTiflowClusterStatus(tc *pingcapcomv1alpha1.TiflowCluster) error {
 	return status.NewTiflowClusterStatusManager(r.Client, r.ClientSet, tc).Update()
 }
 

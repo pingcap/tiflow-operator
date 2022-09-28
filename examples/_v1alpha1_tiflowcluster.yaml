@@ -15,19 +15,16 @@ spec:
     requests:
       storage: "1Gi"
     config: |
-      etcd-endpoints = ["etcd.default.svc:2379"]
-      [framework-metastore-conf]
-        schema = "example_framework"
-        endpoints = ["mysql.default.svc:3306"]
-      [framework-metastore-conf.auth]
-        user = "root"
-        passwd = "123456"
-      [business-metastore-conf]
-        schema = "example_business"
-        endpoints = ["mysql.default.svc:3306"]
-      [business-metastore-conf.auth]
-        user = "root"
-        passwd = "123456"
+      [framework-meta]
+       schema = "example_framework"
+       endpoints = ["mysql.default.svc:3306"]
+       user = "root"
+       passwd = "123456"
+      [business-meta]
+       schema = "example_business"
+       endpoints = ["mysql.default.svc:3306"]
+       user = "root"
+       passwd = "123456"
   executor:
     baseImage: chunzhuli/dataflow
     maxFailoverCount: 0

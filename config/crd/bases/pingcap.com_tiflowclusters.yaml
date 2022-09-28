@@ -12706,8 +12706,6 @@ spec:
                       type: object
                     nullable: true
                     type: array
-                  synced:
-                    type: boolean
                   volumes:
                     additionalProperties:
                       description: StorageVolumeStatus is the actual status for a
@@ -12756,7 +12754,6 @@ spec:
                 required:
                 - lastTransitionTime
                 - lastUpdateTime
-                - synced
                 type: object
               hetero:
                 description: Hetero means that the current instance is a heterogeneous
@@ -13003,12 +13000,9 @@ spec:
                     required:
                     - replicas
                     type: object
-                  synced:
-                    type: boolean
                 required:
                 - lastTransitionTime
                 - lastUpdateTime
-                - synced
                 type: object
               message:
                 description: (Optional) Message related to the status of the MasterCluster

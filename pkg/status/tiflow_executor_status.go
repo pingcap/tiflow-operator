@@ -34,6 +34,7 @@ func setExecutorClusterStatusOnFirstReconcile(executorStatus *v1alpha1.ExecutorS
 	executorStatus.Phase = v1alpha1.ExecutorStarting
 	executorStatus.Message = "Starting..., tiflow-executor on first reconcile. Just a moment"
 	executorStatus.LastTransitionTime = metav1.Now()
+	executorStatus.LastUpdateTime = metav1.Now()
 	return
 }
 

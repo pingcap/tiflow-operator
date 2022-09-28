@@ -34,8 +34,8 @@ func NewTiflowClusterStatusManager(cli client.Client, clientSet kubernetes.Inter
 	}
 }
 
-// SetTiflowClusterStatusOnFirstReconcile will set phase of TiflowCluster as Starting on reconcile first
-func SetTiflowClusterStatusOnFirstReconcile(status *v1alpha1.TiflowClusterStatus) {
+// setTiflowClusterStatusOnFirstReconcile will set phase of TiflowCluster as Starting on reconcile first
+func setTiflowClusterStatusOnFirstReconcile(status *v1alpha1.TiflowClusterStatus) {
 	if status.ClusterPhase != "" {
 		return
 	}
@@ -47,13 +47,16 @@ func SetTiflowClusterStatusOnFirstReconcile(status *v1alpha1.TiflowClusterStatus
 }
 
 func (tcsm *TiflowClusterStatusManager) SyncTiflowClusterPhase() {
+	if tcsm.cluster.Status.ClusterPhase == "" {
+		setTiflowClusterStatusOnFirstReconcile(tcsm.cluster.GetClusterStatus())
+		return
+	}
+
 	tcsm.MasterStatus.SyncPhase()
 	tcsm.ExecutorStatus.SyncPhase()
 
 	masterPhase, executorPhase := tcsm.cluster.GetMasterPhase(), tcsm.cluster.GetExecutorPhase()
 	switch {
-	case masterPhase == "" || executorPhase == "":
-		tcsm.SetTiflowClusterPhase(v1alpha1.ClusterPending, "errors, no phase information getting from  Master or Executor")
 	case masterPhase == v1alpha1.MasterFailed || executorPhase == v1alpha1.ExecutorFailed:
 		tcsm.SetTiflowClusterPhase(v1alpha1.ClusterFailed, "errors, failed phase for Master or Executor")
 	case masterPhase == v1alpha1.MasterUnknown || executorPhase == v1alpha1.ExecutorUnknown:
