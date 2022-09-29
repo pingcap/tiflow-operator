@@ -58,12 +58,15 @@ func (s *executorScaler) ScaleOut(meta metav1.Object, actual *appsv1.StatefulSet
 	tcName := tc.GetName()
 	stsName := actual.GetName()
 
-	condition.SetFalse(v1alpha1.ExecutorSynced, &tc.Status, metav1.Now())
-	status.Ongoing(v1alpha1.ScaleOutType, &tc.Status, v1alpha1.TiFlowExecutorMemberType,
+	condition.SetFalse(v1alpha1.SyncChecked, tc.GetClusterStatus(), metav1.Now())
+	status.Ongoing(v1alpha1.ScaleOutType, tc.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType,
 		fmt.Sprintf("tiflow executor [%s/%s] sacling out...", ns, tcName))
+
+	klog.Infof("current syncTypes: %v", tc.Status.Executor.SyncTypes)
+
 	defer func() {
 		if err != nil {
-			status.Failed(v1alpha1.ScaleOutType, &tc.Status, v1alpha1.TiFlowExecutorMemberType,
+			status.Failed(v1alpha1.ScaleOutType, tc.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType,
 				fmt.Sprintf("tiflow executor [%s/%s] scaling out failed", ns, tcName))
 		}
 	}()
@@ -78,7 +81,7 @@ func (s *executorScaler) ScaleOut(meta metav1.Object, actual *appsv1.StatefulSet
 		}
 	}
 
-	klog.Infof("start to scaling up tiflow-executor statefulSet %s for [%s/%s], actual: %d, desired: %d",
+	klog.Infof("start to scaling out tiflow-executor statefulSet %s for [%s/%s], actual: %d, desired: %d",
 		stsName, ns, tcName, *actual.Spec.Replicas, *desired.Spec.Replicas)
 
 	out := *desired.Spec.Replicas - *actual.Spec.Replicas
@@ -120,12 +123,12 @@ func (s *executorScaler) ScaleIn(meta metav1.Object, actual *appsv1.StatefulSet,
 	tcName := tc.GetName()
 	stsName := actual.GetName()
 
-	condition.SetFalse(v1alpha1.ExecutorSynced, &tc.Status, metav1.Now())
-	status.Ongoing(v1alpha1.ScaleInType, &tc.Status, v1alpha1.TiFlowExecutorMemberType,
+	condition.SetFalse(v1alpha1.SyncChecked, tc.GetClusterStatus(), metav1.Now())
+	status.Ongoing(v1alpha1.ScaleInType, tc.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType,
 		fmt.Sprintf("tiflow executor [%s/%s] sacling in...", ns, tcName))
 	defer func() {
 		if err != nil {
-			status.Failed(v1alpha1.ScaleInType, &tc.Status, v1alpha1.TiFlowExecutorMemberType,
+			status.Failed(v1alpha1.ScaleInType, tc.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType,
 				fmt.Sprintf("tiflow executor [%s/%s] scaling in failed", ns, tcName))
 		}
 	}()

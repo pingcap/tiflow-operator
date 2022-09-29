@@ -5,8 +5,6 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
@@ -80,34 +78,34 @@ func (tcsm TiflowClusterStatusManager) UpdateTilfowClusterPhase() error {
 	ns := tcsm.cluster.GetNamespace()
 	tcName := tcsm.cluster.GetName()
 
-	status := tcsm.cluster.Status.DeepCopy()
+	// status := tcsm.cluster.Status.DeepCopy()
 
 	// don't wait due to limited number of clients, but backoff after the default number of steps
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		var updateErr error
+		// var updateErr error
 		// tc will be updated in Update function, must use cli.Status().Update instead of cli.Update here,
 		//  see https://book-v1.book.kubebuilder.io/basics/status_subresource.html
-		updateErr = tcsm.cli.Status().Update(context.TODO(), tcsm.cluster)
+		return tcsm.cli.Status().Update(context.TODO(), tcsm.cluster)
 
-		if updateErr == nil {
-			klog.Infof("tiflow cluster: [%s/%s] updated successfully", ns, tcName)
-			return nil
-		}
-		klog.Infof("failed to update tiflow cluster: [%s/%s], error: %v", ns, tcName, updateErr)
+		// if updateErr == nil {
+		// 	klog.Infof("tiflow cluster: [%s/%s] updated successfully", ns, tcName)
+		// 	return nil
+		// }
+		// klog.Infof("failed to update tiflow cluster: [%s/%s], error: %v", ns, tcName, updateErr)
+		//
+		// updated := &v1alpha1.TiflowCluster{}
+		// if err := tcsm.cli.Get(context.TODO(), types.NamespacedName{
+		// 	Namespace: ns,
+		// 	Name:      tcName,
+		// }, updated); err == nil {
+		// 	// make a copy, so we don't mutate the shared cache
+		// 	tcsm.cluster = updated.DeepCopy()
+		// 	tcsm.cluster.Status = *status
+		// } else {
+		// 	utilruntime.HandleError(fmt.Errorf("error getting updated tiflow cluster %s/%s: %v", ns, tcName, err))
+		// }
 
-		updated := &v1alpha1.TiflowCluster{}
-		if err := tcsm.cli.Get(context.TODO(), types.NamespacedName{
-			Namespace: ns,
-			Name:      tcName,
-		}, updated); err == nil {
-			// make a copy, so we don't mutate the shared cache
-			tcsm.cluster = updated.DeepCopy()
-			tcsm.cluster.Status = *status
-		} else {
-			utilruntime.HandleError(fmt.Errorf("error getting updated tiflow cluster %s/%s: %v", ns, tcName, err))
-		}
-
-		return updateErr
+		// return updateErr
 	})
 	if err != nil {
 		// return result.UpdateClusterStatus{Err: err}
@@ -121,9 +119,12 @@ func (tcsm TiflowClusterStatusManager) UpdateTilfowClusterPhase() error {
 
 func (tcsm *TiflowClusterStatusManager) Update() error {
 
+	klog.Info("start to sync cluster phase")
 	tcsm.SyncTiflowClusterPhase()
 
+	klog.Infof("start to update cluster phase")
 	if err := tcsm.UpdateTilfowClusterPhase(); err != nil {
+		klog.Errorf("update cluster phase error: %v", err)
 		return err
 	}
 

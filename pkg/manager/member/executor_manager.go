@@ -193,8 +193,8 @@ func (m *executorMemberManager) syncExecutorStatefulSetForTiflowCluster(ctx cont
 	}
 
 	if stsNotExist {
-		condition.SetFalse(v1alpha1.ExecutorSynced, &tc.Status, metav1.Now())
-		status.Ongoing(v1alpha1.CreateType, &tc.Status, v1alpha1.TiFlowExecutorMemberType,
+		condition.SetFalse(v1alpha1.SyncChecked, tc.GetClusterStatus(), metav1.Now())
+		status.Ongoing(v1alpha1.CreateType, tc.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType,
 			fmt.Sprintf("start to create executor cluster [%s/%s]", ns, tcName))
 
 		err = mngerutils.SetStatefulSetLastAppliedConfigAnnotation(newSts)
@@ -203,8 +203,8 @@ func (m *executorMemberManager) syncExecutorStatefulSetForTiflowCluster(ctx cont
 		}
 
 		if err := m.cli.Create(ctx, newSts); err != nil {
-			status.Failed(v1alpha1.CreateType, &tc.Status, v1alpha1.TiFlowExecutorMemberType,
-				fmt.Sprintf("start to create executor cluster [%s/%s] failed", ns, tcName))
+			status.Failed(v1alpha1.CreateType, tc.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType,
+				fmt.Sprintf("create executor cluster [%s/%s] failed", ns, tcName))
 			return err
 		}
 
@@ -212,7 +212,7 @@ func (m *executorMemberManager) syncExecutorStatefulSetForTiflowCluster(ctx cont
 		return nil
 	}
 
-	if condition.False(v1alpha1.ExecutorSynced, tc.Status.ClusterConditions) {
+	if condition.False(v1alpha1.SyncChecked, tc.GetClusterConditions()) {
 		// Force Update takes precedence over Scaling
 		if NeedForceUpgrade(tc.Annotations) {
 			tc.Status.Executor.Phase = v1alpha1.ExecutorUpgrading
@@ -221,7 +221,7 @@ func (m *executorMemberManager) syncExecutorStatefulSetForTiflowCluster(ctx cont
 			return controller.RequeueErrorf("tiflow cluster: [%s/%s]'s tiflow-executor needs force upgrade, %v", ns, tcName, errSts)
 		}
 
-		klog.Infof("waiting for tiflow-executor's status sync")
+		klog.Info("waiting for tiflow-executor's status sync")
 		return nil
 	}
 
@@ -236,7 +236,7 @@ func (m *executorMemberManager) syncExecutorStatefulSetForTiflowCluster(ctx cont
 
 	if !templateEqual(newSts, oldSts) || tc.Status.Executor.Phase == v1alpha1.ExecutorUpgrading {
 		if err := m.upgrader.Upgrade(tc, oldSts, newSts); err != nil {
-			status.Failed(v1alpha1.UpgradeType, &tc.Status, v1alpha1.TiFlowExecutorMemberType,
+			status.Failed(v1alpha1.UpgradeType, tc.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType,
 				fmt.Sprintf("tiflow executor [%s/%s] upgrading failed", ns, tcName))
 			return err
 		}

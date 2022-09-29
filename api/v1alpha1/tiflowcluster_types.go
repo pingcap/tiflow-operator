@@ -597,9 +597,8 @@ type TiflowClusterCondition struct {
 
 // TiflowClusterStatus defines the observed state of TiflowCluster
 type TiflowClusterStatus struct {
-	// Hetero means that the current instance is a heterogeneous cluster
 	// +required
-	Hetero bool `json:"hetero"`
+	ServerName string `json:"serverName"`
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 	Master   MasterStatus   `json:"master,omitempty"`

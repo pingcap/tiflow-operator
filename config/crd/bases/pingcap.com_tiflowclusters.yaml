@@ -12776,10 +12776,6 @@ spec:
                 - lastTransitionTime
                 - lastUpdateTime
                 type: object
-              hetero:
-                description: Hetero means that the current instance is a heterogeneous
-                  cluster
-                type: boolean
               lastTransitionTime:
                 description: LastTransitionTime means last time the ClusterPhase transitioned
                   from one to another
@@ -13060,10 +13056,12 @@ spec:
               message:
                 description: (Optional) Message related to the status of the MasterCluster
                 type: string
+              serverName:
+                type: string
             required:
             - clusterStatus
-            - hetero
             - lastTransitionTime
+            - serverName
             type: object
         type: object
     served: true

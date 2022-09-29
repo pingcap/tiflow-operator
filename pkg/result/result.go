@@ -6,8 +6,8 @@ import (
 )
 
 const (
-	ShortPauseTime = 5 * time.Second
-	LongPauseTime  = 10 * time.Second
+	ShortPauseTime = 15 * time.Second
+	LongPauseTime  = 30 * time.Second
 )
 
 func RequeueIfError(err error) (ctrl.Result, error) {

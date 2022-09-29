@@ -55,12 +55,12 @@ func (s masterScaler) ScaleOut(meta metav1.Object, actual *apps.StatefulSet, des
 	tcName := tc.GetName()
 	stsName := actual.GetName()
 
-	condition.SetFalse(v1alpha1.MasterSynced, &tc.Status, metav1.Now())
-	status.Ongoing(v1alpha1.ScaleOutType, &tc.Status, v1alpha1.TiFlowMasterMemberType,
+	condition.SetFalse(v1alpha1.SyncChecked, tc.GetClusterStatus(), metav1.Now())
+	status.Ongoing(v1alpha1.ScaleOutType, tc.GetClusterStatus(), v1alpha1.TiFlowMasterMemberType,
 		fmt.Sprintf("tiflow master [%s/%s] sacling out...", ns, tcName))
 	defer func() {
 		if err != nil {
-			status.Failed(v1alpha1.ScaleOutType, &tc.Status, v1alpha1.TiFlowMasterMemberType,
+			status.Failed(v1alpha1.ScaleOutType, tc.GetClusterStatus(), v1alpha1.TiFlowMasterMemberType,
 				fmt.Sprintf("tiflow master [%s/%s] scaling out failed", ns, tcName))
 		}
 	}()
@@ -108,12 +108,12 @@ func (s masterScaler) ScaleIn(meta metav1.Object, actual *apps.StatefulSet, desi
 	tcName := tc.GetName()
 	stsName := actual.GetName()
 
-	condition.SetFalse(v1alpha1.MasterSynced, &tc.Status, metav1.Now())
-	status.Ongoing(v1alpha1.ScaleInType, &tc.Status, v1alpha1.TiFlowMasterMemberType,
+	condition.SetFalse(v1alpha1.SyncChecked, tc.GetClusterStatus(), metav1.Now())
+	status.Ongoing(v1alpha1.ScaleInType, tc.GetClusterStatus(), v1alpha1.TiFlowMasterMemberType,
 		fmt.Sprintf("tiflow master [%s/%s] sacling in...", ns, tcName))
 	defer func() {
 		if err != nil {
-			status.Failed(v1alpha1.ScaleInType, &tc.Status, v1alpha1.TiFlowMasterMemberType,
+			status.Failed(v1alpha1.ScaleInType, tc.GetClusterStatus(), v1alpha1.TiFlowMasterMemberType,
 				fmt.Sprintf("tiflow master [%s/%s] scaling in failed", ns, tcName))
 		}
 	}()

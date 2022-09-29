@@ -40,8 +40,8 @@ func (u *masterUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSet *app
 	ns := tc.GetNamespace()
 	tcName := tc.GetName()
 
-	condition.SetFalse(v1alpha1.MasterSynced, &tc.Status, metav1.Now())
-	status.Ongoing(v1alpha1.UpgradeType, &tc.Status, v1alpha1.TiFlowMasterMemberType,
+	condition.SetFalse(v1alpha1.SyncChecked, tc.GetClusterStatus(), metav1.Now())
+	status.Ongoing(v1alpha1.UpgradeType, tc.GetClusterStatus(), v1alpha1.TiFlowMasterMemberType,
 		fmt.Sprintf("tiflow master [%s/%s] upgrading...", ns, tcName))
 
 	if tc.MasterScaling() {

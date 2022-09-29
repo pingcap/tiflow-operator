@@ -18,20 +18,17 @@ package controllers
 
 import (
 	"context"
-	"github.com/lithammer/shortuuid/v3"
-	"go.uber.org/zap/zapcore"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
-
 	pingcapcomv1alpha1 "github.com/pingcap/tiflow-operator/api/v1alpha1"
 	"github.com/pingcap/tiflow-operator/pkg/controller/tiflowcluster"
 	"github.com/pingcap/tiflow-operator/pkg/result"
 	"github.com/pingcap/tiflow-operator/pkg/status"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/klog/v2"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // TiflowClusterReconciler reconciles a TiflowCluster object
@@ -75,52 +72,50 @@ func NewTiflowClusterReconciler(cli client.Client, clientSet kubernetes.Interfac
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.1/pkg/reconcile
 func (r *TiflowClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx)
+	// logger := log.FromContext(ctx)
 
-	logger.WithValues("TiflowCluster", req.NamespacedName, "ReconcileID", shortuuid.New())
-	logger.V(int(zapcore.InfoLevel)).Info("reconciling tiflow cluster")
+	// logger.WithValues("TiflowCluster", req.NamespacedName, "ReconcileID", shortuuid.New())
+	// logger.V(int(zapcore.InfoLevel)).Info("reconciling tiflow cluster")
 
 	tc := &pingcapcomv1alpha1.TiflowCluster{}
 	if err := r.Get(ctx, req.NamespacedName, tc); err != nil {
-		logger.Error(err, "failed to retrieve tiflow cluster resource")
+		klog.Error(err, "failed to retrieve tiflow cluster resource")
 		return result.RequeueIfError(client.IgnoreNotFound(err))
 	}
 
 	if tc.Status.ClusterPhase == "" {
-		logger.Info("reconciling tiflow cluster on first")
+		klog.Info("reconciling tiflow cluster on first")
 		if err := r.updateTiflowClusterStatus(tc); err != nil {
-			logger.Error(err, "failed to update tiflow cluster status")
+			klog.Error(err, "failed to update tiflow cluster status")
 			return result.RequeueIfError(err)
 		}
 		return result.RequeueImmediately()
 	}
 
 	if err := r.Control.UpdateTiflowCluster(ctx, tc); err != nil {
-		logger.Info("Error on TiflowCluster Reconcile ...")
+		klog.Info("Error on TiflowCluster Reconcile ...")
 
 		defer func(ctx context.Context, tc *pingcapcomv1alpha1.TiflowCluster) {
 			if err := r.updateTiflowClusterStatus(tc); err != nil {
-				logger.Error(err, "failed to update tiflow cluster status")
+				klog.Error(err, "failed to update tiflow cluster status")
 			}
 		}(ctx, tc)
 
+		klog.Errorf("handle reconcile error: %v", err)
 		switch err.(type) {
-		case result.SyncConditionErr:
-			logger.Error(err, "failed to sync condition")
-			return result.RequeueImmediately()
 		case result.SyncStatusErr:
-			logger.Error(err, "can not sync master or executor cluster's status")
-			return result.RequeueAfter(result.ShortPauseTime, err)
+			klog.Error(err, "can not sync master or executor cluster's status")
+			return result.RequeueAfter(result.LongPauseTime, nil)
 		case result.NotReadyErr:
-			logger.Error(err, "master or executor cluster are not ready")
-			return result.RequeueAfter(result.LongPauseTime, err)
+			klog.Error(err, "master or executor cluster are not ready")
+			return result.RequeueAfter(result.ShortPauseTime, nil)
 		default:
 			return result.RequeueIfError(err)
 		}
 	}
 
 	if err := r.updateTiflowClusterStatus(tc); err != nil {
-		logger.Error(err, "failed to update tiflow Cluster Status")
+		klog.Errorf("failed to update tiflow Cluster Status error %v", err)
 		return result.RequeueIfError(err)
 	}
 

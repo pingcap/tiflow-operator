@@ -177,6 +177,10 @@ func (tc *TiflowCluster) GetClusterStatus() *TiflowClusterStatus {
 	return &tc.Status
 }
 
+func (tc *TiflowCluster) GetClusterConditions() []TiflowClusterCondition {
+	return tc.Status.ClusterConditions
+}
+
 func (tc *TiflowCluster) GetMasterStatus() *MasterStatus {
 	return &tc.Status.Master
 }

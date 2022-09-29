@@ -254,8 +254,8 @@ func (m *masterMemberManager) syncMasterStatefulSetForTiflowCluster(ctx context.
 	}
 
 	if setNotExist {
-		condition.SetFalse(pingcapcomv1alpha1.MasterSynced, &tc.Status, metav1.Now())
-		status.Ongoing(pingcapcomv1alpha1.CreateType, &tc.Status, pingcapcomv1alpha1.TiFlowMasterMemberType,
+		condition.SetFalse(pingcapcomv1alpha1.SyncChecked, tc.GetClusterStatus(), metav1.Now())
+		status.Ongoing(pingcapcomv1alpha1.CreateType, tc.GetClusterStatus(), pingcapcomv1alpha1.TiFlowMasterMemberType,
 			fmt.Sprintf("start to create master cluster [%s/%s]", ns, tcName))
 
 		err = mngerutils.SetStatefulSetLastAppliedConfigAnnotation(newMasterSet)
@@ -264,7 +264,7 @@ func (m *masterMemberManager) syncMasterStatefulSetForTiflowCluster(ctx context.
 		}
 
 		if err := m.cli.Create(ctx, newMasterSet); err != nil {
-			status.Failed(pingcapcomv1alpha1.CreateType, &tc.Status, pingcapcomv1alpha1.TiFlowMasterMemberType,
+			status.Failed(pingcapcomv1alpha1.CreateType, tc.GetClusterStatus(), pingcapcomv1alpha1.TiFlowMasterMemberType,
 				fmt.Sprintf("create master cluster [%s/%s] failed", ns, tcName))
 			return err
 		}
@@ -273,7 +273,7 @@ func (m *masterMemberManager) syncMasterStatefulSetForTiflowCluster(ctx context.
 		return nil
 	}
 
-	if condition.False(pingcapcomv1alpha1.MasterSynced, tc.Status.ClusterConditions) {
+	if condition.False(pingcapcomv1alpha1.SyncChecked, tc.GetClusterConditions()) {
 		// Force update takes precedence over scaling because force upgrade won't take effect when cluster gets stuck at scaling
 		if NeedForceUpgrade(tc.Annotations) {
 			tc.Status.Master.Phase = pingcapcomv1alpha1.MasterUpgrading
@@ -282,7 +282,7 @@ func (m *masterMemberManager) syncMasterStatefulSetForTiflowCluster(ctx context.
 			return controller.RequeueErrorf("tiflow cluster: [%s/%s]'s tiflow-master needs force upgrade, %v", ns, tcName, errSTS)
 		}
 
-		klog.Infof("waiting for tiflow-master's status sync")
+		klog.Info("waiting for tiflow-master's status sync")
 		return nil
 	}
 
@@ -312,7 +312,7 @@ func (m *masterMemberManager) syncMasterStatefulSetForTiflowCluster(ctx context.
 
 	if !templateEqual(newMasterSet, oldMasterSet) || tc.Status.Master.Phase == pingcapcomv1alpha1.MasterUpgrading {
 		if err := m.upgrader.Upgrade(tc, oldMasterSet, newMasterSet); err != nil {
-			status.Failed(pingcapcomv1alpha1.UpgradeType, &tc.Status, pingcapcomv1alpha1.TiFlowMasterMemberType,
+			status.Failed(pingcapcomv1alpha1.UpgradeType, tc.GetClusterStatus(), pingcapcomv1alpha1.TiFlowMasterMemberType,
 				fmt.Sprintf("tiflow master [%s/%s] upgrading failed", ns, tcName))
 
 			return err

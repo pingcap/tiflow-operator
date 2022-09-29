@@ -3,9 +3,9 @@ package condition
 import (
 	"context"
 	"fmt"
+	"k8s.io/klog/v2"
 
 	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -16,24 +16,120 @@ import (
 )
 
 type ExecutorConditionManager struct {
+	*v1alpha1.TiflowCluster
 	cli       client.Client
 	clientSet kubernetes.Interface
-	cluster   *v1alpha1.TiflowCluster
 }
 
 func NewExecutorConditionManager(cli client.Client, clientSet kubernetes.Interface, tc *v1alpha1.TiflowCluster) ClusterCondition {
 	return &ExecutorConditionManager{
-		cli:       cli,
-		clientSet: clientSet,
-		cluster:   tc,
+		TiflowCluster: tc,
+		cli:           cli,
+		clientSet:     clientSet,
 	}
 }
 
-func (ecm *ExecutorConditionManager) Update(ctx context.Context) error {
-	SetFalse(v1alpha1.ExecutorSynced, &ecm.cluster.Status, metav1.Now())
-	SetFalse(v1alpha1.ExecutorsInfoUpdatedChecked, &ecm.cluster.Status, metav1.Now())
+func (ecm *ExecutorConditionManager) Verify(ctx context.Context) error {
+	if ecm.Spec.Executor == nil {
+		// todo: more gracefully
+		SetTrue(v1alpha1.ExecutorVersionChecked, ecm.GetClusterStatus(), metav1.Now())
+		SetTrue(v1alpha1.ExecutorNumChecked, ecm.GetClusterStatus(), metav1.Now())
+		SetTrue(v1alpha1.ExecutorReadyChecked, ecm.GetClusterStatus(), metav1.Now())
+		SetTrue(v1alpha1.ExecutorPVCChecked, ecm.GetClusterStatus(), metav1.Now())
+		SetTrue(v1alpha1.ExecutorsInfoUpdatedChecked, ecm.GetClusterStatus(), metav1.Now())
+		return nil
+	}
 
-	if err := ecm.update(ctx); err != nil {
+	klog.Info("verify executor condition")
+	ns := ecm.GetNamespace()
+	tcName := ecm.GetName()
+
+	klog.Info("verify executor statefulSet condition")
+	sts, err := ecm.verifyStatefulSet(ctx)
+	if err != nil {
+		return result.NotReadyErr{
+			Err: err,
+		}
+	}
+
+	klog.Info("verify executor version condition")
+	if ecm.versionVerify() {
+		SetTrue(v1alpha1.ExecutorVersionChecked, ecm.GetClusterStatus(), metav1.Now())
+	} else {
+		SetFalse(v1alpha1.ExecutorVersionChecked, ecm.GetClusterStatus(), metav1.Now())
+		return result.NotReadyErr{
+			Err: fmt.Errorf("executor [%s/%s] verify: version are not up-to-date", ns, tcName),
+		}
+	}
+
+	// todo: need to handle failureMembers
+	klog.Info("verify executor number condition")
+	if ecm.ExecutorStsDesiredReplicas() == ecm.ExecutorStsCurrentReplicas() {
+		SetTrue(v1alpha1.ExecutorNumChecked, ecm.GetClusterStatus(), metav1.Now())
+	} else {
+		SetFalse(v1alpha1.ExecutorNumChecked, ecm.GetClusterStatus(), metav1.Now())
+		return result.NotReadyErr{
+			Err: fmt.Errorf("executor [%s/%s] verify: actual is not equal to desired replicas ", ns, tcName),
+		}
+	}
+
+	// todo: need to check this
+	klog.Info("verify executor all ready condition")
+	if ecm.ExecutorStsDesiredReplicas() == ecm.ExecutorStsReadyReplicas() {
+		SetTrue(v1alpha1.ExecutorReadyChecked, ecm.GetClusterStatus(), metav1.Now())
+	} else {
+		SetFalse(v1alpha1.ExecutorReadyChecked, ecm.GetClusterStatus(), metav1.Now())
+		return result.NotReadyErr{
+			Err: fmt.Errorf("executor [%s/%s] verify: cluster are not reday", ns, tcName),
+		}
+	}
+
+	if ecm.leaderVerify() {
+		SetTrue(v1alpha1.LeaderChecked, ecm.GetClusterStatus(), metav1.Now())
+	} else {
+		SetFalse(v1alpha1.LeaderChecked, ecm.GetClusterStatus(), metav1.Now())
+		return result.SyncStatusErr{
+			Err: fmt.Errorf("executor [%s/%s] verify: can not get ledaer from master cluster", ns, tcName),
+		}
+	}
+
+	// todo: need to verify this
+	if ecm.pvcCheck() {
+		SetTrue(v1alpha1.ExecutorPVCChecked, ecm.GetClusterStatus(), metav1.Now())
+	} else {
+		SetFalse(v1alpha1.ExecutorPVCChecked, ecm.GetClusterStatus(), metav1.Now())
+		return result.NotReadyErr{
+			Err: fmt.Errorf("executor [%s/%s] verify: pvc's status is abnormal", ns, tcName),
+		}
+	}
+
+	if err := ecm.Update(ctx, sts); err != nil {
+		SetFalse(v1alpha1.ExecutorsInfoUpdatedChecked, ecm.GetClusterStatus(), metav1.Now())
+		return result.SyncStatusErr{
+			Err: fmt.Errorf("executor [%s/%s] verify: information of executor cluster update failed", ns, tcName),
+		}
+	}
+	SetTrue(v1alpha1.ExecutorsInfoUpdatedChecked, ecm.GetClusterStatus(), metav1.Now())
+
+	return nil
+}
+
+func (ecm *ExecutorConditionManager) verifyStatefulSet(ctx context.Context) (*appsv1.StatefulSet, error) {
+	ns := ecm.GetNamespace()
+	tcName := ecm.GetName()
+
+	sts, err := ecm.clientSet.AppsV1().StatefulSets(ns).
+		Get(ctx, executorMemberName(tcName), metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("executor [%s/%s] verify get satatefulSet error: %v",
+			ns, tcName, err)
+	}
+	ecm.Status.Executor.StatefulSet = &sts.Status
+	return sts, nil
+}
+
+func (ecm *ExecutorConditionManager) Update(ctx context.Context, sts *appsv1.StatefulSet) error {
+	if err := ecm.update(ctx, sts); err != nil {
 		return result.SyncStatusErr{
 			Err: err,
 		}
@@ -42,120 +138,41 @@ func (ecm *ExecutorConditionManager) Update(ctx context.Context) error {
 	return nil
 }
 
-func (ecm *ExecutorConditionManager) update(ctx context.Context) error {
-	ns := ecm.cluster.GetNamespace()
-	tcName := ecm.cluster.GetName()
-
-	sts, err := ecm.clientSet.AppsV1().StatefulSets(ns).
-		Get(ctx, executorMemberName(tcName), metav1.GetOptions{})
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return nil
-		} else {
-			return fmt.Errorf("executor [%s/%s] codition get satatefulSet error: %v",
-				ns, tcName, err)
-		}
-	}
-	ecm.cluster.Status.Executor.StatefulSet = &sts.Status
-
-	if err = ecm.syncMembersStatus(ctx, sts); err != nil {
+func (ecm *ExecutorConditionManager) update(ctx context.Context, sts *appsv1.StatefulSet) error {
+	klog.Info("get executor infos for Leader")
+	if err := ecm.syncMembersStatus(ctx, sts); err != nil {
 		return err
 	}
 
 	// get follows from podName
-	ecm.cluster.Status.Executor.Image = ""
+	ecm.Status.Executor.Image = ""
 	if c := findContainerByName(sts, "tiflow-executor"); c != nil {
-		ecm.cluster.Status.Executor.Image = c.Image
+		ecm.Status.Executor.Image = c.Image
 	}
 
 	// todo: Need to get the info of volumes which running container has bound
 	// todo: Waiting for discussion
-	ecm.cluster.Status.Executor.Volumes = nil
-	ecm.cluster.Status.Executor.LastUpdateTime = metav1.Now()
+	ecm.Status.Executor.Volumes = nil
+	ecm.Status.Executor.LastUpdateTime = metav1.Now()
 
-	SetTrue(v1alpha1.ExecutorsInfoUpdatedChecked, &ecm.cluster.Status, metav1.Now())
-	return nil
-}
-
-func (ecm *ExecutorConditionManager) Check() error {
-	if ecm.cluster.Spec.Executor == nil {
-		// todo: more gracefully
-		SetTrue(v1alpha1.ExecutorNumChecked, &ecm.cluster.Status, metav1.Now())
-		SetTrue(v1alpha1.ExecutorReadyChecked, &ecm.cluster.Status, metav1.Now())
-		return nil
-	}
-
-	ns := ecm.cluster.GetNamespace()
-	tcName := ecm.cluster.GetName()
-
-	infosUpdateChecked := True(v1alpha1.ExecutorsInfoUpdatedChecked, ecm.cluster.Status.ClusterConditions)
-	if !infosUpdateChecked {
-		return result.SyncConditionErr{
-			Err: fmt.Errorf("executor [%s/%s] check: information update failed", ns, tcName),
-		}
-	}
-
-	if ecm.versionCheck() {
-		SetTrue(v1alpha1.ExecutorVersionChecked, &ecm.cluster.Status, metav1.Now())
-	} else {
-		SetFalse(v1alpha1.ExecutorVersionChecked, &ecm.cluster.Status, metav1.Now())
-		return result.NotReadyErr{
-			Err: fmt.Errorf("executor [%s/%s] check: version are not up-to-date", ns, tcName),
-		}
-	}
-
-	// todo: need to check this
-	if ecm.pvcCheck() {
-		SetTrue(v1alpha1.ExecutorPVCChecked, &ecm.cluster.Status, metav1.Now())
-	} else {
-		SetFalse(v1alpha1.ExecutorPVCChecked, &ecm.cluster.Status, metav1.Now())
-		return result.NotReadyErr{
-			Err: fmt.Errorf("executor [%s/%s] check: pvc's status is abnormal", ns, tcName),
-		}
-	}
-
-	actual := ecm.cluster.ExecutorStsCurrentReplicas()
-	desired := ecm.cluster.ExecutorStsDesiredReplicas()
-	// todo: need to handle failureMembers
-	// failed := len(ecm.cluster.Status.Executor.FailureMembers)
-
-	if actual == desired {
-		SetTrue(v1alpha1.ExecutorNumChecked, &ecm.cluster.Status, metav1.Now())
-	} else {
-		SetFalse(v1alpha1.ExecutorNumChecked, &ecm.cluster.Status, metav1.Now())
-		return result.NotReadyErr{
-			Err: fmt.Errorf("executor [%s/%s] check: actual is not equal to desired replicas ", ns, tcName),
-		}
-	}
-
-	// todo: need to check this
-	if ecm.cluster.AllExecutorMembersReady() {
-		SetTrue(v1alpha1.ExecutorReadyChecked, &ecm.cluster.Status, metav1.Now())
-	} else {
-		SetFalse(v1alpha1.ExecutorReadyChecked, &ecm.cluster.Status, metav1.Now())
-		return result.NotReadyErr{
-			Err: fmt.Errorf("executor [%s/%s] check: cluster are not reday", ns, tcName),
-		}
-	}
-
+	klog.Info("sync executor infos end")
 	return nil
 }
 
 func (ecm *ExecutorConditionManager) syncMembersStatus(ctx context.Context, sts *appsv1.StatefulSet) error {
-	ns := ecm.cluster.GetNamespace()
-	tcName := ecm.cluster.GetName()
+	ns := ecm.GetNamespace()
+	tcName := ecm.GetName()
 
-	if ecm.cluster.Heterogeneous() && ecm.cluster.WithoutLocalMaster() {
-		ns = ecm.cluster.Spec.Cluster.Namespace
-		tcName = ecm.cluster.Spec.Cluster.Name
+	if ecm.Heterogeneous() && ecm.WithoutLocalMaster() {
+		ns = ecm.Spec.Cluster.Namespace
+		tcName = ecm.Spec.Cluster.Name
 	}
 
-	tiflowClient := tiflowapi.GetMasterClient(ecm.cli, ns, tcName, "", ecm.cluster.IsClusterTLSEnabled())
+	tiflowClient := tiflowapi.GetMasterClient(ecm.cli, ns, tcName, "", ecm.IsClusterTLSEnabled())
 
 	// get executors info from master
 	executorsInfo, err := tiflowClient.GetExecutors()
 	if err != nil {
-		SetFalse(v1alpha1.ExecutorsInfoUpdatedChecked, &ecm.cluster.Status, metav1.Now())
 		selector, selectErr := metav1.LabelSelectorAsSelector(sts.Spec.Selector)
 		if selectErr != nil {
 			return fmt.Errorf("executor [%s/%s] codition converting statefulset selector error: %v",
@@ -180,11 +197,12 @@ func (ecm *ExecutorConditionManager) syncMembersStatus(ctx context.Context, sts 
 		return err
 	}
 
+	klog.Info("sync executor infos")
 	return ecm.updateMembersInfo(executorsInfo)
 }
 
 func (ecm *ExecutorConditionManager) updateMembersInfo(executorsInfo tiflowapi.ExecutorsInfo) error {
-	ns := ecm.cluster.GetNamespace()
+	ns := ecm.GetNamespace()
 
 	// todo: WIP, get information about the FailureMembers and FailoverUID through the MasterClient
 	members := make(map[string]v1alpha1.ExecutorMember)
@@ -204,15 +222,15 @@ func (ecm *ExecutorConditionManager) updateMembersInfo(executorsInfo tiflowapi.E
 		}
 
 		clusterName, ordinal, namespace, err2 := getOrdinalFromName(e.Name, v1alpha1.TiFlowExecutorMemberType)
-		if err2 == nil && clusterName == ecm.cluster.GetName() && namespace == ns && ordinal < ecm.cluster.Spec.Master.Replicas {
+		if err2 == nil && clusterName == ecm.GetName() && namespace == ns && ordinal < ecm.Spec.Master.Replicas {
 			members[e.Name] = member
 		} else {
 			peerMembers[e.Name] = member
 		}
 	}
 
-	ecm.cluster.Status.Executor.Members = members
-	ecm.cluster.Status.Executor.PeerMembers = peerMembers
+	ecm.Status.Executor.Members = members
+	ecm.Status.Executor.PeerMembers = peerMembers
 	return nil
 }
 
@@ -221,6 +239,29 @@ func (ecm *ExecutorConditionManager) pvcCheck() bool {
 	return true
 }
 
-func (ecm *ExecutorConditionManager) versionCheck() bool {
-	return statefulSetUpToDate(ecm.cluster.Status.Executor.StatefulSet, true)
+func (ecm *ExecutorConditionManager) versionVerify() bool {
+	return statefulSetUpToDate(ecm.Status.Executor.StatefulSet, true)
+}
+
+func (ecm *ExecutorConditionManager) leaderVerify() bool {
+	ns := ecm.GetNamespace()
+	tcName := ecm.GetName()
+
+	tiflowClient := tiflowapi.GetMasterClient(ecm.cli, ns, tcName, "", ecm.IsClusterTLSEnabled())
+	leader, err := tiflowClient.GetLeader()
+	if err != nil {
+		return false
+	}
+
+	ecm.Status.Master.Leader = v1alpha1.MasterMember{
+		ClientURL:          leader.AdvertiseAddr,
+		Health:             true,
+		LastTransitionTime: metav1.Now(),
+	}
+
+	return true
+}
+
+func (ecm ExecutorConditionManager) membersVerify() bool {
+	panic("not implemented")
 }
