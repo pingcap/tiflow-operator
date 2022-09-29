@@ -312,11 +312,9 @@ func (a *componentAccessorImpl) TopologySpreadConstraints() []corev1.TopologySpr
 			WhenUnsatisfiable: corev1.DoNotSchedule,
 		}
 		componentLabelVal := getComponentLabelValue(a.component)
-		l := label.New()
-		l[label.ComponentLabelKey] = componentLabelVal
-		l[label.InstanceLabelKey] = a.name
+		l := label.New().Component(componentLabelVal).Instance(a.name)
 		ptsc.LabelSelector = &metav1.LabelSelector{
-			MatchLabels: map[string]string(l),
+			MatchLabels: l,
 		}
 		ptscs = append(ptscs, ptsc)
 	}

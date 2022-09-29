@@ -12578,6 +12578,27 @@ spec:
                           type: string
                       type: object
                     type: object
+                  peerMembers:
+                    additionalProperties:
+                      description: ExecutorMember is Tiflow-executor member status
+                      properties:
+                        addr:
+                          type: string
+                        capability:
+                          format: int64
+                          type: integer
+                        id:
+                          type: string
+                        lastTransitionTime:
+                          description: 'TODO: add cpu/memory/disk usage later Last
+                            time the health transitioned from one to another.'
+                          format: date-time
+                          nullable: true
+                          type: string
+                        name:
+                          type: string
+                      type: object
+                    type: object
                   phase:
                     description: MemberPhase is the current state of member
                     type: string
@@ -12734,8 +12755,6 @@ spec:
                           type: string
                         clientURL:
                           type: string
-                        health:
-                          type: boolean
                         id:
                           type: string
                         is_leader:
@@ -12752,7 +12771,6 @@ spec:
                           type: string
                       required:
                       - clientURL
-                      - health
                       type: object
                     type: object
                   image:
@@ -12764,8 +12782,6 @@ spec:
                         type: string
                       clientURL:
                         type: string
-                      health:
-                        type: boolean
                       id:
                         type: string
                       is_leader:
@@ -12782,7 +12798,6 @@ spec:
                         type: string
                     required:
                     - clientURL
-                    - health
                     type: object
                   members:
                     additionalProperties:
@@ -12792,8 +12807,6 @@ spec:
                           type: string
                         clientURL:
                           type: string
-                        health:
-                          type: boolean
                         id:
                           type: string
                         is_leader:
@@ -12810,7 +12823,6 @@ spec:
                           type: string
                       required:
                       - clientURL
-                      - health
                       type: object
                     type: object
                   peerMembers:
@@ -12821,8 +12833,6 @@ spec:
                           type: string
                         clientURL:
                           type: string
-                        health:
-                          type: boolean
                         id:
                           type: string
                         is_leader:
@@ -12839,7 +12849,6 @@ spec:
                           type: string
                       required:
                       - clientURL
-                      - health
                       type: object
                     type: object
                   phase:

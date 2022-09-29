@@ -461,7 +461,6 @@ type MasterMember struct {
 	IsLeader      bool   `json:"is_leader,omitempty"`
 	Name          string `json:"name,omitempty"`
 	ClientURL     string `json:"clientURL"`
-	Health        bool   `json:"health"`
 	MemberDeleted bool   `json:"memberDeleted,omitempty"`
 	// Last time the health transitioned from one to another.
 	// +nullable
