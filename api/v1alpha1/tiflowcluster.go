@@ -101,6 +101,26 @@ func (tc *TiflowCluster) ExecutorStsDesiredReplicas() int32 {
 
 	return tc.Spec.Executor.Replicas + int32(len(tc.Status.Executor.FailureMembers))
 }
+func (tc *TiflowCluster) ExecutorAllActualMembers() int32 {
+	if tc.Spec.Executor != nil {
+		return tc.ExecutorActualMembers() + tc.ExecutorActualPeerMembers()
+	}
+	return 0
+}
+
+func (tc *TiflowCluster) ExecutorActualMembers() int32 {
+	if tc.Status.Executor.Members != nil {
+		return int32(len(tc.Status.Executor.Members))
+	}
+	return 0
+}
+
+func (tc *TiflowCluster) ExecutorActualPeerMembers() int32 {
+	if tc.Status.Executor.PeerMembers != nil {
+		return int32(len(tc.Status.Executor.PeerMembers))
+	}
+	return 0
+}
 
 func (tc *TiflowCluster) MasterUpgrading() bool {
 	return tc.Status.Master.Phase == MasterUpgrading
@@ -136,6 +156,27 @@ func (tc *TiflowCluster) MasterStsCurrentReplicas() int32 {
 
 func (tc *TiflowCluster) MasterStsDesiredReplicas() int32 {
 	return tc.Spec.Master.Replicas + int32(len(tc.Status.Master.FailureMembers))
+}
+
+func (tc *TiflowCluster) MasterAllActualMembers() int32 {
+	if tc.Spec.Master != nil {
+		return tc.MasterActualMembers() + tc.MasterActualPeerMembers()
+	}
+	return 0
+}
+
+func (tc *TiflowCluster) MasterActualMembers() int32 {
+	if tc.Status.Master.Members != nil {
+		return int32(len(tc.Status.Master.Members))
+	}
+	return 0
+}
+
+func (tc *TiflowCluster) MasterActualPeerMembers() int32 {
+	if tc.Status.Master.PeerMembers != nil {
+		return int32(len(tc.Status.Master.PeerMembers))
+	}
+	return 0
 }
 
 func (tc *TiflowCluster) IsClusterTLSEnabled() bool {

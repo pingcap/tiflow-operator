@@ -33,7 +33,7 @@ func (mcm *MasterConditionManager) Verify(ctx context.Context) error {
 	if mcm.Heterogeneous() {
 		// todo: more gracefully
 		SetTrue(v1alpha1.MasterVersionChecked, mcm.GetClusterStatus(), metav1.Now())
-		SetTrue(v1alpha1.MasterNumChecked, mcm.GetClusterStatus(), metav1.Now())
+		SetTrue(v1alpha1.MasterReplicaChecked, mcm.GetClusterStatus(), metav1.Now())
 		SetTrue(v1alpha1.MasterReadyChecked, mcm.GetClusterStatus(), metav1.Now())
 		SetTrue(v1alpha1.LeaderChecked, mcm.GetClusterStatus(), metav1.Now())
 		SetTrue(v1alpha1.MastersInfoUpdatedChecked, mcm.GetClusterStatus(), metav1.Now())
@@ -63,11 +63,11 @@ func (mcm *MasterConditionManager) Verify(ctx context.Context) error {
 	}
 
 	// todo: need to handle failureMembers
-	klog.Info("verify master number condition")
+	klog.Info("verify master replica condition")
 	if mcm.MasterStsDesiredReplicas() == mcm.MasterStsCurrentReplicas() {
-		SetTrue(v1alpha1.MasterNumChecked, mcm.GetClusterStatus(), metav1.Now())
+		SetTrue(v1alpha1.MasterReplicaChecked, mcm.GetClusterStatus(), metav1.Now())
 	} else {
-		SetFalse(v1alpha1.MasterNumChecked, mcm.GetClusterStatus(), metav1.Now())
+		SetFalse(v1alpha1.MasterReplicaChecked, mcm.GetClusterStatus(), metav1.Now())
 		return result.NotReadyErr{
 			Err: fmt.Errorf("master [%s/%s] verify: actual is not equal to desired replicas ", ns, tcName),
 		}
@@ -100,6 +100,14 @@ func (mcm *MasterConditionManager) Verify(ctx context.Context) error {
 	}
 	SetTrue(v1alpha1.MastersInfoUpdatedChecked, mcm.GetClusterStatus(), metav1.Now())
 
+	if mcm.MasterStsDesiredReplicas() == mcm.MasterAllActualMembers() {
+		SetTrue(v1alpha1.MasterMembersChecked, mcm.GetClusterStatus(), metav1.Now())
+	} else {
+		return result.SyncStatusErr{
+			Err: fmt.Errorf("master [%s/%s] verify: member infos is incomplete", ns, tcName),
+		}
+	}
+
 	return nil
 }
 
@@ -113,7 +121,7 @@ func (mcm *MasterConditionManager) verifyStatefulSet(ctx context.Context) (*apps
 		return nil, fmt.Errorf("master [%s/%s] verify get satatefulSet error: %v",
 			ns, tcName, err)
 	}
-	mcm.Status.Master.StatefulSet = &sts.Status
+	mcm.Status.Master.StatefulSet = sts.Status.DeepCopy()
 	return sts, nil
 }
 

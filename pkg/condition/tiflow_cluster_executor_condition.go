@@ -33,7 +33,7 @@ func (ecm *ExecutorConditionManager) Verify(ctx context.Context) error {
 	if ecm.Spec.Executor == nil {
 		// todo: more gracefully
 		SetTrue(v1alpha1.ExecutorVersionChecked, ecm.GetClusterStatus(), metav1.Now())
-		SetTrue(v1alpha1.ExecutorNumChecked, ecm.GetClusterStatus(), metav1.Now())
+		SetTrue(v1alpha1.ExecutorReplicaChecked, ecm.GetClusterStatus(), metav1.Now())
 		SetTrue(v1alpha1.ExecutorReadyChecked, ecm.GetClusterStatus(), metav1.Now())
 		SetTrue(v1alpha1.ExecutorPVCChecked, ecm.GetClusterStatus(), metav1.Now())
 		SetTrue(v1alpha1.ExecutorsInfoUpdatedChecked, ecm.GetClusterStatus(), metav1.Now())
@@ -52,6 +52,16 @@ func (ecm *ExecutorConditionManager) Verify(ctx context.Context) error {
 		}
 	}
 
+	// todo: need to verify this
+	if ecm.pvcCheck() {
+		SetTrue(v1alpha1.ExecutorPVCChecked, ecm.GetClusterStatus(), metav1.Now())
+	} else {
+		SetFalse(v1alpha1.ExecutorPVCChecked, ecm.GetClusterStatus(), metav1.Now())
+		return result.NotReadyErr{
+			Err: fmt.Errorf("executor [%s/%s] verify: pvc's status is abnormal", ns, tcName),
+		}
+	}
+
 	klog.Info("verify executor version condition")
 	if ecm.versionVerify() {
 		SetTrue(v1alpha1.ExecutorVersionChecked, ecm.GetClusterStatus(), metav1.Now())
@@ -63,11 +73,11 @@ func (ecm *ExecutorConditionManager) Verify(ctx context.Context) error {
 	}
 
 	// todo: need to handle failureMembers
-	klog.Info("verify executor number condition")
+	klog.Info("verify executor replica condition")
 	if ecm.ExecutorStsDesiredReplicas() == ecm.ExecutorStsCurrentReplicas() {
-		SetTrue(v1alpha1.ExecutorNumChecked, ecm.GetClusterStatus(), metav1.Now())
+		SetTrue(v1alpha1.ExecutorReplicaChecked, ecm.GetClusterStatus(), metav1.Now())
 	} else {
-		SetFalse(v1alpha1.ExecutorNumChecked, ecm.GetClusterStatus(), metav1.Now())
+		SetFalse(v1alpha1.ExecutorReplicaChecked, ecm.GetClusterStatus(), metav1.Now())
 		return result.NotReadyErr{
 			Err: fmt.Errorf("executor [%s/%s] verify: actual is not equal to desired replicas ", ns, tcName),
 		}
@@ -93,16 +103,6 @@ func (ecm *ExecutorConditionManager) Verify(ctx context.Context) error {
 		}
 	}
 
-	// todo: need to verify this
-	if ecm.pvcCheck() {
-		SetTrue(v1alpha1.ExecutorPVCChecked, ecm.GetClusterStatus(), metav1.Now())
-	} else {
-		SetFalse(v1alpha1.ExecutorPVCChecked, ecm.GetClusterStatus(), metav1.Now())
-		return result.NotReadyErr{
-			Err: fmt.Errorf("executor [%s/%s] verify: pvc's status is abnormal", ns, tcName),
-		}
-	}
-
 	if err := ecm.Update(ctx, sts); err != nil {
 		SetFalse(v1alpha1.ExecutorsInfoUpdatedChecked, ecm.GetClusterStatus(), metav1.Now())
 		return result.SyncStatusErr{
@@ -110,6 +110,15 @@ func (ecm *ExecutorConditionManager) Verify(ctx context.Context) error {
 		}
 	}
 	SetTrue(v1alpha1.ExecutorsInfoUpdatedChecked, ecm.GetClusterStatus(), metav1.Now())
+
+	if ecm.ExecutorStsDesiredReplicas() == ecm.ExecutorAllActualMembers() {
+		SetTrue(v1alpha1.ExecutorMembersChecked, ecm.GetClusterStatus(), metav1.Now())
+	} else {
+		SetFalse(v1alpha1.ExecutorMembersChecked, ecm.GetClusterStatus(), metav1.Now())
+		return result.SyncStatusErr{
+			Err: fmt.Errorf("executor [%s/%s] verify: member infos is incomplete", ns, tcName),
+		}
+	}
 
 	return nil
 }
@@ -124,7 +133,7 @@ func (ecm *ExecutorConditionManager) verifyStatefulSet(ctx context.Context) (*ap
 		return nil, fmt.Errorf("executor [%s/%s] verify get satatefulSet error: %v",
 			ns, tcName, err)
 	}
-	ecm.Status.Executor.StatefulSet = &sts.Status
+	ecm.Status.Executor.StatefulSet = sts.Status.DeepCopy()
 	return sts, nil
 }
 
