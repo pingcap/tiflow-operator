@@ -1,0 +1,28 @@
+name: Go
+on:
+  push:
+    branches:
+      - master
+      - release-*
+  pull_request:
+    branches:
+      - master
+      - release-*
+
+jobs:
+  unit-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: true
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 2
+      - name: Set up Go 1.18
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.18
+      - name: Unit test
+        run: make test WITH_RACE=1
+      - uses: codecov/codecov-action@v1
