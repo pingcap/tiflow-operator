@@ -67,7 +67,6 @@ ARGS="--name $name \
 "
 
 echo "starting tiflow-master ..."
-sleep $((RANDOM % 10))
 echo "/tiflow master ${ARGS}"
 exec /tiflow master ${ARGS}
 `))
@@ -122,7 +121,6 @@ ARGS="--name $name \
 "
 
 echo "starting tiflow-executor ..."
-sleep $((RANDOM % 10))
 echo "/tiflow executor ${ARGS}"
 exec /tiflow executor ${ARGS}
 `))
