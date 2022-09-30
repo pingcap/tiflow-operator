@@ -77,6 +77,11 @@ type ComponentSpec struct {
 	// +optional
 	Affinity *corev1.Affinity `json:"affinity,omitempty"`
 
+	// PriorityClassName of the component. Override the cluster-level one if present
+	// Optional: Defaults to cluster-level setting
+	// +optional
+	PriorityClassName *string `json:"priorityClassName,omitempty"`
+
 	// NodeSelector of the component. Merged into the cluster-level nodeSelector if non-empty
 	// Optional: Defaults to cluster-level setting
 	// +optional

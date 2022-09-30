@@ -139,7 +139,10 @@ func (a *componentAccessorImpl) Affinity() *corev1.Affinity {
 }
 
 func (a *componentAccessorImpl) PriorityClassName() *string {
-	return a.priorityClassName
+	if a.ComponentSpec == nil || a.ComponentSpec.PriorityClassName == nil {
+		return a.priorityClassName
+	}
+	return a.ComponentSpec.PriorityClassName
 }
 
 func (a *componentAccessorImpl) NodeSelector() map[string]string {
