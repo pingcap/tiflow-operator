@@ -56,7 +56,7 @@ func TestDeepCopyJsonObject(t *testing.T) {
 	}
 	copied := objects[1].DeepCopy()
 	copied.Inner()["k1"] = false
-	require.Equal(t, true, objects[1].Inner()["k1"], "Mutation copy should net affect origin")
+	require.Equal(t, true, objects[1].Inner()["k1"], "Mutation copy should not affect origin")
 }
 
 func TestMarshalTOML(t *testing.T) {
