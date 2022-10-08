@@ -7,6 +7,8 @@ IMG ?= ${DOCKER_REPO}:${IMAGE_TAG}
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.24.1
 
+GO_SUBMODULES = github.com/pingcap/tiflow-operator/api
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -59,8 +61,12 @@ vet: ## Run go vet against code.
 	go vet ./...
 
 .PHONY: test
+test: TEST_PACKAGES = ./controllers ./pkg
 test: manifests generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test -cover \
+		$(foreach pkg, $(TEST_PACKAGES), $(pkg)/...) \
+		$(foreach mod, $(GO_SUBMODULES), $(mod)/...) \
+		-coverprofile cover.out -covermode=atomic
 
 ##@ Build
 

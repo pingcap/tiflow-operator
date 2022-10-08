@@ -139,7 +139,10 @@ func (a *componentAccessorImpl) Affinity() *corev1.Affinity {
 }
 
 func (a *componentAccessorImpl) PriorityClassName() *string {
-	return a.priorityClassName
+	if a.ComponentSpec == nil || a.ComponentSpec.PriorityClassName == nil {
+		return a.priorityClassName
+	}
+	return a.ComponentSpec.PriorityClassName
 }
 
 func (a *componentAccessorImpl) NodeSelector() map[string]string {
@@ -312,11 +315,9 @@ func (a *componentAccessorImpl) TopologySpreadConstraints() []corev1.TopologySpr
 			WhenUnsatisfiable: corev1.DoNotSchedule,
 		}
 		componentLabelVal := getComponentLabelValue(a.component)
-		l := label.New()
-		l[label.ComponentLabelKey] = componentLabelVal
-		l[label.InstanceLabelKey] = a.name
+		l := label.New().Component(componentLabelVal).Instance(a.name)
 		ptsc.LabelSelector = &metav1.LabelSelector{
-			MatchLabels: map[string]string(l),
+			MatchLabels: l,
 		}
 		ptscs = append(ptscs, ptsc)
 	}

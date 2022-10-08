@@ -492,7 +492,7 @@ func (m *masterMemberManager) getNewMasterServiceForTiflowCluster(tc *pingcapcom
 	svcName := controller.TiflowMasterMemberName(tcName)
 	instanceName := tc.GetInstanceName()
 	masterSelector := label.New().Instance(instanceName).TiflowMaster()
-	masterLabels := masterSelector.Copy().UsedByEndUser().Labels()
+	masterLabels := masterSelector.Copy().Labels()
 
 	ports := []corev1.ServicePort{
 		{
@@ -552,7 +552,7 @@ func getNewMasterHeadlessServiceForTiflowCluster(tc *pingcapcomv1alpha1.TiflowCl
 	svcName := controller.TiflowMasterPeerMemberName(tcName)
 	instanceName := tc.GetInstanceName()
 	masterSelector := label.New().Instance(instanceName).TiflowMaster()
-	masterLabels := masterSelector.Copy().UsedByPeer().Labels()
+	masterLabels := masterSelector.Copy().Labels()
 
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -656,13 +656,13 @@ func (m *masterMemberManager) syncTiflowClusterStatus(tc *pingcapcomv1alpha1.Tif
 	// TODO: WIP, need to get the information of memberDeleted and LastTransitionTime
 	members := make(map[string]pingcapcomv1alpha1.MasterMember)
 	peerMembers := make(map[string]pingcapcomv1alpha1.MasterMember)
+	tc.Status.Master.Leader = pingcapcomv1alpha1.MasterMember{}
 	for _, master := range mastersInfo.Masters {
 		member := pingcapcomv1alpha1.MasterMember{
 			Id:                 master.ID,
 			Address:            master.Address,
 			IsLeader:           master.IsLeader,
 			Name:               master.Name,
-			Health:             true,
 			LastTransitionTime: metav1.Now(),
 		}
 		clusterName, ordinal, namespace, err2 := getOrdinalFromName(master.Name, pingcapcomv1alpha1.TiFlowMasterMemberType)
@@ -671,22 +671,14 @@ func (m *masterMemberManager) syncTiflowClusterStatus(tc *pingcapcomv1alpha1.Tif
 		} else {
 			peerMembers[master.Name] = member
 		}
+		if master.IsLeader {
+			tc.Status.Master.Leader = member
+		}
 	}
 	tc.Status.Master.Members = members
 	tc.Status.Master.PeerMembers = peerMembers
 
-	leader, err := tiflowClient.GetLeader()
-	if err != nil {
-		tc.Status.Master.Synced = false
-		return err
-	}
-
 	tc.Status.Master.Synced = true
-	tc.Status.Master.Leader = pingcapcomv1alpha1.MasterMember{
-		ClientURL:          leader.AdvertiseAddr,
-		Health:             true,
-		LastTransitionTime: metav1.Now(),
-	}
 	tc.Status.Master.Image = ""
 	c := findContainerByName(set, "tiflow-master")
 	if c != nil {

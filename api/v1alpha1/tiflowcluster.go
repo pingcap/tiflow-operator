@@ -48,17 +48,7 @@ func (tc *TiflowCluster) ExecutorImage() string {
 }
 
 func (tc *TiflowCluster) AllExecutorMembersReady() bool {
-	// TODO: support members later
-	// if int(tc.ExecutorStsDesiredReplicas()) != len(tc.Status.Executor.Members) {
-	//	return false
-	// }
-
-	// for _, member := range tc.Status.Executor.Members {
-	//	if member {
-	//
-	//	}
-	// }
-	return true
+	return int(tc.ExecutorStsDesiredReplicas()) == len(tc.Status.Executor.Members)
 }
 
 func (tc *TiflowCluster) ExecutorUpgrading() bool {
@@ -111,18 +101,7 @@ func (tc *TiflowCluster) IsClusterTLSEnabled() bool {
 }
 
 func (tc *TiflowCluster) AllMasterMembersReady() bool {
-	return true
-	// TODO: support members later
-	// if int(tc.MasterStsDesiredReplicas()) != len(tc.Status.Master.Members) {
-	//	return false
-	// }
-	//
-	// for _, member := range tc.Status.Master.Members {
-	//	if !member.Health {
-	//		return false
-	//	}
-	// }
-	// return true
+	return int(tc.MasterStsDesiredReplicas()) == len(tc.Status.Master.Members)
 }
 
 func (tc *TiflowCluster) Heterogeneous() bool {
@@ -131,6 +110,10 @@ func (tc *TiflowCluster) Heterogeneous() bool {
 
 func (tc *TiflowCluster) WithoutLocalMaster() bool {
 	return tc.Spec.Master == nil
+}
+
+func (tc *TiflowCluster) MasterIsAvailable() bool {
+	return tc.Status.Master.Leader.Id != ""
 }
 
 func (mt MemberType) String() string {
