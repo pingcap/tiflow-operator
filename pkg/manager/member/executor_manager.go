@@ -465,15 +465,6 @@ func (m *executorMemberManager) getNewExecutorPVCTemp(tc *v1alpha1.TiflowCluster
 		},
 	}
 
-	// There are two states of executor in the cluster, one is stateful and the other is stateless.
-	// Distinguish between these two states by the label stateful.
-	// If it is a stateful executor, set its OwnerReference to delete both its pvc and bound pv when deleting statefulSet.
-	// Instead, just delete the statefulSet and keep the pvc and pv.
-	// todo: The pvc and pv need to be handled
-	// if tc.Spec.Executor.Stateful {
-	//	pvc[0].ObjectMeta.Finalizers = []string{}
-	// }
-
 	return pvc, nil
 }
 

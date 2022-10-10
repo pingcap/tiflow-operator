@@ -7,7 +7,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
@@ -15,21 +14,21 @@ import (
 	"github.com/pingcap/tiflow-operator/pkg/tiflowapi"
 )
 
-type MasterConditionManager struct {
+type masterConditionManager struct {
 	*v1alpha1.TiflowCluster
 	cli       client.Client
 	clientSet kubernetes.Interface
 }
 
 func NewMasterConditionManager(cli client.Client, clientSet kubernetes.Interface, tc *v1alpha1.TiflowCluster) ClusterCondition {
-	return &MasterConditionManager{
+	return &masterConditionManager{
 		TiflowCluster: tc,
 		cli:           cli,
 		clientSet:     clientSet,
 	}
 }
 
-func (mcm *MasterConditionManager) Verify(ctx context.Context) error {
+func (mcm *masterConditionManager) Verify(ctx context.Context) error {
 	if mcm.Heterogeneous() {
 		// todo: more gracefully
 		SetTrue(v1alpha1.MasterVersionChecked, mcm.GetClusterStatus(), metav1.Now())
@@ -40,11 +39,9 @@ func (mcm *MasterConditionManager) Verify(ctx context.Context) error {
 		return nil
 	}
 
-	klog.Info("verify master condition")
 	ns := mcm.GetNamespace()
 	tcName := mcm.GetName()
 
-	klog.Info("verify master statefulSet condition")
 	sts, err := mcm.verifyStatefulSet(ctx)
 	if err != nil {
 		return result.NotReadyErr{
@@ -52,7 +49,6 @@ func (mcm *MasterConditionManager) Verify(ctx context.Context) error {
 		}
 	}
 
-	klog.Info("verify master version condition")
 	if mcm.versionVerify() {
 		SetTrue(v1alpha1.MasterVersionChecked, mcm.GetClusterStatus(), metav1.Now())
 	} else {
@@ -63,7 +59,6 @@ func (mcm *MasterConditionManager) Verify(ctx context.Context) error {
 	}
 
 	// todo: need to handle failureMembers
-	klog.Info("verify master replica condition")
 	if mcm.MasterStsDesiredReplicas() == mcm.MasterStsCurrentReplicas() {
 		SetTrue(v1alpha1.MasterReplicaChecked, mcm.GetClusterStatus(), metav1.Now())
 	} else {
@@ -73,7 +68,6 @@ func (mcm *MasterConditionManager) Verify(ctx context.Context) error {
 		}
 	}
 
-	klog.Info("verify master all ready condition")
 	if mcm.MasterStsDesiredReplicas() == mcm.MasterStsReadyReplicas() {
 		SetTrue(v1alpha1.MasterReadyChecked, mcm.GetClusterStatus(), metav1.Now())
 	} else {
@@ -92,14 +86,13 @@ func (mcm *MasterConditionManager) Verify(ctx context.Context) error {
 		}
 	}
 
-	if err := mcm.Update(ctx, sts); err != nil {
+	if err = mcm.Update(ctx, sts); err != nil {
 		SetFalse(v1alpha1.MastersInfoUpdatedChecked, mcm.GetClusterStatus(), metav1.Now())
-		return result.SyncStatusErr{
-			Err: fmt.Errorf("master [%s/%s] verify: information of master cluster update failed", ns, tcName),
-		}
+		return err
 	}
 	SetTrue(v1alpha1.MastersInfoUpdatedChecked, mcm.GetClusterStatus(), metav1.Now())
 
+	// todo: unclear behavior of peerMembers
 	if mcm.MasterStsDesiredReplicas() == mcm.MasterAllActualMembers() {
 		SetTrue(v1alpha1.MasterMembersChecked, mcm.GetClusterStatus(), metav1.Now())
 	} else {
@@ -111,7 +104,7 @@ func (mcm *MasterConditionManager) Verify(ctx context.Context) error {
 	return nil
 }
 
-func (mcm *MasterConditionManager) verifyStatefulSet(ctx context.Context) (*appsv1.StatefulSet, error) {
+func (mcm *masterConditionManager) verifyStatefulSet(ctx context.Context) (*appsv1.StatefulSet, error) {
 	ns := mcm.GetNamespace()
 	tcName := mcm.GetName()
 
@@ -125,7 +118,7 @@ func (mcm *MasterConditionManager) verifyStatefulSet(ctx context.Context) (*apps
 	return sts, nil
 }
 
-func (mcm *MasterConditionManager) Update(ctx context.Context, sts *appsv1.StatefulSet) error {
+func (mcm *masterConditionManager) Update(ctx context.Context, sts *appsv1.StatefulSet) error {
 	if err := mcm.update(ctx, sts); err != nil {
 		return result.SyncStatusErr{
 			Err: err,
@@ -135,14 +128,12 @@ func (mcm *MasterConditionManager) Update(ctx context.Context, sts *appsv1.State
 	return nil
 }
 
-func (mcm *MasterConditionManager) update(ctx context.Context, sts *appsv1.StatefulSet) error {
-	klog.Info("update master infos")
+func (mcm *masterConditionManager) update(ctx context.Context, sts *appsv1.StatefulSet) error {
 	ns := mcm.GetNamespace()
 	tcName := mcm.GetName()
 
 	tiflowClient := tiflowapi.GetMasterClient(mcm.cli, ns, tcName, "", mcm.IsClusterTLSEnabled())
 
-	klog.Info("get master infos for Leader")
 	mastersInfo, err := tiflowClient.GetMasters()
 	if err != nil {
 		selector, selectErr := metav1.LabelSelectorAsSelector(sts.Spec.Selector)
@@ -169,7 +160,6 @@ func (mcm *MasterConditionManager) update(ctx context.Context, sts *appsv1.State
 		return err
 	}
 
-	klog.Info("sync master infos")
 	if err = mcm.updateMembersInfo(mastersInfo); err != nil {
 		return err
 	}
@@ -181,12 +171,11 @@ func (mcm *MasterConditionManager) update(ctx context.Context, sts *appsv1.State
 	}
 
 	mcm.Status.Master.LastUpdateTime = metav1.Now()
-	klog.Info("sync master infos end")
 
 	return nil
 }
 
-func (mcm *MasterConditionManager) updateMembersInfo(mastersInfo tiflowapi.MastersInfo) error {
+func (mcm *masterConditionManager) updateMembersInfo(mastersInfo tiflowapi.MastersInfo) error {
 	ns := mcm.GetNamespace()
 
 	// TODO: WIP, need to get the information of memberDeleted and LastTransitionTime
@@ -214,11 +203,11 @@ func (mcm *MasterConditionManager) updateMembersInfo(mastersInfo tiflowapi.Maste
 	return nil
 }
 
-func (mcm *MasterConditionManager) versionVerify() bool {
+func (mcm *masterConditionManager) versionVerify() bool {
 	return statefulSetUpToDate(mcm.Status.Master.StatefulSet, true)
 }
 
-func (mcm *MasterConditionManager) leaderVerify() bool {
+func (mcm *masterConditionManager) leaderVerify() bool {
 	ns := mcm.GetNamespace()
 	tcName := mcm.GetName()
 

@@ -118,11 +118,8 @@ func (tcsm TiflowClusterStatusManager) UpdateTilfowClusterPhase() error {
 }
 
 func (tcsm *TiflowClusterStatusManager) Update() error {
-
-	klog.Info("start to sync cluster phase")
 	tcsm.SyncTiflowClusterPhase()
 
-	klog.Infof("start to update cluster phase")
 	if err := tcsm.UpdateTilfowClusterPhase(); err != nil {
 		klog.Errorf("update cluster phase error: %v", err)
 		return err

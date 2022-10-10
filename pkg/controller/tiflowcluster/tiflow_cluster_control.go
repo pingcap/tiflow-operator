@@ -2,8 +2,6 @@ package tiflowcluster
 
 import (
 	"context"
-	"k8s.io/klog/v2"
-
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -50,23 +48,17 @@ func (c *defaultTiflowClusterControl) UpdateTiflowCluster(ctx context.Context, t
 
 	c.conditionUpdater = condition.NewTiflowCLusterConditionManager(c.cli, c.clientSet, tc)
 
-	// var errs []error
 	oldStatus := tc.Status.DeepCopy()
 
-	klog.Info("start main reconcile")
 	if err := c.updateTiflowCluster(ctx, tc); err != nil {
-		// errs = append(errs, err)
-		klog.Errorf("main reconcile error: %v", err)
 		return err
 	}
 
-	klog.Info("start update condition")
 	if err := c.conditionUpdater.Sync(ctx); err != nil {
-		// errs = append(errs, err)
-		klog.Errorf(" update cluster condition error: %v", err)
 		return err
 	}
 
+	// todo: need to modify
 	if apiequality.Semantic.DeepEqual(&tc.Status, oldStatus) {
 		return nil
 	}
@@ -75,8 +67,6 @@ func (c *defaultTiflowClusterControl) UpdateTiflowCluster(ctx context.Context, t
 }
 
 func (c *defaultTiflowClusterControl) updateTiflowCluster(ctx context.Context, tc *v1alpha1.TiflowCluster) error {
-	// var errs []error
-
 	// works that should be done to make the tiflow-master cluster current state match the desired state:
 	//   - create or update the tiflow-master service
 	//   - create or update the tiflow-master headless service
@@ -89,7 +79,6 @@ func (c *defaultTiflowClusterControl) updateTiflowCluster(ctx context.Context, t
 	//   - scale out/in the tiflow-master cluster
 	//   - failover the tiflow-master cluster
 	if err := c.masterMemberManager.Sync(ctx, tc); err != nil {
-		// errs = append(errs, err)
 		return err
 	}
 
@@ -102,7 +91,6 @@ func (c *defaultTiflowClusterControl) updateTiflowCluster(ctx context.Context, t
 	//   - scale out/in the tiflow-executor cluster
 	//   - failover the tiflow-executor cluster
 	if err := c.executorMemberManager.Sync(ctx, tc); err != nil {
-		// errs = append(errs, err)
 		return err
 	}
 

@@ -18,23 +18,28 @@ package controllers
 
 import (
 	"context"
-	pingcapcomv1alpha1 "github.com/pingcap/tiflow-operator/api/v1alpha1"
-	"github.com/pingcap/tiflow-operator/pkg/controller/tiflowcluster"
-	"github.com/pingcap/tiflow-operator/pkg/result"
-	"github.com/pingcap/tiflow-operator/pkg/status"
+
+	"github.com/go-logr/logr"
+	"github.com/lithammer/shortuuid/v3"
+	"go.uber.org/zap/zapcore"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	pingcapcomv1alpha1 "github.com/pingcap/tiflow-operator/api/v1alpha1"
+	"github.com/pingcap/tiflow-operator/pkg/controller/tiflowcluster"
+	"github.com/pingcap/tiflow-operator/pkg/result"
+	"github.com/pingcap/tiflow-operator/pkg/status"
 )
 
 // TiflowClusterReconciler reconciles a TiflowCluster object
 type TiflowClusterReconciler struct {
 	client.Client
 	ClientSet kubernetes.Interface
+	Log       logr.Logger
 	Scheme    *runtime.Scheme
 	Control   tiflowcluster.ControlInterface
 }
@@ -43,6 +48,7 @@ func NewTiflowClusterReconciler(cli client.Client, clientSet kubernetes.Interfac
 	return &TiflowClusterReconciler{
 		Client:    cli,
 		ClientSet: clientSet,
+		Log:       ctrl.Log.WithName("controller").WithName("TiflowCluster"),
 		Scheme:    scheme,
 		Control:   tiflowcluster.NewDefaultTiflowClusterControl(cli, clientSet),
 	}
@@ -74,40 +80,39 @@ func NewTiflowClusterReconciler(cli client.Client, clientSet kubernetes.Interfac
 func (r *TiflowClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	// logger := log.FromContext(ctx)
 
-	// logger.WithValues("TiflowCluster", req.NamespacedName, "ReconcileID", shortuuid.New())
-	// logger.V(int(zapcore.InfoLevel)).Info("reconciling tiflow cluster")
+	log := r.Log.WithValues("TiflowCluster", req.NamespacedName, "ReconcileID", shortuuid.New())
+	log.V(int(zapcore.InfoLevel)).Info("reconciling tiflow cluster")
 
 	tc := &pingcapcomv1alpha1.TiflowCluster{}
 	if err := r.Get(ctx, req.NamespacedName, tc); err != nil {
-		klog.Error(err, "failed to retrieve tiflow cluster resource")
+		r.Log.Error(err, "failed to retrieve tiflow cluster resource")
 		return result.RequeueIfError(client.IgnoreNotFound(err))
 	}
 
 	if tc.Status.ClusterPhase == "" {
-		klog.Info("reconciling tiflow cluster on first")
+		log.Info("reconciling tiflow cluster on first")
 		if err := r.updateTiflowClusterStatus(tc); err != nil {
-			klog.Error(err, "failed to update tiflow cluster status")
+			log.Error(err, "failed to update tiflow cluster status")
 			return result.RequeueIfError(err)
 		}
 		return result.RequeueImmediately()
 	}
 
 	if err := r.Control.UpdateTiflowCluster(ctx, tc); err != nil {
-		klog.Info("Error on TiflowCluster Reconcile ...")
+		log.Info("Error on TiflowCluster Reconcile ...")
 
 		defer func(ctx context.Context, tc *pingcapcomv1alpha1.TiflowCluster) {
 			if err := r.updateTiflowClusterStatus(tc); err != nil {
-				klog.Error(err, "failed to update tiflow cluster status")
+				log.Error(err, "failed to update tiflow cluster status")
 			}
 		}(ctx, tc)
 
-		klog.Errorf("handle reconcile error: %v", err)
 		switch err.(type) {
 		case result.SyncStatusErr:
-			klog.Error(err, "can not sync master or executor cluster's status")
+			log.Error(err, "can not sync master or executor cluster's status")
 			return result.RequeueAfter(result.LongPauseTime, nil)
 		case result.NotReadyErr:
-			klog.Error(err, "master or executor cluster are not ready")
+			log.Error(err, "master or executor cluster are not ready")
 			return result.RequeueAfter(result.ShortPauseTime, nil)
 		default:
 			return result.RequeueIfError(err)
@@ -115,7 +120,7 @@ func (r *TiflowClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	if err := r.updateTiflowClusterStatus(tc); err != nil {
-		klog.Errorf("failed to update tiflow Cluster Status error %v", err)
+		log.Error(err, "failed to update tiflow cluster status")
 		return result.RequeueIfError(err)
 	}
 

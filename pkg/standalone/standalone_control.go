@@ -17,27 +17,21 @@ type ControlInterface interface {
 }
 
 type defaultStandaloneControl struct {
-	cli          client.Client
-	frameManager StandaloneManager
-	userManager  StandaloneManager
+	cli   client.Client
+	store StandaloneManager
 }
 
 func NewDefaultStandaloneControl(cli client.Client, schema *runtime.Scheme) ControlInterface {
 	return &defaultStandaloneControl{
 		cli,
 		NewFrameManager(cli, schema),
-		NewUserManager(cli, schema),
 	}
 }
 
 // UpdateStandalone executes the core logic loop for a Standalone.
 func (c *defaultStandaloneControl) UpdateStandalone(ctx context.Context, instance *v1alpha1.Standalone) (ctrl.Result, error) {
 
-	if result, err := c.frameManager.Sync(ctx, instance); err != nil {
-		return result, err
-	}
-
-	if result, err := c.userManager.Sync(ctx, instance); err != nil {
+	if result, err := c.store.Sync(ctx, instance); err != nil {
 		return result, err
 	}
 

@@ -5,7 +5,6 @@ import (
 	"github.com/pingcap/tiflow-operator/pkg/tiflowapi"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
@@ -30,19 +29,11 @@ func NewTiflowCLusterConditionManager(cli client.Client, clientSet kubernetes.In
 func (tcm *TiflowClusterConditionManager) Sync(ctx context.Context) error {
 	InitConditionsIfNeed(tcm.GetClusterStatus(), metav1.Now())
 
-	// if True(v1alpha1.SyncChecked, tcm.GetClusterConditions()) {
-	// 	return nil
-	// }
-
-	klog.Info("start master condition verify")
 	if err := tcm.masterCondition.Verify(ctx); err != nil {
-		klog.Errorf("master condition verify error: %v", err)
 		return err
 	}
 
-	klog.Info("start executor condition verify")
 	if err := tcm.executorCondition.Verify(ctx); err != nil {
-		klog.Errorf("executor condition verify error: %v", err)
 		return err
 	}
 

@@ -3,7 +3,6 @@ package member
 import (
 	"context"
 	"fmt"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,6 +37,8 @@ func (u *executorUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSts, n
 	ns := tc.GetNamespace()
 	tcName := tc.GetName()
 
+	klog.Infof("start to upgrade tiflow executor [%s/%s]", ns, tcName)
+
 	condition.SetFalse(v1alpha1.SyncChecked, tc.GetClusterStatus(), metav1.Now())
 	status.Ongoing(v1alpha1.UpgradeType, tc.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType,
 		fmt.Sprintf("tiflow executor [%s/%s] upgrading...", ns, tcName))
@@ -57,6 +58,7 @@ func (u *executorUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSts, n
 		return nil
 	}
 
+	klog.Infof("CurrentRevision: %s, UpdateRevision: %s", tc.Status.Executor.StatefulSet.CurrentRevision, tc.Status.Executor.StatefulSet.UpdateRevision)
 	if tc.Status.Executor.StatefulSet.UpdateRevision == tc.Status.Executor.StatefulSet.CurrentRevision {
 		return nil
 	}
@@ -70,6 +72,7 @@ func (u *executorUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSts, n
 	}
 
 	mngerutils.SetUpgradePartition(newSts, *oldSts.Spec.UpdateStrategy.RollingUpdate.Partition)
+	klog.Infof("Upgrading tiflow-executor statefulSet")
 	for i := *oldSts.Spec.Replicas - 1; i >= 0; i-- {
 		podName := TiflowExecutorPodName(tcName, i)
 		pod := &corev1.Pod{}
@@ -103,14 +106,6 @@ func (u *executorUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSts, n
 		mngerutils.SetUpgradePartition(newSts, i)
 		return nil
 	}
-
-	return nil
-}
-
-// todo: Need to be removed
-func (u *executorUpgrader) upgradeExecutorPod(ctx context.Context, tc *v1alpha1.TiflowCluster, ordinal int32, newSts *appsv1.StatefulSet) error {
-
-	mngerutils.SetUpgradePartition(newSts, ordinal)
 
 	return nil
 }

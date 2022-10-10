@@ -62,8 +62,6 @@ func (s *executorScaler) ScaleOut(meta metav1.Object, actual *appsv1.StatefulSet
 	status.Ongoing(v1alpha1.ScaleOutType, tc.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType,
 		fmt.Sprintf("tiflow executor [%s/%s] sacling out...", ns, tcName))
 
-	klog.Infof("current syncTypes: %v", tc.Status.Executor.SyncTypes)
-
 	defer func() {
 		if err != nil {
 			status.Failed(v1alpha1.ScaleOutType, tc.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType,

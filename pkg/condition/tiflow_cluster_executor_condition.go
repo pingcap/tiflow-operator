@@ -3,11 +3,11 @@ package condition
 import (
 	"context"
 	"fmt"
-	"k8s.io/klog/v2"
-
+	"github.com/pingcap/tiflow-operator/pkg/status"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
@@ -15,21 +15,21 @@ import (
 	"github.com/pingcap/tiflow-operator/pkg/tiflowapi"
 )
 
-type ExecutorConditionManager struct {
+type executorConditionManager struct {
 	*v1alpha1.TiflowCluster
 	cli       client.Client
 	clientSet kubernetes.Interface
 }
 
 func NewExecutorConditionManager(cli client.Client, clientSet kubernetes.Interface, tc *v1alpha1.TiflowCluster) ClusterCondition {
-	return &ExecutorConditionManager{
+	return &executorConditionManager{
 		TiflowCluster: tc,
 		cli:           cli,
 		clientSet:     clientSet,
 	}
 }
 
-func (ecm *ExecutorConditionManager) Verify(ctx context.Context) error {
+func (ecm *executorConditionManager) Verify(ctx context.Context) error {
 	if ecm.Spec.Executor == nil {
 		// todo: more gracefully
 		SetTrue(v1alpha1.ExecutorVersionChecked, ecm.GetClusterStatus(), metav1.Now())
@@ -40,11 +40,9 @@ func (ecm *ExecutorConditionManager) Verify(ctx context.Context) error {
 		return nil
 	}
 
-	klog.Info("verify executor condition")
 	ns := ecm.GetNamespace()
 	tcName := ecm.GetName()
 
-	klog.Info("verify executor statefulSet condition")
 	sts, err := ecm.verifyStatefulSet(ctx)
 	if err != nil {
 		return result.NotReadyErr{
@@ -53,7 +51,7 @@ func (ecm *ExecutorConditionManager) Verify(ctx context.Context) error {
 	}
 
 	// todo: need to verify this
-	if ecm.pvcCheck() {
+	if ecm.pvcVerify() {
 		SetTrue(v1alpha1.ExecutorPVCChecked, ecm.GetClusterStatus(), metav1.Now())
 	} else {
 		SetFalse(v1alpha1.ExecutorPVCChecked, ecm.GetClusterStatus(), metav1.Now())
@@ -62,7 +60,6 @@ func (ecm *ExecutorConditionManager) Verify(ctx context.Context) error {
 		}
 	}
 
-	klog.Info("verify executor version condition")
 	if ecm.versionVerify() {
 		SetTrue(v1alpha1.ExecutorVersionChecked, ecm.GetClusterStatus(), metav1.Now())
 	} else {
@@ -73,8 +70,7 @@ func (ecm *ExecutorConditionManager) Verify(ctx context.Context) error {
 	}
 
 	// todo: need to handle failureMembers
-	klog.Info("verify executor replica condition")
-	if ecm.ExecutorStsDesiredReplicas() == ecm.ExecutorStsCurrentReplicas() {
+	if ecm.replicasVerify() {
 		SetTrue(v1alpha1.ExecutorReplicaChecked, ecm.GetClusterStatus(), metav1.Now())
 	} else {
 		SetFalse(v1alpha1.ExecutorReplicaChecked, ecm.GetClusterStatus(), metav1.Now())
@@ -83,9 +79,7 @@ func (ecm *ExecutorConditionManager) Verify(ctx context.Context) error {
 		}
 	}
 
-	// todo: need to check this
-	klog.Info("verify executor all ready condition")
-	if ecm.ExecutorStsDesiredReplicas() == ecm.ExecutorStsReadyReplicas() {
+	if ecm.readyVerify() {
 		SetTrue(v1alpha1.ExecutorReadyChecked, ecm.GetClusterStatus(), metav1.Now())
 	} else {
 		SetFalse(v1alpha1.ExecutorReadyChecked, ecm.GetClusterStatus(), metav1.Now())
@@ -103,11 +97,9 @@ func (ecm *ExecutorConditionManager) Verify(ctx context.Context) error {
 		}
 	}
 
-	if err := ecm.Update(ctx, sts); err != nil {
+	if err = ecm.Update(ctx, sts); err != nil {
 		SetFalse(v1alpha1.ExecutorsInfoUpdatedChecked, ecm.GetClusterStatus(), metav1.Now())
-		return result.SyncStatusErr{
-			Err: fmt.Errorf("executor [%s/%s] verify: information of executor cluster update failed", ns, tcName),
-		}
+		return err
 	}
 	SetTrue(v1alpha1.ExecutorsInfoUpdatedChecked, ecm.GetClusterStatus(), metav1.Now())
 
@@ -123,7 +115,7 @@ func (ecm *ExecutorConditionManager) Verify(ctx context.Context) error {
 	return nil
 }
 
-func (ecm *ExecutorConditionManager) verifyStatefulSet(ctx context.Context) (*appsv1.StatefulSet, error) {
+func (ecm *executorConditionManager) verifyStatefulSet(ctx context.Context) (*appsv1.StatefulSet, error) {
 	ns := ecm.GetNamespace()
 	tcName := ecm.GetName()
 
@@ -137,7 +129,7 @@ func (ecm *ExecutorConditionManager) verifyStatefulSet(ctx context.Context) (*ap
 	return sts, nil
 }
 
-func (ecm *ExecutorConditionManager) Update(ctx context.Context, sts *appsv1.StatefulSet) error {
+func (ecm *executorConditionManager) Update(ctx context.Context, sts *appsv1.StatefulSet) error {
 	if err := ecm.update(ctx, sts); err != nil {
 		return result.SyncStatusErr{
 			Err: err,
@@ -147,8 +139,7 @@ func (ecm *ExecutorConditionManager) Update(ctx context.Context, sts *appsv1.Sta
 	return nil
 }
 
-func (ecm *ExecutorConditionManager) update(ctx context.Context, sts *appsv1.StatefulSet) error {
-	klog.Info("get executor infos for Leader")
+func (ecm *executorConditionManager) update(ctx context.Context, sts *appsv1.StatefulSet) error {
 	if err := ecm.syncMembersStatus(ctx, sts); err != nil {
 		return err
 	}
@@ -164,11 +155,10 @@ func (ecm *ExecutorConditionManager) update(ctx context.Context, sts *appsv1.Sta
 	ecm.Status.Executor.Volumes = nil
 	ecm.Status.Executor.LastUpdateTime = metav1.Now()
 
-	klog.Info("sync executor infos end")
 	return nil
 }
 
-func (ecm *ExecutorConditionManager) syncMembersStatus(ctx context.Context, sts *appsv1.StatefulSet) error {
+func (ecm *executorConditionManager) syncMembersStatus(ctx context.Context, sts *appsv1.StatefulSet) error {
 	ns := ecm.GetNamespace()
 	tcName := ecm.GetName()
 
@@ -206,11 +196,10 @@ func (ecm *ExecutorConditionManager) syncMembersStatus(ctx context.Context, sts 
 		return err
 	}
 
-	klog.Info("sync executor infos")
 	return ecm.updateMembersInfo(executorsInfo)
 }
 
-func (ecm *ExecutorConditionManager) updateMembersInfo(executorsInfo tiflowapi.ExecutorsInfo) error {
+func (ecm *executorConditionManager) updateMembersInfo(executorsInfo tiflowapi.ExecutorsInfo) error {
 	ns := ecm.GetNamespace()
 
 	// todo: WIP, get information about the FailureMembers and FailoverUID through the MasterClient
@@ -231,7 +220,7 @@ func (ecm *ExecutorConditionManager) updateMembersInfo(executorsInfo tiflowapi.E
 		}
 
 		clusterName, ordinal, namespace, err2 := getOrdinalFromName(e.Name, v1alpha1.TiFlowExecutorMemberType)
-		if err2 == nil && clusterName == ecm.GetName() && namespace == ns && ordinal < ecm.Spec.Master.Replicas {
+		if err2 == nil && clusterName == ecm.GetName() && namespace == ns && ordinal < ecm.ExecutorStsDesiredReplicas() {
 			members[e.Name] = member
 		} else {
 			peerMembers[e.Name] = member
@@ -243,16 +232,48 @@ func (ecm *ExecutorConditionManager) updateMembersInfo(executorsInfo tiflowapi.E
 	return nil
 }
 
-func (ecm *ExecutorConditionManager) pvcCheck() bool {
+func (ecm *executorConditionManager) pvcVerify() bool {
 	// todo: need to check pvc's status here
 	return true
 }
 
-func (ecm *ExecutorConditionManager) versionVerify() bool {
+func (ecm *executorConditionManager) versionVerify() bool {
+	klog.Infof("CurrentRevision: %d , UpdateRevision: %d",
+		ecm.GetExecutorStatus().StatefulSet.CurrentRevision,
+		ecm.GetExecutorStatus().StatefulSet.UpdateRevision)
+
+	if status.GetSyncStatus(v1alpha1.UpgradeType, ecm.GetClusterStatus(),
+		v1alpha1.TiFlowExecutorMemberType) == v1alpha1.Ongoing {
+		return true
+	}
 	return statefulSetUpToDate(ecm.Status.Executor.StatefulSet, true)
 }
 
-func (ecm *ExecutorConditionManager) leaderVerify() bool {
+func (ecm *executorConditionManager) replicasVerify() bool {
+	klog.Infof("DesiredReplicas: %d , CurrentReplicas: %d",
+		ecm.ExecutorStsDesiredReplicas(), ecm.ExecutorStsCurrentReplicas())
+
+	// if status.GetSyncStatus(v1alpha1.UpgradeType, ecm.GetClusterStatus(),
+	// 	v1alpha1.TiFlowExecutorMemberType) == v1alpha1.Ongoing {
+	// 	return true
+	// }
+
+	return ecm.ExecutorStsDesiredReplicas() == ecm.ExecutorStsCurrentReplicas()
+}
+
+func (ecm *executorConditionManager) readyVerify() bool {
+	klog.Infof("DesiredReplicas: %d , ReadyReplicas: %d",
+		ecm.ExecutorStsDesiredReplicas(), ecm.ExecutorStsReadyReplicas())
+
+	// if status.GetSyncStatus(v1alpha1.UpgradeType, ecm.GetClusterStatus(),
+	// 	v1alpha1.TiFlowExecutorMemberType) == v1alpha1.Ongoing {
+	// 	return true
+	// }
+
+	return ecm.ExecutorStsDesiredReplicas() == ecm.ExecutorStsReadyReplicas()
+}
+
+func (ecm *executorConditionManager) leaderVerify() bool {
 	ns := ecm.GetNamespace()
 	tcName := ecm.GetName()
 
@@ -271,6 +292,6 @@ func (ecm *ExecutorConditionManager) leaderVerify() bool {
 	return true
 }
 
-func (ecm ExecutorConditionManager) membersVerify() bool {
+func (ecm executorConditionManager) membersVerify() bool {
 	panic("not implemented")
 }

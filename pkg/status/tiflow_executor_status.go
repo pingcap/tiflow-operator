@@ -2,23 +2,23 @@ package status
 
 import (
 	"context"
+	"fmt"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
 )
 
-type ExecutorPhaseManger struct {
+type executorPhaseManger struct {
 	*v1alpha1.TiflowCluster
 	cli       client.Client
 	clientSet kubernetes.Interface
 }
 
 func NewExecutorPhaseManager(cli client.Client, clientSet kubernetes.Interface, tc *v1alpha1.TiflowCluster) SyncPhaseManager {
-	return &ExecutorPhaseManger{
+	return &executorPhaseManger{
 		tc,
 		cli,
 		clientSet,
@@ -48,7 +48,7 @@ func InitExecutorClusterSyncTypesIfNeed(executorStatus *v1alpha1.ExecutorStatus)
 // SyncPhase
 // todo: need to check for all OperatorActions or for just the 0th element
 // This depends on our logic for updating Status
-func (em *ExecutorPhaseManger) SyncPhase() {
+func (em *executorPhaseManger) SyncPhase() {
 	executorStatus := em.GetExecutorStatus()
 	InitExecutorClusterSyncTypesIfNeed(executorStatus)
 
@@ -81,7 +81,7 @@ func (em *ExecutorPhaseManger) SyncPhase() {
 	return
 }
 
-func (em *ExecutorPhaseManger) syncExecutorPhaseFromCluster() bool {
+func (em *executorPhaseManger) syncExecutorPhaseFromCluster() bool {
 	if em.syncExecutorCreatPhase() {
 		return true
 	}
@@ -97,7 +97,7 @@ func (em *ExecutorPhaseManger) syncExecutorPhaseFromCluster() bool {
 	return false
 
 }
-func (em *ExecutorPhaseManger) syncExecutorCreatPhase() bool {
+func (em *executorPhaseManger) syncExecutorCreatPhase() bool {
 	syncTypes := em.GetExecutorSyncTypes()
 	index := findPos(v1alpha1.CreateType, syncTypes)
 	if index < 0 || syncTypes[index].Status == v1alpha1.Completed {
@@ -112,7 +112,7 @@ func (em *ExecutorPhaseManger) syncExecutorCreatPhase() bool {
 	return false
 }
 
-func (em *ExecutorPhaseManger) syncExecutorScalePhase() bool {
+func (em *executorPhaseManger) syncExecutorScalePhase() bool {
 	syncTypes := em.GetExecutorSyncTypes()
 
 	index := findPos(v1alpha1.ScaleOutType, syncTypes)
@@ -136,7 +136,8 @@ func (em *ExecutorPhaseManger) syncExecutorScalePhase() bool {
 	return false
 }
 
-func (em *ExecutorPhaseManger) syncExecutorUpgradePhase() bool {
+// syncExecutorUpgradePhase return true indicates a change in the current phase
+func (em *executorPhaseManger) syncExecutorUpgradePhase() bool {
 	syncTypes := em.GetExecutorSyncTypes()
 
 	index := findPos(v1alpha1.UpgradeType, syncTypes)
@@ -151,8 +152,9 @@ func (em *ExecutorPhaseManger) syncExecutorUpgradePhase() bool {
 	sts, err := em.clientSet.AppsV1().StatefulSets(ns).
 		Get(context.TODO(), executorMemberName(tcName), metav1.GetOptions{})
 	if err != nil {
-		Unknown(v1alpha1.UpgradeType, em.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType, "executor upgrading  unknown")
-		return false
+		message := fmt.Sprintf("executor [%s/%s] upgrade phase: can not get statefulSet", ns, tcName)
+		Unknown(v1alpha1.UpgradeType, em.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType, message)
+		return true
 	}
 
 	if isUpgrading(sts) {
@@ -162,30 +164,36 @@ func (em *ExecutorPhaseManger) syncExecutorUpgradePhase() bool {
 	instanceName := em.GetInstanceName()
 	selector, err := metav1.LabelSelectorAsSelector(sts.Spec.Selector)
 	if err != nil {
-		klog.Infof("executor [%s/%s] status converting statefulSet selector error: %v",
+		message := fmt.Sprintf("executor [%s/%s] upgrade phase: converting statefulSet selector error: %v",
 			ns, instanceName, err)
-		Failed(v1alpha1.UpgradeType, em.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType, "executor upgrading  failed")
-		return false
+		Failed(v1alpha1.UpgradeType, em.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType, message)
+		return true
 	}
 
 	executorPods, err := em.clientSet.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: selector.String(),
 	})
 	if err != nil {
-		klog.Infof("executor [%s/%s] status listing executor's pods error: %v",
+		message := fmt.Sprintf("executor [%s/%s] upgrade phase: listing executor's pods error: %v",
 			ns, instanceName, err)
-		Failed(v1alpha1.UpgradeType, em.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType, "executor upgrading  failed")
-		return false
+		Failed(v1alpha1.UpgradeType, em.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType, message)
+		return true
 	}
 
 	// todo: more gracefully
 	for _, pod := range executorPods.Items {
 		revisionHash, exist := pod.Labels[appsv1.ControllerRevisionHashLabelKey]
-		if !exist && revisionHash == em.GetExecutorStatus().StatefulSet.UpdateRevision {
-			Complied(v1alpha1.UpgradeType, em.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType, "executor upgrading  completed")
+		if !exist {
+			message := fmt.Sprintf("executor [%s/%s] upgrade phase: has no label ControllerRevisionHashLabelKey",
+				ns, tcName)
+			Failed(v1alpha1.UpgradeType, em.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType, message)
 			return true
+		}
+		if revisionHash != em.GetExecutorStatus().StatefulSet.UpdateRevision {
+			return false
 		}
 	}
 
-	return false
+	Complied(v1alpha1.UpgradeType, em.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType, "executor upgrading  completed")
+	return true
 }

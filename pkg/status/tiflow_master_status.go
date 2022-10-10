@@ -2,23 +2,23 @@ package status
 
 import (
 	"context"
+	"fmt"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
 )
 
-type MasterPhaseManager struct {
+type masterPhaseManager struct {
 	*v1alpha1.TiflowCluster
 	cli       client.Client
 	clientSet kubernetes.Interface
 }
 
 func NewMasterPhaseManager(cli client.Client, clientSet kubernetes.Interface, tc *v1alpha1.TiflowCluster) SyncPhaseManager {
-	return &MasterPhaseManager{
+	return &masterPhaseManager{
 		tc,
 		cli,
 		clientSet,
@@ -48,7 +48,7 @@ func InitMasterClusterSyncTypesIfNeed(masterStatus *v1alpha1.MasterStatus) {
 // SyncPhase
 // todo: need to check for all OperatorActions or for just the 0th element
 // This depends on our logic for updating Status
-func (mm *MasterPhaseManager) SyncPhase() {
+func (mm *masterPhaseManager) SyncPhase() {
 	masterStatus := mm.GetMasterStatus()
 	InitMasterClusterSyncTypesIfNeed(masterStatus)
 
@@ -81,7 +81,7 @@ func (mm *MasterPhaseManager) SyncPhase() {
 	return
 }
 
-func (mm *MasterPhaseManager) syncMasterPhaseFromCluster() bool {
+func (mm *masterPhaseManager) syncMasterPhaseFromCluster() bool {
 
 	if mm.syncMasterCreatPhase() {
 		return true
@@ -97,7 +97,7 @@ func (mm *MasterPhaseManager) syncMasterPhaseFromCluster() bool {
 
 	return false
 }
-func (mm *MasterPhaseManager) syncMasterCreatPhase() bool {
+func (mm *masterPhaseManager) syncMasterCreatPhase() bool {
 	syncTypes := mm.GetMasterSyncTypes()
 	index := findPos(v1alpha1.CreateType, syncTypes)
 	if index < 0 || syncTypes[index].Status == v1alpha1.Completed {
@@ -112,7 +112,7 @@ func (mm *MasterPhaseManager) syncMasterCreatPhase() bool {
 	return false
 }
 
-func (mm *MasterPhaseManager) syncMasterScalePhase() bool {
+func (mm *masterPhaseManager) syncMasterScalePhase() bool {
 	syncTypes := mm.GetMasterSyncTypes()
 
 	index := findPos(v1alpha1.ScaleOutType, syncTypes)
@@ -136,7 +136,8 @@ func (mm *MasterPhaseManager) syncMasterScalePhase() bool {
 	return false
 }
 
-func (mm *MasterPhaseManager) syncMasterUpgradePhase() bool {
+// syncMasterUpgradePhase return true indicates a change in the current phase
+func (mm *masterPhaseManager) syncMasterUpgradePhase() bool {
 	syncTypes := mm.GetMasterSyncTypes()
 
 	index := findPos(v1alpha1.UpgradeType, syncTypes)
@@ -151,8 +152,9 @@ func (mm *MasterPhaseManager) syncMasterUpgradePhase() bool {
 	sts, err := mm.clientSet.AppsV1().StatefulSets(ns).
 		Get(context.TODO(), masterMemberName(tcName), metav1.GetOptions{})
 	if err != nil {
-		Unknown(v1alpha1.UpgradeType, mm.GetClusterStatus(), v1alpha1.TiFlowMasterMemberType, "master upgrading  unknown")
-		return false
+		message := fmt.Sprintf("master [%s/%s] upgrade phase: can not get statefulSet", ns, tcName)
+		Unknown(v1alpha1.UpgradeType, mm.GetClusterStatus(), v1alpha1.TiFlowMasterMemberType, message)
+		return true
 	}
 
 	if isUpgrading(sts) {
@@ -162,30 +164,35 @@ func (mm *MasterPhaseManager) syncMasterUpgradePhase() bool {
 	instanceName := mm.GetInstanceName()
 	selector, err := metav1.LabelSelectorAsSelector(sts.Spec.Selector)
 	if err != nil {
-		klog.Infof("master [%s/%s] status converting statefulSet selector error: %v",
+		message := fmt.Sprintf("master [%s/%s] upgrade phase: converting statefulSet selector error: %v",
 			ns, instanceName, err)
-		Failed(v1alpha1.UpgradeType, mm.GetClusterStatus(), v1alpha1.TiFlowMasterMemberType, "master upgrading  failed")
-		return false
+		Failed(v1alpha1.UpgradeType, mm.GetClusterStatus(), v1alpha1.TiFlowMasterMemberType, message)
+		return true
 	}
 
 	masterPods, err := mm.clientSet.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: selector.String(),
 	})
 	if err != nil {
-		klog.Infof("master [%s/%s] status listing master's pods error: %v",
+		message := fmt.Sprintf("master [%s/%s] upgrade phase: listing master's pods error: %v",
 			ns, instanceName, err)
-		Failed(v1alpha1.UpgradeType, mm.GetClusterStatus(), v1alpha1.TiFlowMasterMemberType, "master upgrading  failed")
-		return false
+		Failed(v1alpha1.UpgradeType, mm.GetClusterStatus(), v1alpha1.TiFlowMasterMemberType, message)
+		return true
 	}
 
 	// todo: more gracefully
 	for _, pod := range masterPods.Items {
 		revisionHash, exist := pod.Labels[appsv1.ControllerRevisionHashLabelKey]
-		if !exist && revisionHash == mm.GetMasterStatus().StatefulSet.UpdateRevision {
-			Complied(v1alpha1.UpgradeType, mm.GetClusterStatus(), v1alpha1.TiFlowMasterMemberType, "master upgrading  completed")
+		if !exist {
+			message := fmt.Sprintf("master [%s/%s] upgrade phase: has no label ControllerRevisionHashLabelKey",
+				ns, tcName)
+			Failed(v1alpha1.UpgradeType, mm.GetClusterStatus(), v1alpha1.TiFlowMasterMemberType, message)
 			return true
 		}
+		if revisionHash != mm.GetMasterStatus().StatefulSet.UpdateRevision {
+			return false
+		}
 	}
-
-	return false
+	Complied(v1alpha1.UpgradeType, mm.GetClusterStatus(), v1alpha1.TiFlowMasterMemberType, "master upgrading  completed")
+	return true
 }
