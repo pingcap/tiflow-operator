@@ -193,7 +193,7 @@ func (m *executorMemberManager) syncExecutorStatefulSetForTiflowCluster(ctx cont
 	}
 
 	if stsNotExist {
-		condition.SetFalse(v1alpha1.SyncChecked, tc.GetClusterStatus(), metav1.Now())
+		condition.SetFalse(v1alpha1.ExecutorSyncChecked, tc.GetClusterStatus(), metav1.Now())
 		status.Ongoing(v1alpha1.CreateType, tc.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType,
 			fmt.Sprintf("start to create executor cluster [%s/%s]", ns, tcName))
 
@@ -212,7 +212,7 @@ func (m *executorMemberManager) syncExecutorStatefulSetForTiflowCluster(ctx cont
 		return nil
 	}
 
-	if condition.False(v1alpha1.SyncChecked, tc.GetClusterConditions()) {
+	if condition.False(v1alpha1.ExecutorSyncChecked, tc.GetClusterConditions()) {
 		// Force Update takes precedence over Scaling
 		if NeedForceUpgrade(tc.Annotations) {
 			tc.Status.Executor.Phase = v1alpha1.ExecutorUpgrading

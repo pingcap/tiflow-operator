@@ -5,7 +5,6 @@ type TiflowClusterConditionType string
 
 const (
 	VersionChecked TiflowClusterConditionType = "VersionChecked"
-	SyncChecked    TiflowClusterConditionType = "SyncChecked"
 	LeaderChecked  TiflowClusterConditionType = "LeaderChecked"
 
 	MastersInfoUpdatedChecked TiflowClusterConditionType = "MastersInfoUpdatedChecked"
@@ -13,6 +12,7 @@ const (
 	MasterReplicaChecked      TiflowClusterConditionType = "MasterReplicaChecked"
 	MasterReadyChecked        TiflowClusterConditionType = "MasterReadyChecked"
 	MasterMembersChecked      TiflowClusterConditionType = "MasterMembersChecked"
+	MasterSyncChecked         TiflowClusterConditionType = "MasterSyncChecked"
 
 	ExecutorsInfoUpdatedChecked TiflowClusterConditionType = "ExecutorsInfoUpdatedCheck"
 	ExecutorVersionChecked      TiflowClusterConditionType = "ExecutorVersionChecked"
@@ -20,4 +20,5 @@ const (
 	ExecutorReadyChecked        TiflowClusterConditionType = "ExecutorReadyChecked"
 	ExecutorPVCChecked          TiflowClusterConditionType = "ExecutorPVCChecked"
 	ExecutorMembersChecked      TiflowClusterConditionType = "ExecutorMembersChecked"
+	ExecutorSyncChecked         TiflowClusterConditionType = "ExecutorSyncChecked"
 )

@@ -93,7 +93,7 @@ func (ecm *executorConditionManager) Verify(ctx context.Context) error {
 	} else {
 		SetFalse(v1alpha1.LeaderChecked, ecm.GetClusterStatus(), metav1.Now())
 		return result.SyncStatusErr{
-			Err: fmt.Errorf("executor [%s/%s] verify: can not get ledaer from master cluster", ns, tcName),
+			Err: fmt.Errorf("executor [%s/%s] verify: can not get leader from master cluster", ns, tcName),
 		}
 	}
 
@@ -103,7 +103,7 @@ func (ecm *executorConditionManager) Verify(ctx context.Context) error {
 	}
 	SetTrue(v1alpha1.ExecutorsInfoUpdatedChecked, ecm.GetClusterStatus(), metav1.Now())
 
-	if ecm.ExecutorStsDesiredReplicas() == ecm.ExecutorAllActualMembers() {
+	if ecm.ExecutorStsDesiredReplicas() == ecm.ExecutorActualMembers() {
 		SetTrue(v1alpha1.ExecutorMembersChecked, ecm.GetClusterStatus(), metav1.Now())
 	} else {
 		SetFalse(v1alpha1.ExecutorMembersChecked, ecm.GetClusterStatus(), metav1.Now())
@@ -238,7 +238,7 @@ func (ecm *executorConditionManager) pvcVerify() bool {
 }
 
 func (ecm *executorConditionManager) versionVerify() bool {
-	klog.Infof("CurrentRevision: %d , UpdateRevision: %d",
+	klog.Infof("Executor: CurrentRevision: %d , UpdateRevision: %d",
 		ecm.GetExecutorStatus().StatefulSet.CurrentRevision,
 		ecm.GetExecutorStatus().StatefulSet.UpdateRevision)
 
@@ -250,25 +250,19 @@ func (ecm *executorConditionManager) versionVerify() bool {
 }
 
 func (ecm *executorConditionManager) replicasVerify() bool {
-	klog.Infof("DesiredReplicas: %d , CurrentReplicas: %d",
-		ecm.ExecutorStsDesiredReplicas(), ecm.ExecutorStsCurrentReplicas())
+	klog.Infof("DesiredReplicas: %d , CurrentReplicas: %d, UpdatedReplicas: %d",
+		ecm.ExecutorStsDesiredReplicas(), ecm.ExecutorStsCurrentReplicas(), ecm.ExecutorStsUpdatedReplicas())
 
-	// if status.GetSyncStatus(v1alpha1.UpgradeType, ecm.GetClusterStatus(),
-	// 	v1alpha1.TiFlowExecutorMemberType) == v1alpha1.Ongoing {
-	// 	return true
-	// }
+	if ecm.GetExecutorStatus().StatefulSet.CurrentRevision == ecm.GetExecutorStatus().StatefulSet.UpdateRevision {
+		return ecm.ExecutorStsDesiredReplicas() == ecm.ExecutorStsCurrentReplicas()
+	}
 
-	return ecm.ExecutorStsDesiredReplicas() == ecm.ExecutorStsCurrentReplicas()
+	return ecm.ExecutorStsDesiredReplicas() == ecm.ExecutorStsCurrentReplicas()+ecm.ExecutorStsUpdatedReplicas()
 }
 
 func (ecm *executorConditionManager) readyVerify() bool {
 	klog.Infof("DesiredReplicas: %d , ReadyReplicas: %d",
 		ecm.ExecutorStsDesiredReplicas(), ecm.ExecutorStsReadyReplicas())
-
-	// if status.GetSyncStatus(v1alpha1.UpgradeType, ecm.GetClusterStatus(),
-	// 	v1alpha1.TiFlowExecutorMemberType) == v1alpha1.Ongoing {
-	// 	return true
-	// }
 
 	return ecm.ExecutorStsDesiredReplicas() == ecm.ExecutorStsReadyReplicas()
 }
@@ -276,6 +270,11 @@ func (ecm *executorConditionManager) readyVerify() bool {
 func (ecm *executorConditionManager) leaderVerify() bool {
 	ns := ecm.GetNamespace()
 	tcName := ecm.GetName()
+
+	if ecm.Heterogeneous() && ecm.WithoutLocalMaster() {
+		ns = ecm.Spec.Cluster.Namespace
+		tcName = ecm.Spec.Cluster.Name
+	}
 
 	tiflowClient := tiflowapi.GetMasterClient(ecm.cli, ns, tcName, "", ecm.IsClusterTLSEnabled())
 	leader, err := tiflowClient.GetLeader()
@@ -290,8 +289,4 @@ func (ecm *executorConditionManager) leaderVerify() bool {
 	}
 
 	return true
-}
-
-func (ecm executorConditionManager) membersVerify() bool {
-	panic("not implemented")
 }

@@ -12514,7 +12514,7 @@ spec:
                   type: object
                 nullable: true
                 type: array
-              clusterStatus:
+              clusterPhase:
                 description: ClusterPhase represents the observed state of a tiflow
                   cluster Update by master's phase and executor's phase
                 type: string
@@ -13059,7 +13059,7 @@ spec:
               serverName:
                 type: string
             required:
-            - clusterStatus
+            - clusterPhase
             - lastTransitionTime
             - serverName
             type: object

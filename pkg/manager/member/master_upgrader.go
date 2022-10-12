@@ -42,7 +42,7 @@ func (u *masterUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSet *app
 
 	klog.Infof("start to upgrade tiflow master [%s/%s]", ns, tcName)
 
-	condition.SetFalse(v1alpha1.SyncChecked, tc.GetClusterStatus(), metav1.Now())
+	condition.SetFalse(v1alpha1.MasterSyncChecked, tc.GetClusterStatus(), metav1.Now())
 	status.Ongoing(v1alpha1.UpgradeType, tc.GetClusterStatus(), v1alpha1.TiFlowMasterMemberType,
 		fmt.Sprintf("tiflow master [%s/%s] upgrading...", ns, tcName))
 
@@ -56,9 +56,10 @@ func (u *masterUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSet *app
 		return nil
 	}
 
-	// if !templateEqual(newSet, oldSet) {
-	// 	return nil
-	// }
+	tc.Status.Master.Phase = v1alpha1.MasterUpgrading
+	if !templateEqual(newSet, oldSet) {
+		return nil
+	}
 
 	if tc.Status.Master.StatefulSet.UpdateRevision == tc.Status.Master.StatefulSet.CurrentRevision {
 		return nil

@@ -254,7 +254,7 @@ func (m *masterMemberManager) syncMasterStatefulSetForTiflowCluster(ctx context.
 	}
 
 	if setNotExist {
-		condition.SetFalse(pingcapcomv1alpha1.SyncChecked, tc.GetClusterStatus(), metav1.Now())
+		condition.SetFalse(pingcapcomv1alpha1.MasterSyncChecked, tc.GetClusterStatus(), metav1.Now())
 		status.Ongoing(pingcapcomv1alpha1.CreateType, tc.GetClusterStatus(), pingcapcomv1alpha1.TiFlowMasterMemberType,
 			fmt.Sprintf("start to create master cluster [%s/%s]", ns, tcName))
 
@@ -273,7 +273,7 @@ func (m *masterMemberManager) syncMasterStatefulSetForTiflowCluster(ctx context.
 		return nil
 	}
 
-	if condition.False(pingcapcomv1alpha1.SyncChecked, tc.GetClusterConditions()) {
+	if condition.False(pingcapcomv1alpha1.MasterSyncChecked, tc.GetClusterConditions()) {
 		// Force update takes precedence over scaling because force upgrade won't take effect when cluster gets stuck at scaling
 		if NeedForceUpgrade(tc.Annotations) {
 			tc.Status.Master.Phase = pingcapcomv1alpha1.MasterUpgrading

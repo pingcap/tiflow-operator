@@ -45,7 +45,8 @@ func (tcm *TiflowClusterConditionManager) Apply() error {
 		tcm.GetNamespace(), tcm.GetName(), "", tcm.IsClusterTLSEnabled()).
 		GetURL()
 
-	SetTrue(v1alpha1.SyncChecked, tcm.GetClusterStatus(), metav1.Now())
+	SetTrue(v1alpha1.MasterSyncChecked, tcm.GetClusterStatus(), metav1.Now())
+	SetTrue(v1alpha1.ExecutorSyncChecked, tcm.GetClusterStatus(), metav1.Now())
 	SetTrue(v1alpha1.VersionChecked, tcm.GetClusterStatus(), metav1.Now())
 	return nil
 }

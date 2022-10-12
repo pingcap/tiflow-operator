@@ -94,6 +94,15 @@ func (tc *TiflowCluster) ExecutorStsCurrentReplicas() int32 {
 	return stsStatus.CurrentReplicas
 }
 
+func (tc *TiflowCluster) ExecutorStsUpdatedReplicas() int32 {
+	stsStatus := tc.Status.Executor.StatefulSet
+	if stsStatus == nil {
+		return 0
+	}
+
+	return stsStatus.UpdatedReplicas
+}
+
 func (tc *TiflowCluster) ExecutorStsDesiredReplicas() int32 {
 	if tc.Spec.Executor == nil {
 		return 0
@@ -101,7 +110,7 @@ func (tc *TiflowCluster) ExecutorStsDesiredReplicas() int32 {
 
 	return tc.Spec.Executor.Replicas + int32(len(tc.Status.Executor.FailureMembers))
 }
-func (tc *TiflowCluster) ExecutorAllActualMembers() int32 {
+func (tc *TiflowCluster) ExecutorAllMembers() int32 {
 	if tc.Spec.Executor != nil {
 		return tc.ExecutorActualMembers() + tc.ExecutorActualPeerMembers()
 	}
@@ -154,11 +163,20 @@ func (tc *TiflowCluster) MasterStsCurrentReplicas() int32 {
 	return stsStatus.CurrentReplicas
 }
 
+func (tc *TiflowCluster) MasterStsUpdatedReplicas() int32 {
+	stsStatus := tc.Status.Master.StatefulSet
+	if stsStatus == nil {
+		return 0
+	}
+
+	return stsStatus.UpdatedReplicas
+}
+
 func (tc *TiflowCluster) MasterStsDesiredReplicas() int32 {
 	return tc.Spec.Master.Replicas + int32(len(tc.Status.Master.FailureMembers))
 }
 
-func (tc *TiflowCluster) MasterAllActualMembers() int32 {
+func (tc *TiflowCluster) MasterAllMembers() int32 {
 	if tc.Spec.Master != nil {
 		return tc.MasterActualMembers() + tc.MasterActualPeerMembers()
 	}

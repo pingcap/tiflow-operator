@@ -39,7 +39,7 @@ func (u *executorUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSts, n
 
 	klog.Infof("start to upgrade tiflow executor [%s/%s]", ns, tcName)
 
-	condition.SetFalse(v1alpha1.SyncChecked, tc.GetClusterStatus(), metav1.Now())
+	condition.SetFalse(v1alpha1.ExecutorSyncChecked, tc.GetClusterStatus(), metav1.Now())
 	status.Ongoing(v1alpha1.UpgradeType, tc.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType,
 		fmt.Sprintf("tiflow executor [%s/%s] upgrading...", ns, tcName))
 
@@ -54,6 +54,7 @@ func (u *executorUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSts, n
 		return nil
 	}
 
+	tc.Status.Executor.Phase = v1alpha1.ExecutorUpgrading
 	if !templateEqual(newSts, oldSts) {
 		return nil
 	}

@@ -611,7 +611,7 @@ type TiflowClusterStatus struct {
 	// ClusterPhase represents the observed state of a tiflow cluster
 	// Update by master's phase and executor's phase
 	// +required
-	ClusterPhase TiflowClusterPhaseType `json:"clusterStatus"`
+	ClusterPhase TiflowClusterPhaseType `json:"clusterPhase"`
 	// (Optional) Message related to the status of the MasterCluster
 	// +optional
 	Message string `json:"message,omitempty"`

@@ -3,7 +3,9 @@ package condition
 import (
 	"context"
 	"fmt"
+	"github.com/pingcap/tiflow-operator/pkg/status"
 	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/klog/v2"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -59,7 +61,7 @@ func (mcm *masterConditionManager) Verify(ctx context.Context) error {
 	}
 
 	// todo: need to handle failureMembers
-	if mcm.MasterStsDesiredReplicas() == mcm.MasterStsCurrentReplicas() {
+	if mcm.replicasVerify() {
 		SetTrue(v1alpha1.MasterReplicaChecked, mcm.GetClusterStatus(), metav1.Now())
 	} else {
 		SetFalse(v1alpha1.MasterReplicaChecked, mcm.GetClusterStatus(), metav1.Now())
@@ -68,7 +70,7 @@ func (mcm *masterConditionManager) Verify(ctx context.Context) error {
 		}
 	}
 
-	if mcm.MasterStsDesiredReplicas() == mcm.MasterStsReadyReplicas() {
+	if mcm.readyVerify() {
 		SetTrue(v1alpha1.MasterReadyChecked, mcm.GetClusterStatus(), metav1.Now())
 	} else {
 		SetFalse(v1alpha1.MasterReadyChecked, mcm.GetClusterStatus(), metav1.Now())
@@ -93,7 +95,7 @@ func (mcm *masterConditionManager) Verify(ctx context.Context) error {
 	SetTrue(v1alpha1.MastersInfoUpdatedChecked, mcm.GetClusterStatus(), metav1.Now())
 
 	// todo: unclear behavior of peerMembers
-	if mcm.MasterStsDesiredReplicas() == mcm.MasterAllActualMembers() {
+	if mcm.MasterStsDesiredReplicas() == mcm.MasterActualMembers() {
 		SetTrue(v1alpha1.MasterMembersChecked, mcm.GetClusterStatus(), metav1.Now())
 	} else {
 		return result.SyncStatusErr{
@@ -204,7 +206,35 @@ func (mcm *masterConditionManager) updateMembersInfo(mastersInfo tiflowapi.Maste
 }
 
 func (mcm *masterConditionManager) versionVerify() bool {
+	klog.Infof("Master: CurrentRevision: %d , UpdateRevision: %d",
+		mcm.GetMasterStatus().StatefulSet.CurrentRevision,
+		mcm.GetMasterStatus().StatefulSet.UpdateRevision)
+
+	if status.GetSyncStatus(v1alpha1.UpgradeType, mcm.GetClusterStatus(),
+		v1alpha1.TiFlowMasterMemberType) == v1alpha1.Ongoing {
+		return true
+	}
+
 	return statefulSetUpToDate(mcm.Status.Master.StatefulSet, true)
+}
+
+func (mcm *masterConditionManager) replicasVerify() bool {
+	klog.Infof("DesiredReplicas: %d , CurrentReplicas: %d, UpdatedReplicas: %d",
+		mcm.MasterStsDesiredReplicas(), mcm.MasterStsCurrentReplicas(), mcm.MasterStsUpdatedReplicas())
+
+	if mcm.GetMasterStatus().StatefulSet.CurrentRevision == mcm.GetMasterStatus().StatefulSet.UpdateRevision {
+		return mcm.MasterStsDesiredReplicas() == mcm.MasterStsCurrentReplicas()
+	}
+
+	return mcm.MasterStsDesiredReplicas() == mcm.MasterStsCurrentReplicas()+mcm.MasterStsUpdatedReplicas()
+
+}
+
+func (mcm *masterConditionManager) readyVerify() bool {
+	klog.Infof("DesiredReplicas: %d , ReadyReplicas: %d",
+		mcm.MasterStsDesiredReplicas(), mcm.MasterStsReadyReplicas())
+
+	return mcm.MasterStsDesiredReplicas() == mcm.MasterStsReadyReplicas()
 }
 
 func (mcm *masterConditionManager) leaderVerify() bool {
