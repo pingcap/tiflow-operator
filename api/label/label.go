@@ -21,9 +21,6 @@ const (
 
 	// NamespaceLabelKey is label key used in PV for easy querying
 	NamespaceLabelKey string = "app.kubernetes.io/namespace"
-	// UsedByLabelKey indicate where it is used. for example, tidb has two services,
-	// one for internal component access and the other for end-user
-	UsedByLabelKey string = "app.kubernetes.io/used-by"
 
 	// TiFlowOperator is ManagedByLabelKey label value
 	TiFlowOperator string = "tiflow-operator"
@@ -61,24 +58,6 @@ func New() Label {
 // Instance adds instance kv pair to label
 func (l Label) Instance(name string) Label {
 	l[InstanceLabelKey] = name
-	return l
-}
-
-// UsedBy adds use-by kv pair to label
-func (l Label) UsedBy(name string) Label {
-	l[UsedByLabelKey] = name
-	return l
-}
-
-// UsedByPeer adds used-by=peer label
-func (l Label) UsedByPeer() Label {
-	l[UsedByLabelKey] = "peer"
-	return l
-}
-
-// UsedByEndUser adds use-by=end-user label
-func (l Label) UsedByEndUser() Label {
-	l[UsedByLabelKey] = "end-user"
 	return l
 }
 

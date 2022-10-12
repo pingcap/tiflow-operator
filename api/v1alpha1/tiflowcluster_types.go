@@ -77,6 +77,11 @@ type ComponentSpec struct {
 	// +optional
 	Affinity *corev1.Affinity `json:"affinity,omitempty"`
 
+	// PriorityClassName of the component. Override the cluster-level one if present
+	// Optional: Defaults to cluster-level setting
+	// +optional
+	PriorityClassName *string `json:"priorityClassName,omitempty"`
+
 	// NodeSelector of the component. Merged into the cluster-level nodeSelector if non-empty
 	// Optional: Defaults to cluster-level setting
 	// +optional
@@ -450,7 +455,6 @@ type MasterMember struct {
 	// so uint64 may overflow int64 and thus convert to float64
 	Name          string `json:"podName,omitempty"`
 	ClientURL     string `json:"clientURL"`
-	Health        bool   `json:"health"`
 	MemberDeleted bool   `json:"memberDeleted,omitempty"`
 	// Last time the health transitioned from one to another.
 	// +nullable

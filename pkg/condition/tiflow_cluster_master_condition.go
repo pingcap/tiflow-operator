@@ -189,7 +189,6 @@ func (mcm *masterConditionManager) updateMembersInfo(mastersInfo tiflowapi.Maste
 			Address:            m.Address,
 			IsLeader:           m.IsLeader,
 			Name:               m.Name,
-			Health:             true,
 			LastTransitionTime: metav1.Now(),
 		}
 		clusterName, ordinal, namespace, err2 := getOrdinalFromName(m.Name, v1alpha1.TiFlowMasterMemberType)
@@ -249,7 +248,6 @@ func (mcm *masterConditionManager) leaderVerify() bool {
 
 	mcm.Status.Master.Leader = v1alpha1.MasterMember{
 		ClientURL:          leader.AdvertiseAddr,
-		Health:             true,
 		LastTransitionTime: metav1.Now(),
 	}
 

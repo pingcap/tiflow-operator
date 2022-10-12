@@ -86,7 +86,6 @@ func (r *StandaloneReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 func (r *StandaloneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&pingcapcomv1alpha1.Standalone{}).
-		Owns(&appsv1.StatefulSet{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
 		Owns(&corev1.ConfigMap{}).

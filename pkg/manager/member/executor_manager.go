@@ -72,7 +72,9 @@ func (m *executorMemberManager) Sync(ctx context.Context, tc *v1alpha1.TiflowClu
 		return nil
 	}
 
-	// todo: Need to know if master is available？
+	// if !tc.MasterIsAvailable() {
+	// 	return controller.RequeueErrorf("tiflow cluster: %s/%s, waiting for tiflow-master cluster running", ns, tcName)
+	// }
 
 	// Sync tilfow-Executor Headless Service
 	if err := m.syncExecutorHeadlessServiceForTiflowCluster(ctx, tc); err != nil {
@@ -259,9 +261,12 @@ func (m *executorMemberManager) getExecutorConfigMap(tc *v1alpha1.TiflowCluster)
 	}
 
 	// TODO: add discovery or full name to make sure executor can connect to alive master
-	masterHost := controller.TiflowMasterMemberName(tc.Name)
-	if tc.Heterogeneous() && tc.WithoutLocalMaster() {
-		masterHost = controller.TiflowMasterFullHost(tc.Spec.Cluster.Name, tc.Spec.Cluster.Namespace, tc.Spec.ClusterDomain) // use pd of reference cluster
+	masterAddresses := make([]string, 0)
+	if !tc.WithoutLocalMaster() {
+		masterAddresses = append(masterAddresses, controller.TiflowMasterMemberName(tc.Name)+":10240")
+	}
+	if tc.Heterogeneous() {
+		masterAddresses = append(masterAddresses, controller.TiflowMasterFullHost(tc.Spec.Cluster.Name, tc.Spec.Cluster.Namespace, tc.Spec.ClusterDomain)+":10240") // use dm-master of reference cluster
 	}
 
 	startScript, err := RenderExecutorStartScript(&TiflowExecutorStartScriptModel{
@@ -269,7 +274,7 @@ func (m *executorMemberManager) getExecutorConfigMap(tc *v1alpha1.TiflowCluster)
 			ClusterDomain: tc.Spec.ClusterDomain,
 		},
 		DataDir:       tiflowExecutorDataVolumeMountPath,
-		MasterAddress: masterHost + ":10240",
+		MasterAddress: strings.Join(masterAddresses, ","),
 	})
 	if err != nil {
 		return nil, err
@@ -304,7 +309,7 @@ func (m *executorMemberManager) getNewExecutorHeadlessService(tc *v1alpha1.Tiflo
 	instanceName := tc.GetInstanceName()
 
 	executorSelector := label.New().Instance(instanceName).TiflowExecutor()
-	svcLabels := executorSelector.Copy().UsedByPeer().Labels()
+	svcLabels := executorSelector.Copy().Labels()
 
 	svc := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{

@@ -284,7 +284,6 @@ func (ecm *executorConditionManager) leaderVerify() bool {
 
 	ecm.Status.Master.Leader = v1alpha1.MasterMember{
 		ClientURL:          leader.AdvertiseAddr,
-		Health:             true,
 		LastTransitionTime: metav1.Now(),
 	}
 

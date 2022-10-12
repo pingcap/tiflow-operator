@@ -6314,6 +6314,11 @@ spec:
                             type: string
                         type: object
                     type: object
+                  priorityClassName:
+                    description: 'PriorityClassName of the component. Override the
+                      cluster-level one if present Optional: Defaults to cluster-level
+                      setting'
+                    type: string
                   pvReclaimPolicy:
                     default: Retain
                     description: Persistent volume reclaim policy applied to the PVs
@@ -11973,6 +11978,11 @@ spec:
                             type: string
                         type: object
                     type: object
+                  priorityClassName:
+                    description: 'PriorityClassName of the component. Override the
+                      cluster-level one if present Optional: Defaults to cluster-level
+                      setting'
+                    type: string
                   replicas:
                     description: The desired ready replicas
                     format: int32
@@ -12822,8 +12832,6 @@ spec:
                           type: string
                         clientURL:
                           type: string
-                        health:
-                          type: boolean
                         id:
                           type: string
                         is_leader:
@@ -12843,7 +12851,6 @@ spec:
                           type: string
                       required:
                       - clientURL
-                      - health
                       type: object
                     type: object
                   image:
@@ -12865,8 +12872,6 @@ spec:
                         type: string
                       clientURL:
                         type: string
-                      health:
-                        type: boolean
                       id:
                         type: string
                       is_leader:
@@ -12886,7 +12891,6 @@ spec:
                         type: string
                     required:
                     - clientURL
-                    - health
                     type: object
                   members:
                     additionalProperties:
@@ -12896,8 +12900,6 @@ spec:
                           type: string
                         clientURL:
                           type: string
-                        health:
-                          type: boolean
                         id:
                           type: string
                         is_leader:
@@ -12917,7 +12919,6 @@ spec:
                           type: string
                       required:
                       - clientURL
-                      - health
                       type: object
                     type: object
                   message:
@@ -12931,8 +12932,6 @@ spec:
                           type: string
                         clientURL:
                           type: string
-                        health:
-                          type: boolean
                         id:
                           type: string
                         is_leader:
@@ -12952,7 +12951,6 @@ spec:
                           type: string
                       required:
                       - clientURL
-                      - health
                       type: object
                     type: object
                   phase:

@@ -506,7 +506,7 @@ func (m *masterMemberManager) getNewMasterServiceForTiflowCluster(tc *pingcapcom
 	svcName := controller.TiflowMasterMemberName(tcName)
 	instanceName := tc.GetInstanceName()
 	masterSelector := label.New().Instance(instanceName).TiflowMaster()
-	masterLabels := masterSelector.Copy().UsedByEndUser().Labels()
+	masterLabels := masterSelector.Copy().Labels()
 
 	ports := []corev1.ServicePort{
 		{
@@ -566,7 +566,7 @@ func getNewMasterHeadlessServiceForTiflowCluster(tc *pingcapcomv1alpha1.TiflowCl
 	svcName := controller.TiflowMasterPeerMemberName(tcName)
 	instanceName := tc.GetInstanceName()
 	masterSelector := label.New().Instance(instanceName).TiflowMaster()
-	masterLabels := masterSelector.Copy().UsedByPeer().Labels()
+	masterLabels := masterSelector.Copy().Labels()
 
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
