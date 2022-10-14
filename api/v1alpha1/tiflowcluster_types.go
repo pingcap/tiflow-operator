@@ -526,7 +526,7 @@ type ClusterSyncType struct {
 type MasterStatus struct {
 	Image string `json:"image,omitempty"`
 	// +required
-	ServerName     string                  `json:"serverName"`
+	ServerAddress  string                  `json:"serverAddress"`
 	Leader         MasterMember            `json:"leader,omitempty"`
 	Members        map[string]MasterMember `json:"members,omitempty"`
 	PeerMembers    map[string]MasterMember `json:"peerMembers,omitempty"`

@@ -83,7 +83,7 @@ func (mm *masterPhaseManager) SyncPhase() {
 
 func (mm *masterPhaseManager) syncMasterPhaseFromCluster() bool {
 
-	if mm.syncMasterCreatPhase() {
+	if mm.syncMasterCreatePhase() {
 		return true
 	}
 
@@ -97,7 +97,7 @@ func (mm *masterPhaseManager) syncMasterPhaseFromCluster() bool {
 
 	return false
 }
-func (mm *masterPhaseManager) syncMasterCreatPhase() bool {
+func (mm *masterPhaseManager) syncMasterCreatePhase() bool {
 	syncTypes := mm.GetMasterSyncTypes()
 	index := findPos(v1alpha1.CreateType, syncTypes)
 	if index < 0 || syncTypes[index].Status == v1alpha1.Completed {

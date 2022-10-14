@@ -82,7 +82,7 @@ func (em *executorPhaseManger) SyncPhase() {
 }
 
 func (em *executorPhaseManger) syncExecutorPhaseFromCluster() bool {
-	if em.syncExecutorCreatPhase() {
+	if em.syncExecutorCreatePhase() {
 		return true
 	}
 
@@ -97,7 +97,7 @@ func (em *executorPhaseManger) syncExecutorPhaseFromCluster() bool {
 	return false
 
 }
-func (em *executorPhaseManger) syncExecutorCreatPhase() bool {
+func (em *executorPhaseManger) syncExecutorCreatePhase() bool {
 	syncTypes := em.GetExecutorSyncTypes()
 	index := findPos(v1alpha1.CreateType, syncTypes)
 	if index < 0 || syncTypes[index].Status == v1alpha1.Completed {
