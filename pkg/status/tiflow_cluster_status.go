@@ -60,7 +60,7 @@ func (tcsm *TiflowClusterStatusManager) SyncTiflowClusterPhase() {
 	case masterPhase == v1alpha1.MasterUnknown || executorPhase == v1alpha1.ExecutorUnknown:
 		tcsm.SetTiflowClusterPhase(v1alpha1.ClusterUnknown, "errors, unknown phase for Master or Executor")
 	case masterPhase == v1alpha1.MasterRunning && executorPhase == v1alpha1.ExecutorRunning:
-		tcsm.SetTiflowClusterPhase(v1alpha1.ClusterCompleted, "reconcile completed successfully. Enjoying...")
+		tcsm.SetTiflowClusterPhase(v1alpha1.ClusterRunning, "reconcile completed successfully. Enjoying...")
 	default:
 		tcsm.SetTiflowClusterPhase(v1alpha1.ClusterReconciling, "reconciling... Just a moment")
 	}

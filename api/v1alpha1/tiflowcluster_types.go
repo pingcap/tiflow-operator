@@ -453,7 +453,7 @@ type MasterMember struct {
 	IsLeader bool   `json:"is_leader,omitempty"`
 	// member id is actually an uint64, but apimachinery's json only treats numbers as int64/float64
 	// so uint64 may overflow int64 and thus convert to float64
-	Name          string `json:"podName,omitempty"`
+	Name          string `json:"name,omitempty"`
 	ClientURL     string `json:"clientURL"`
 	MemberDeleted bool   `json:"memberDeleted,omitempty"`
 	// Last time the health transitioned from one to another.
@@ -503,7 +503,7 @@ type StorageVolumeStatus struct {
 
 // +k8s:deepcopy-gen=true
 
-// ClusterSyncType represents master or executor cluster's sync status as it is perceived by the operator\
+// ClusterSyncType represents master or executor cluster's sync status as it is perceived by the operator
 type ClusterSyncType struct {
 	// Name of the Sync type
 	// +required
@@ -530,7 +530,7 @@ type MasterStatus struct {
 	PeerMembers    map[string]MasterMember `json:"peerMembers,omitempty"`
 	FailureMembers map[string]MasterMember `json:"failureMembers,omitempty"`
 	StatefulSet    *apps.StatefulSetStatus `json:"statefulSet,omitempty"`
-	// LastUpdateTime means the time when the status of Master cluster's info was updated
+	// LastUpdateTime means the time when the status of Master or executor cluster's info was updated
 	// +required
 	LastUpdateTime metav1.Time `json:"lastUpdateTime"`
 
@@ -542,8 +542,8 @@ type MasterStatus struct {
 	// +optional
 	Message string `json:"message,omitempty"`
 	// +nullable
-	SyncTypes []ClusterSyncType `json:"SyncTypes,omitempty"`
-	// LastTransitionTime means the time when the status of Master Phase
+	SyncTypes []ClusterSyncType `json:"syncTypes,omitempty"`
+	// LastTransitionTime means the time when the status of Cluster Phase
 	// transitioned from one to another
 	// +required
 	LastTransitionTime metav1.Time `json:"lastTransitionTime"`

@@ -84,7 +84,7 @@ func (r *TiflowClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	tc := &pingcapcomv1alpha1.TiflowCluster{}
 	if err := r.Get(ctx, req.NamespacedName, tc); err != nil {
-		r.Log.Error(err, "failed to retrieve tiflow cluster resource")
+		log.Error(err, "failed to retrieve tiflow cluster resource")
 		return result.RequeueIfError(client.IgnoreNotFound(err))
 	}
 

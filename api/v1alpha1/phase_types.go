@@ -8,8 +8,8 @@ const (
 	ClusterStarting TiflowClusterPhaseType = "Starting"
 	// ClusterReconciling indicates the state of operator is reconciling
 	ClusterReconciling TiflowClusterPhaseType = "Reconciling"
-	// ClusterCompleted indicates the state of operator is completed
-	ClusterCompleted TiflowClusterPhaseType = "Completed"
+	// ClusterRunning indicates the state of operator is completed
+	ClusterRunning TiflowClusterPhaseType = "Running"
 	// ClusterUnknown indicates the state of operator is unknown
 	ClusterUnknown TiflowClusterPhaseType = "Unknown"
 	// ClusterFailed indicates the state of operator is failed

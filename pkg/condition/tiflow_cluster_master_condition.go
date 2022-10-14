@@ -84,7 +84,7 @@ func (mcm *masterConditionManager) Verify(ctx context.Context) error {
 	} else {
 		SetFalse(v1alpha1.LeaderChecked, mcm.GetClusterStatus(), metav1.Now())
 		return result.SyncStatusErr{
-			Err: fmt.Errorf("master [%s/%s] verify: can not get ledaer from master cluster", ns, tcName),
+			Err: fmt.Errorf("master [%s/%s] verify: can not get leader from master cluster", ns, tcName),
 		}
 	}
 

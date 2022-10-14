@@ -12712,7 +12712,7 @@ spec:
                   syncTypes:
                     items:
                       description: ClusterSyncType represents master or executor cluster's
-                        sync status as it is perceived by the operator\
+                        sync status as it is perceived by the operator
                       properties:
                         lastUpdateTime:
                           description: LastUpdateTime means the time when the status
@@ -12796,34 +12796,6 @@ spec:
                   of cluster Important: Run "make" to regenerate code after modifying
                   this file'
                 properties:
-                  SyncTypes:
-                    items:
-                      description: ClusterSyncType represents master or executor cluster's
-                        sync status as it is perceived by the operator\
-                      properties:
-                        lastUpdateTime:
-                          description: LastUpdateTime means the time when the status
-                            of Sync was updated
-                          format: date-time
-                          type: string
-                        message:
-                          description: (Optional) Message related to the status of
-                            the Sync
-                          type: string
-                        name:
-                          description: Name of the Sync type
-                          type: integer
-                        status:
-                          description: 'Status of SyncType: Failed, Ongoing, Completed
-                            or Unknown'
-                          type: integer
-                      required:
-                      - lastUpdateTime
-                      - name
-                      - status
-                      type: object
-                    nullable: true
-                    type: array
                   failureMembers:
                     additionalProperties:
                       description: MasterMember is Tiflow-master member status
@@ -12844,7 +12816,7 @@ spec:
                           type: string
                         memberDeleted:
                           type: boolean
-                        podName:
+                        name:
                           description: member id is actually an uint64, but apimachinery's
                             json only treats numbers as int64/float64 so uint64 may
                             overflow int64 and thus convert to float64
@@ -12857,12 +12829,12 @@ spec:
                     type: string
                   lastTransitionTime:
                     description: LastTransitionTime means the time when the status
-                      of Master Phase transitioned from one to another
+                      of Cluster Phase transitioned from one to another
                     format: date-time
                     type: string
                   lastUpdateTime:
                     description: LastUpdateTime means the time when the status of
-                      Master cluster's info was updated
+                      Master or executor cluster's info was updated
                     format: date-time
                     type: string
                   leader:
@@ -12884,7 +12856,7 @@ spec:
                         type: string
                       memberDeleted:
                         type: boolean
-                      podName:
+                      name:
                         description: member id is actually an uint64, but apimachinery's
                           json only treats numbers as int64/float64 so uint64 may
                           overflow int64 and thus convert to float64
@@ -12912,7 +12884,7 @@ spec:
                           type: string
                         memberDeleted:
                           type: boolean
-                        podName:
+                        name:
                           description: member id is actually an uint64, but apimachinery's
                             json only treats numbers as int64/float64 so uint64 may
                             overflow int64 and thus convert to float64
@@ -12944,7 +12916,7 @@ spec:
                           type: string
                         memberDeleted:
                           type: boolean
-                        podName:
+                        name:
                           description: member id is actually an uint64, but apimachinery's
                             json only treats numbers as int64/float64 so uint64 may
                             overflow int64 and thus convert to float64
@@ -13047,6 +13019,34 @@ spec:
                     required:
                     - replicas
                     type: object
+                  syncTypes:
+                    items:
+                      description: ClusterSyncType represents master or executor cluster's
+                        sync status as it is perceived by the operator
+                      properties:
+                        lastUpdateTime:
+                          description: LastUpdateTime means the time when the status
+                            of Sync was updated
+                          format: date-time
+                          type: string
+                        message:
+                          description: (Optional) Message related to the status of
+                            the Sync
+                          type: string
+                        name:
+                          description: Name of the Sync type
+                          type: integer
+                        status:
+                          description: 'Status of SyncType: Failed, Ongoing, Completed
+                            or Unknown'
+                          type: integer
+                      required:
+                      - lastUpdateTime
+                      - name
+                      - status
+                      type: object
+                    nullable: true
+                    type: array
                 required:
                 - lastTransitionTime
                 - lastUpdateTime
