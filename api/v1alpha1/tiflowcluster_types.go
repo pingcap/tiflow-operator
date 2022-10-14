@@ -524,7 +524,9 @@ type ClusterSyncType struct {
 
 // MasterStatus defines the desired state of tiflow master
 type MasterStatus struct {
-	Image          string                  `json:"image,omitempty"`
+	Image string `json:"image,omitempty"`
+	// +required
+	ServerName     string                  `json:"serverName"`
 	Leader         MasterMember            `json:"leader,omitempty"`
 	Members        map[string]MasterMember `json:"members,omitempty"`
 	PeerMembers    map[string]MasterMember `json:"peerMembers,omitempty"`
@@ -601,8 +603,6 @@ type TiflowClusterCondition struct {
 
 // TiflowClusterStatus defines the observed state of TiflowCluster
 type TiflowClusterStatus struct {
-	// +required
-	ServerName string `json:"serverName"`
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 	Master   MasterStatus   `json:"master,omitempty"`

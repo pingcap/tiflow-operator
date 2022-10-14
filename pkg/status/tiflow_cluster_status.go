@@ -3,7 +3,6 @@ package status
 import (
 	"context"
 	"fmt"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
@@ -73,13 +72,13 @@ func (tcsm *TiflowClusterStatusManager) SetTiflowClusterPhase(phase v1alpha1.Tif
 	clusterStatus.LastTransitionTime = metav1.Now()
 }
 
-func (tcsm TiflowClusterStatusManager) UpdateTilfowClusterPhase() error {
+func (tcsm TiflowClusterStatusManager) UpdateTiflowClusterPhase() error {
 
 	ns := tcsm.cluster.GetNamespace()
 	tcName := tcsm.cluster.GetName()
 
 	// status := tcsm.cluster.Status.DeepCopy()
-
+	// todo: need to modified
 	// don't wait due to limited number of clients, but backoff after the default number of steps
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		// var updateErr error
@@ -120,7 +119,7 @@ func (tcsm TiflowClusterStatusManager) UpdateTilfowClusterPhase() error {
 func (tcsm *TiflowClusterStatusManager) Update() error {
 	tcsm.SyncTiflowClusterPhase()
 
-	if err := tcsm.UpdateTilfowClusterPhase(); err != nil {
+	if err := tcsm.UpdateTiflowClusterPhase(); err != nil {
 		klog.Errorf("update cluster phase error: %v", err)
 		return err
 	}

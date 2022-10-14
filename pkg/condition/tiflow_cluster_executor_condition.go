@@ -253,7 +253,7 @@ func (ecm *executorConditionManager) replicasVerify() bool {
 	klog.Infof("DesiredReplicas: %d , CurrentReplicas: %d, UpdatedReplicas: %d",
 		ecm.ExecutorStsDesiredReplicas(), ecm.ExecutorStsCurrentReplicas(), ecm.ExecutorStsUpdatedReplicas())
 
-	if ecm.GetExecutorStatus().StatefulSet.CurrentRevision == ecm.GetExecutorStatus().StatefulSet.UpdateRevision {
+	if statefulSetUpToDate(ecm.Status.Executor.StatefulSet, true) {
 		return ecm.ExecutorStsDesiredReplicas() == ecm.ExecutorStsCurrentReplicas()
 	}
 

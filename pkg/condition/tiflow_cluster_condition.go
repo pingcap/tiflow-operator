@@ -17,7 +17,7 @@ type TiflowClusterConditionManager struct {
 	executorCondition ClusterCondition
 }
 
-func NewTiflowCLusterConditionManager(cli client.Client, clientSet kubernetes.Interface, tc *v1alpha1.TiflowCluster) Condition {
+func NewTiflowClusterConditionManager(cli client.Client, clientSet kubernetes.Interface, tc *v1alpha1.TiflowCluster) Condition {
 	return &TiflowClusterConditionManager{
 		TiflowCluster:     tc,
 		cli:               cli,
@@ -41,7 +41,7 @@ func (tcm *TiflowClusterConditionManager) Sync(ctx context.Context) error {
 }
 
 func (tcm *TiflowClusterConditionManager) Apply() error {
-	tcm.GetClusterStatus().ServerName = tiflowapi.GetMasterClient(tcm.cli,
+	tcm.GetClusterStatus().Master.ServerName = tiflowapi.GetMasterClient(tcm.cli,
 		tcm.GetNamespace(), tcm.GetName(), "", tcm.IsClusterTLSEnabled()).
 		GetURL()
 

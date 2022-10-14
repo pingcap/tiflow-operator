@@ -221,7 +221,7 @@ func (mcm *masterConditionManager) replicasVerify() bool {
 	klog.Infof("DesiredReplicas: %d , CurrentReplicas: %d, UpdatedReplicas: %d",
 		mcm.MasterStsDesiredReplicas(), mcm.MasterStsCurrentReplicas(), mcm.MasterStsUpdatedReplicas())
 
-	if mcm.GetMasterStatus().StatefulSet.CurrentRevision == mcm.GetMasterStatus().StatefulSet.UpdateRevision {
+	if statefulSetUpToDate(mcm.Status.Master.StatefulSet, true) {
 		return mcm.MasterStsDesiredReplicas() == mcm.MasterStsCurrentReplicas()
 	}
 

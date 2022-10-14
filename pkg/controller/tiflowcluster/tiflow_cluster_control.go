@@ -46,7 +46,7 @@ func (c *defaultTiflowClusterControl) UpdateTiflowCluster(ctx context.Context, t
 	//	return nil // fatal error, no need to retry on invalid object
 	// }
 
-	c.conditionUpdater = condition.NewTiflowCLusterConditionManager(c.cli, c.clientSet, tc)
+	c.conditionUpdater = condition.NewTiflowClusterConditionManager(c.cli, c.clientSet, tc)
 
 	oldStatus := tc.Status.DeepCopy()
 

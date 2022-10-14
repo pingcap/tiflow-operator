@@ -12929,6 +12929,8 @@ spec:
                     description: Phase represents the observed state of a tiflow master
                       Update by sync types
                     type: string
+                  serverName:
+                    type: string
                   statefulSet:
                     description: StatefulSetStatus represents the current state of
                       a StatefulSet.
@@ -13050,16 +13052,14 @@ spec:
                 required:
                 - lastTransitionTime
                 - lastUpdateTime
+                - serverName
                 type: object
               message:
                 description: (Optional) Message related to the status of the MasterCluster
                 type: string
-              serverName:
-                type: string
             required:
             - clusterPhase
             - lastTransitionTime
-            - serverName
             type: object
         type: object
     served: true
