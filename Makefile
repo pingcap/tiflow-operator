@@ -1,7 +1,7 @@
 
 # Image URL to use all building/pushing image targets
-DOCKER_REGISTRY ?= steponce7
-DOCKER_REPO ?= ${DOCKER_REGISTRY}/controller
+DOCKER_REGISTRY ?= gcr.io/pingcap-public/tidbcloud
+DOCKER_REPO ?= ${DOCKER_REGISTRY}/tiflow-operator
 IMAGE_TAG ?= latest
 IMG ?= ${DOCKER_REPO}:${IMAGE_TAG}
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
