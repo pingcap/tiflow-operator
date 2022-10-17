@@ -5,7 +5,7 @@
 replicaCount: 1
 
 image:
-  repository: chunzhuli/controller
+  repository: gcr.io/pingcap-public/tidbcloud/tiflow-operator
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: "latest"

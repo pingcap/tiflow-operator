@@ -7,7 +7,7 @@ spec:
   configUpdateStrategy: RollingUpdate
   imagePullPolicy: Always
   master:
-    baseImage: chunzhuli/dataflow
+    baseImage: gcr.io/pingcap-public/tidbcloud/tiflow
     maxFailoverCount: 0
     replicas: 3
     # if storageClassName is not set, the default Storage Class of the Kubernetes cluster will be used
@@ -26,7 +26,7 @@ spec:
         user = "root"
         password = "123456"
   executor:
-    baseImage: chunzhuli/dataflow
+    baseImage: gcr.io/pingcap-public/tidbcloud/tiflow
     maxFailoverCount: 0
     replicas: 3
     stateful: false
