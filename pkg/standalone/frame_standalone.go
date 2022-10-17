@@ -19,7 +19,6 @@ import (
 
 const (
 	FRAME_STANDALONE = "mysql"
-	USER_STANDALONE  = "etcd"
 	CONTAINER_PORT   = 3306
 )
 
@@ -283,7 +282,6 @@ func createPVIfNotExists(pv *corev1.PersistentVolume) {
 			corev1.ResourceStorage: resource.MustParse("5Gi"),
 		},
 		AccessModes: []corev1.PersistentVolumeAccessMode{
-			// 该卷可以被单个节点以读/写模式挂载
 			corev1.ReadWriteOnce,
 		},
 

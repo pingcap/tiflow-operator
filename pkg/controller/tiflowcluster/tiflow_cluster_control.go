@@ -2,13 +2,12 @@ package tiflowcluster
 
 import (
 	"context"
-	"k8s.io/client-go/kubernetes"
-
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	errorutils "k8s.io/apimachinery/pkg/util/errors"
+	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
+	"github.com/pingcap/tiflow-operator/pkg/condition"
 	"github.com/pingcap/tiflow-operator/pkg/manager"
 	"github.com/pingcap/tiflow-operator/pkg/manager/member"
 )
@@ -25,56 +24,49 @@ type ControlInterface interface {
 // implements the documented semantics for tiflowClusters.
 func NewDefaultTiflowClusterControl(cli client.Client, clientSet kubernetes.Interface) ControlInterface {
 	return &defaultTiflowClusterControl{
-		cli,
-		member.NewMasterMemberManager(cli, clientSet),
-		member.NewExecutorMemberManager(cli, clientSet),
-		&realConditionUpdater{},
-		NewRealStatusUpdater(cli),
+		cli:                   cli,
+		clientSet:             clientSet,
+		masterMemberManager:   member.NewMasterMemberManager(cli, clientSet),
+		executorMemberManager: member.NewExecutorMemberManager(cli, clientSet),
 	}
 }
 
 type defaultTiflowClusterControl struct {
 	cli                   client.Client
+	clientSet             kubernetes.Interface
 	masterMemberManager   manager.TiflowManager
 	executorMemberManager manager.TiflowManager
-	conditionUpdater      ConditionUpdater
-	statusUpdater         StatusUpdater
+	conditionUpdater      condition.Condition
 }
 
 // UpdateTiflowCluster executes the core logic loop for a tiflowcluster.
 func (c *defaultTiflowClusterControl) UpdateTiflowCluster(ctx context.Context, tc *v1alpha1.TiflowCluster) error {
-	//c.defaulting(tc)
-	//if !c.validate(tc) {
+	// c.defaulting(tc)
+	// if !c.validate(tc) {
 	//	return nil // fatal error, no need to retry on invalid object
-	//}
+	// }
 
-	var errs []error
+	c.conditionUpdater = condition.NewTiflowClusterConditionManager(c.cli, c.clientSet, tc)
+
 	oldStatus := tc.Status.DeepCopy()
 
 	if err := c.updateTiflowCluster(ctx, tc); err != nil {
-		errs = append(errs, err)
+		return err
 	}
 
-	// TODO: add WaitUntilRunning here to make sure newly added nodes work now
-
-	if err := c.conditionUpdater.Update(tc); err != nil {
-		errs = append(errs, err)
+	if err := c.conditionUpdater.Sync(ctx); err != nil {
+		return err
 	}
 
+	// todo: need to modify
 	if apiequality.Semantic.DeepEqual(&tc.Status, oldStatus) {
-		return errorutils.NewAggregate(errs)
+		return nil
 	}
 
-	if _, err := c.statusUpdater.UpdateTiflowCluster(tc); err != nil {
-		errs = append(errs, err)
-	}
-
-	return errorutils.NewAggregate(errs)
+	return nil
 }
 
 func (c *defaultTiflowClusterControl) updateTiflowCluster(ctx context.Context, tc *v1alpha1.TiflowCluster) error {
-	var errs []error
-
 	// works that should be done to make the tiflow-master cluster current state match the desired state:
 	//   - create or update the tiflow-master service
 	//   - create or update the tiflow-master headless service
@@ -87,7 +79,7 @@ func (c *defaultTiflowClusterControl) updateTiflowCluster(ctx context.Context, t
 	//   - scale out/in the tiflow-master cluster
 	//   - failover the tiflow-master cluster
 	if err := c.masterMemberManager.Sync(ctx, tc); err != nil {
-		errs = append(errs, err)
+		return err
 	}
 
 	// works that should be done to make the tiflow-executor cluster current state match the desired state:
@@ -99,8 +91,8 @@ func (c *defaultTiflowClusterControl) updateTiflowCluster(ctx context.Context, t
 	//   - scale out/in the tiflow-executor cluster
 	//   - failover the tiflow-executor cluster
 	if err := c.executorMemberManager.Sync(ctx, tc); err != nil {
-		errs = append(errs, err)
+		return err
 	}
 
-	return errorutils.NewAggregate(errs)
+	return nil
 }

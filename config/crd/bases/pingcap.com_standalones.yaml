@@ -59,26 +59,6 @@ spec:
                 description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
                   Important: Run "make" to regenerate code after modifying this file'
                 type: string
-              userStandalone:
-                properties:
-                  image:
-                    type: string
-                  name:
-                    description: etcd-standalone-sample
-                    type: string
-                  ports:
-                    items:
-                      format: int32
-                      type: integer
-                    type: array
-                  size:
-                    format: int32
-                    type: integer
-                required:
-                - image
-                - name
-                - ports
-                type: object
             required:
             - name
             type: object

@@ -3,17 +3,19 @@ package member
 import (
 	"context"
 	"fmt"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 	podutil "k8s.io/kubernetes/pkg/api/v1/pod"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
+	"github.com/pingcap/tiflow-operator/pkg/condition"
 	"github.com/pingcap/tiflow-operator/pkg/controller"
 	mngerutils "github.com/pingcap/tiflow-operator/pkg/manager/utils"
+	"github.com/pingcap/tiflow-operator/pkg/status"
 )
 
 type executorUpgrader struct {
@@ -35,10 +37,11 @@ func (u *executorUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSts, n
 	ns := tc.GetNamespace()
 	tcName := tc.GetName()
 
-	if !tc.Status.Executor.Synced {
-		return fmt.Errorf("tiflowCluster: [%s/%s]'s tiflow-executor status sync failed,"+
-			"can not to be upgraded", ns, tcName)
-	}
+	klog.Infof("start to upgrade tiflow executor [%s/%s]", ns, tcName)
+
+	condition.SetFalse(v1alpha1.ExecutorSyncChecked, tc.GetClusterStatus(), metav1.Now())
+	status.Ongoing(v1alpha1.UpgradeType, tc.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType,
+		fmt.Sprintf("tiflow executor [%s/%s] upgrading...", ns, tcName))
 
 	if tc.ExecutorScaling() {
 		klog.Infof("TiflowCluster: [%s/%s]'s tiflow-executor is scaling, can not upgrade tiflow-executor",
@@ -51,11 +54,12 @@ func (u *executorUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSts, n
 		return nil
 	}
 
-	tc.Status.Executor.Phase = v1alpha1.UpgradePhase
+	tc.Status.Executor.Phase = v1alpha1.ExecutorUpgrading
 	if !templateEqual(newSts, oldSts) {
 		return nil
 	}
 
+	klog.Infof("CurrentRevision: %s, UpdateRevision: %s", tc.Status.Executor.StatefulSet.CurrentRevision, tc.Status.Executor.StatefulSet.UpdateRevision)
 	if tc.Status.Executor.StatefulSet.UpdateRevision == tc.Status.Executor.StatefulSet.CurrentRevision {
 		return nil
 	}
@@ -69,6 +73,7 @@ func (u *executorUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSts, n
 	}
 
 	mngerutils.SetUpgradePartition(newSts, *oldSts.Spec.UpdateStrategy.RollingUpdate.Partition)
+	klog.Infof("Upgrading tiflow-executor statefulSet")
 	for i := *oldSts.Spec.Replicas - 1; i >= 0; i-- {
 		podName := TiflowExecutorPodName(tcName, i)
 		pod := &corev1.Pod{}
@@ -102,13 +107,6 @@ func (u *executorUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSts, n
 		mngerutils.SetUpgradePartition(newSts, i)
 		return nil
 	}
-	return nil
-}
-
-// todo: Need to be removed
-func (u *executorUpgrader) upgradeExecutorPod(ctx context.Context, tc *v1alpha1.TiflowCluster, ordinal int32, newSts *appsv1.StatefulSet) error {
-
-	mngerutils.SetUpgradePartition(newSts, ordinal)
 
 	return nil
 }

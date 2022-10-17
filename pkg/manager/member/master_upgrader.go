@@ -7,14 +7,17 @@ import (
 
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 	podutil "k8s.io/kubernetes/pkg/api/v1/pod"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
+	"github.com/pingcap/tiflow-operator/pkg/condition"
 	"github.com/pingcap/tiflow-operator/pkg/controller"
 	mngerutils "github.com/pingcap/tiflow-operator/pkg/manager/utils"
+	"github.com/pingcap/tiflow-operator/pkg/status"
 	"github.com/pingcap/tiflow-operator/pkg/tiflowapi"
 )
 
@@ -36,9 +39,13 @@ func (u *masterUpgrader) Upgrade(tc *v1alpha1.TiflowCluster, oldSet *apps.Statef
 func (u *masterUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSet *apps.StatefulSet, newSet *apps.StatefulSet) error {
 	ns := tc.GetNamespace()
 	tcName := tc.GetName()
-	if !tc.Status.Master.Synced {
-		return fmt.Errorf("tiflowcluster: [%s/%s]'s tiflow-master status sync failed, can not to be upgraded", ns, tcName)
-	}
+
+	klog.Infof("start to upgrade tiflow master [%s/%s]", ns, tcName)
+
+	condition.SetFalse(v1alpha1.MasterSyncChecked, tc.GetClusterStatus(), metav1.Now())
+	status.Ongoing(v1alpha1.UpgradeType, tc.GetClusterStatus(), v1alpha1.TiFlowMasterMemberType,
+		fmt.Sprintf("tiflow master [%s/%s] upgrading...", ns, tcName))
+
 	if tc.MasterScaling() {
 		klog.Infof("TiflowCluster: [%s/%s]'s tiflow-master is scaling, can not upgrade tiflow-master", ns, tcName)
 		_, podSpec, err := GetLastAppliedConfig(oldSet)
@@ -49,7 +56,7 @@ func (u *masterUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSet *app
 		return nil
 	}
 
-	tc.Status.Master.Phase = v1alpha1.UpgradePhase
+	tc.Status.Master.Phase = v1alpha1.MasterUpgrading
 	if !templateEqual(newSet, oldSet) {
 		return nil
 	}
@@ -90,9 +97,9 @@ func (u *masterUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSet *app
 				return controller.RequeueErrorf("tiflowcluster: [%s/%s]'s upgraded tiflow pod: [%s] is not ready", ns, tcName, podName)
 			}
 			// TODO: add this after members update is supported
-			//if member, exist := tc.Status.Master.Members[podName]; !exist || !member.Health {
+			// if member, exist := tc.Status.Master.Members[podName]; !exist || !member.Health {
 			//	return controller.RequeueErrorf("tiflowcluster: [%s/%s]'s tiflow-master upgraded pod: [%s] is not ready", ns, tcName, podName)
-			//}
+			// }
 			continue
 		}
 

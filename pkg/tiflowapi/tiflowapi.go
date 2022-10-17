@@ -20,6 +20,7 @@ type MasterClient interface {
 	GetMasters() (MastersInfo, error)
 	GetExecutors() (ExecutorsInfo, error)
 	GetLeader() (LeaderInfo, error)
+	GetURL() string
 	EvictLeader() error
 	DeleteMaster(name string) error
 	DeleteExecutor(name string) error
@@ -64,6 +65,10 @@ type masterClient struct {
 	httpClient *http.Client
 }
 
+func (c masterClient) GetURL() string {
+	return c.url
+}
+
 func (c masterClient) GetMasters() (MastersInfo, error) {
 	apiURL := fmt.Sprintf("%s/%s", c.url, listMastersPrefix)
 	body, err := httputil.GetBodyOK(c.httpClient, apiURL)
@@ -106,12 +111,12 @@ func (c masterClient) EvictLeader() error {
 }
 
 func (c masterClient) DeleteMaster(name string) error {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (c masterClient) DeleteExecutor(name string) error {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 

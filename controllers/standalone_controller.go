@@ -48,9 +48,9 @@ func NewStandaloneReconciler(cli client.Client, scheme *runtime.Scheme) *Standal
 	}
 }
 
-//+kubebuilder:rbac:groups=pingcap.com,resources=standalones,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=pingcap.com,resources=standalones/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=pingcap.com,resources=standalones/finalizers,verbs=update
+// +kubebuilder:rbac:groups=pingcap.com,resources=standalones,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=pingcap.com,resources=standalones/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=pingcap.com,resources=standalones/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -65,15 +65,11 @@ func NewStandaloneReconciler(cli client.Client, scheme *runtime.Scheme) *Standal
 func (r *StandaloneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
-	logger.Info("start standalone reconcile logic")
-
 	instance := &pingcapcomv1alpha1.Standalone{}
 	if err := r.Get(ctx, req.NamespacedName, instance); err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("standalone instance is not found")
 			return ctrl.Result{}, nil
 		}
-		logger.Info("find standalone instance error")
 		return ctrl.Result{}, err
 	}
 
@@ -90,7 +86,6 @@ func (r *StandaloneReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 func (r *StandaloneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&pingcapcomv1alpha1.Standalone{}).
-		Owns(&appsv1.StatefulSet{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
 		Owns(&corev1.ConfigMap{}).

@@ -29,7 +29,6 @@ type StandaloneSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 	Name            string              `json:"name"`
 	FrameStandalone FrameStandaloneSpec `json:"frameStandalone,omitempty"`
-	UserStandalone  UserStandaloneSpec  `json:"userStandalone,omitempty"`
 }
 
 type FrameStandaloneSpec struct {
@@ -45,25 +44,14 @@ type FrameStandaloneSpec struct {
 	Port int32 `json:"port"`
 }
 
-type UserStandaloneSpec struct {
-	// etcd-standalone-sample
-	Name string `json:"name"`
-
-	Size *int32 `json:"size,omitempty"`
-
-	Image string `json:"image"`
-
-	Ports []int32 `json:"ports"`
-}
-
 // StandaloneStatus defines the observed state of Standalone
 type StandaloneStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 
 // Standalone is the Schema for the standalones API
 type Standalone struct {
@@ -74,7 +62,7 @@ type Standalone struct {
 	Status StandaloneStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // StandaloneList contains a list of Standalone
 type StandaloneList struct {

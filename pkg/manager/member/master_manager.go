@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"strings"
 
-	"k8s.io/client-go/kubernetes"
-
 	apps "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -20,10 +19,11 @@ import (
 	"github.com/pingcap/tiflow-operator/api/label"
 	pingcapcomv1alpha1 "github.com/pingcap/tiflow-operator/api/v1alpha1"
 	"github.com/pingcap/tiflow-operator/pkg/component"
+	"github.com/pingcap/tiflow-operator/pkg/condition"
 	"github.com/pingcap/tiflow-operator/pkg/controller"
 	"github.com/pingcap/tiflow-operator/pkg/manager"
 	mngerutils "github.com/pingcap/tiflow-operator/pkg/manager/utils"
-	"github.com/pingcap/tiflow-operator/pkg/tiflowapi"
+	"github.com/pingcap/tiflow-operator/pkg/status"
 	"github.com/pingcap/tiflow-operator/pkg/util"
 )
 
@@ -243,36 +243,47 @@ func (m *masterMemberManager) syncMasterStatefulSetForTiflowCluster(ctx context.
 	setNotExist := errors.IsNotFound(err)
 	oldMasterSet := oldMasterSetTmp.DeepCopy()
 
-	if err = m.syncTiflowClusterStatus(tc, oldMasterSet); err != nil {
-		klog.Errorf("failed to sync Tiflow Cluster: [%s/%s]'s status, error: %v", ns, tcName, err)
-	}
-
 	cm, err := m.syncMasterConfigMap(ctx, tc, oldMasterSet)
 	if err != nil {
 		return err
 	}
+
 	newMasterSet, err := getNewMasterSetForTiflowCluster(tc, cm)
 	if err != nil {
 		return err
 	}
+
 	if setNotExist {
+		condition.SetFalse(pingcapcomv1alpha1.MasterSyncChecked, tc.GetClusterStatus(), metav1.Now())
+		status.Ongoing(pingcapcomv1alpha1.CreateType, tc.GetClusterStatus(), pingcapcomv1alpha1.TiFlowMasterMemberType,
+			fmt.Sprintf("start to create master cluster [%s/%s]", ns, tcName))
+
 		err = mngerutils.SetStatefulSetLastAppliedConfigAnnotation(newMasterSet)
 		if err != nil {
 			return err
 		}
+
 		if err := m.cli.Create(ctx, newMasterSet); err != nil {
+			status.Failed(pingcapcomv1alpha1.CreateType, tc.GetClusterStatus(), pingcapcomv1alpha1.TiFlowMasterMemberType,
+				fmt.Sprintf("create master cluster [%s/%s] failed", ns, tcName))
 			return err
 		}
+
 		tc.Status.Master.StatefulSet = &apps.StatefulSetStatus{}
-		return controller.RequeueErrorf("tiflow cluster: [%s/%s], waiting for tiflow-master cluster running", ns, tcName)
+		return nil
 	}
 
-	// Force update takes precedence over scaling because force upgrade won't take effect when cluster gets stuck at scaling
-	if !tc.Status.Master.Synced && NeedForceUpgrade(tc.Annotations) {
-		tc.Status.Master.Phase = pingcapcomv1alpha1.UpgradePhase
-		mngerutils.SetUpgradePartition(newMasterSet, 0)
-		errSTS := mngerutils.UpdateStatefulSet(ctx, m.cli, newMasterSet, oldMasterSet)
-		return controller.RequeueErrorf("tiflow cluster: [%s/%s]'s tiflow-master needs force upgrade, %v", ns, tcName, errSTS)
+	if condition.False(pingcapcomv1alpha1.MasterSyncChecked, tc.GetClusterConditions()) {
+		// Force update takes precedence over scaling because force upgrade won't take effect when cluster gets stuck at scaling
+		if NeedForceUpgrade(tc.Annotations) {
+			tc.Status.Master.Phase = pingcapcomv1alpha1.MasterUpgrading
+			mngerutils.SetUpgradePartition(newMasterSet, 0)
+			errSTS := mngerutils.UpdateStatefulSet(ctx, m.cli, newMasterSet, oldMasterSet)
+			return controller.RequeueErrorf("tiflow cluster: [%s/%s]'s tiflow-master needs force upgrade, %v", ns, tcName, errSTS)
+		}
+
+		klog.Info("waiting for tiflow-master's status sync")
+		return nil
 	}
 
 	// TODO: support scaler
@@ -299,8 +310,11 @@ func (m *masterMemberManager) syncMasterStatefulSetForTiflowCluster(ctx context.
 	//	}
 	// }
 
-	if !templateEqual(newMasterSet, oldMasterSet) || tc.Status.Master.Phase == pingcapcomv1alpha1.UpgradePhase {
+	if !templateEqual(newMasterSet, oldMasterSet) || tc.Status.Master.Phase == pingcapcomv1alpha1.MasterUpgrading {
 		if err := m.upgrader.Upgrade(tc, oldMasterSet, newMasterSet); err != nil {
+			status.Failed(pingcapcomv1alpha1.UpgradeType, tc.GetClusterStatus(), pingcapcomv1alpha1.TiFlowMasterMemberType,
+				fmt.Sprintf("tiflow master [%s/%s] upgrading failed", ns, tcName))
+
 			return err
 		}
 	}
@@ -575,135 +589,4 @@ func getNewMasterHeadlessServiceForTiflowCluster(tc *pingcapcomv1alpha1.TiflowCl
 			PublishNotReadyAddresses: true,
 		},
 	}
-}
-
-func (m *masterMemberManager) masterStatefulSetIsUpgrading(set *apps.StatefulSet, tc *pingcapcomv1alpha1.TiflowCluster) (bool, error) {
-	if mngerutils.StatefulSetIsUpgrading(set) {
-		return true, nil
-	}
-	instanceName := tc.GetInstanceName()
-	selector, err := label.New().
-		Instance(instanceName).
-		TiflowMaster().
-		Selector()
-	if err != nil {
-		return false, err
-	}
-	masterPods := &corev1.PodList{}
-	err = m.cli.List(context.TODO(), masterPods, client.InNamespace(tc.GetNamespace()), client.MatchingLabelsSelector{Selector: selector})
-	if err != nil {
-		return false, fmt.Errorf("masterStatefulSetIsUpgrading: failed to list pods for cluster %s/%s, selector %s, error: %v", tc.GetNamespace(), instanceName, selector, err)
-	}
-	for _, pod := range masterPods.Items {
-		revisionHash, exist := pod.Labels[apps.ControllerRevisionHashLabelKey]
-		if !exist {
-			return false, nil
-		}
-		if revisionHash != tc.Status.Master.StatefulSet.UpdateRevision {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-func (m *masterMemberManager) syncTiflowClusterStatus(tc *pingcapcomv1alpha1.TiflowCluster, set *apps.StatefulSet) error {
-	if set == nil {
-		// skip if not created yet
-		return nil
-	}
-
-	tcName := tc.GetName()
-	ns := tc.GetNamespace()
-
-	tc.Status.Master.StatefulSet = &set.Status
-
-	upgrading, err := m.masterStatefulSetIsUpgrading(set, tc)
-	if err != nil {
-		return err
-	}
-
-	// Scaling takes precedence over upgrading.
-	if tc.MasterStsDesiredReplicas() != *set.Spec.Replicas {
-		tc.Status.Master.Phase = pingcapcomv1alpha1.ScalePhase
-	} else if upgrading {
-		tc.Status.Master.Phase = pingcapcomv1alpha1.UpgradePhase
-	} else {
-		tc.Status.Master.Phase = pingcapcomv1alpha1.NormalPhase
-	}
-
-	// TODO: add status info after tiflow master interface stable
-	tiflowClient := tiflowapi.GetMasterClient(m.cli, ns, tcName, "", tc.IsClusterTLSEnabled())
-
-	mastersInfo, err := tiflowClient.GetMasters()
-	if err != nil {
-		tc.Status.Master.Synced = false
-		// get endpoints info
-		eps := &corev1.Endpoints{}
-		epErr := m.cli.Get(context.TODO(), types.NamespacedName{
-			Namespace: ns,
-			Name:      controller.TiflowMasterMemberName(tcName),
-		}, eps)
-		if epErr != nil {
-			return fmt.Errorf("syncTiflowClusterStatus: failed to get endpoints %s for cluster %s/%s, err: %s, epErr %s", controller.TiflowMasterMemberName(tcName), ns, tcName, err, epErr)
-		}
-		// tiflow-master service has no endpoints
-		if eps != nil && len(eps.Subsets) == 0 {
-			return fmt.Errorf("%s, service %s/%s has no endpoints", err, ns, controller.TiflowMasterMemberName(tcName))
-		}
-		return err
-	}
-
-	// TODO: WIP, need to get the information of memberDeleted and LastTransitionTime
-	members := make(map[string]pingcapcomv1alpha1.MasterMember)
-	peerMembers := make(map[string]pingcapcomv1alpha1.MasterMember)
-	tc.Status.Master.Leader = pingcapcomv1alpha1.MasterMember{}
-	for _, master := range mastersInfo.Masters {
-		member := pingcapcomv1alpha1.MasterMember{
-			Id:                 master.ID,
-			Address:            master.Address,
-			IsLeader:           master.IsLeader,
-			Name:               master.Name,
-			LastTransitionTime: metav1.Now(),
-		}
-		clusterName, ordinal, namespace, err2 := getOrdinalFromName(master.Name, pingcapcomv1alpha1.TiFlowMasterMemberType)
-		if err2 == nil && clusterName == tcName && namespace == ns && ordinal < tc.MasterStsDesiredReplicas() {
-			members[master.Name] = member
-		} else {
-			peerMembers[master.Name] = member
-		}
-		if master.IsLeader {
-			tc.Status.Master.Leader = member
-		}
-	}
-	tc.Status.Master.Members = members
-	tc.Status.Master.PeerMembers = peerMembers
-
-	tc.Status.Master.Synced = true
-	tc.Status.Master.Image = ""
-	c := findContainerByName(set, "tiflow-master")
-	if c != nil {
-		tc.Status.Master.Image = c.Image
-	}
-
-	return nil
-}
-
-// findContainerByName finds targetContainer by containerName, If not find, then return nil
-func findContainerByName(sts *apps.StatefulSet, containerName string) *corev1.Container {
-	for _, c := range sts.Spec.Template.Spec.Containers {
-		if c.Name == containerName {
-			return &c
-		}
-	}
-	return nil
-}
-
-func formatMasterName(name string) (string, error) {
-	nameSlice := strings.Split(name, ".")
-	if len(nameSlice) != 4 {
-		return "", fmt.Errorf("split name %s error", name)
-	}
-
-	res := fmt.Sprintf("%s.%s", nameSlice[0], nameSlice[2])
-	return res, nil
 }

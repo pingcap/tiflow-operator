@@ -9,11 +9,4 @@ spec:
     image: mysql:latest
     size: 1
     port: 3306
-  userStandalone:
-    name: etcd
-    size: 1
-    image: quay.io/coreos/etcd
-    ports:
-      - 2379
-      - 2380
 
