@@ -12834,7 +12834,7 @@ spec:
                     type: string
                   lastUpdateTime:
                     description: LastUpdateTime means the time when the status of
-                      Master or executor cluster's info was updated
+                      Master cluster's info was updated
                     format: date-time
                     type: string
                   leader:
