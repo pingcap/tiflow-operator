@@ -21,7 +21,7 @@ func Ongoing(syncName v1alpha1.SyncTypeName, tc *v1alpha1.TiflowClusterStatus, m
 	setExecutorSyncTypeStatus(syncName, v1alpha1.Ongoing, &tc.Executor, message, metav1.Now())
 }
 
-func Complied(syncName v1alpha1.SyncTypeName, tc *v1alpha1.TiflowClusterStatus, member v1alpha1.MemberType, message string) {
+func Completed(syncName v1alpha1.SyncTypeName, tc *v1alpha1.TiflowClusterStatus, member v1alpha1.MemberType, message string) {
 	if member == v1alpha1.TiFlowMasterMemberType {
 		setMasterSyncTypeStatus(syncName, v1alpha1.Completed, &tc.Master, message, metav1.Now())
 		return

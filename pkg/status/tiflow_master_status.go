@@ -105,7 +105,7 @@ func (mm *masterPhaseManager) syncMasterCreatePhase() bool {
 	}
 
 	if mm.MasterStsDesiredReplicas() == mm.MasterStsCurrentReplicas() {
-		Complied(v1alpha1.CreateType, mm.GetClusterStatus(), v1alpha1.TiFlowMasterMemberType, "master creating completed")
+		Completed(v1alpha1.CreateType, mm.GetClusterStatus(), v1alpha1.TiFlowMasterMemberType, "master creating completed")
 		return true
 	}
 
@@ -118,7 +118,7 @@ func (mm *masterPhaseManager) syncMasterScalePhase() bool {
 	index := findPos(v1alpha1.ScaleOutType, syncTypes)
 	if index >= 0 && syncTypes[index].Status != v1alpha1.Completed {
 		if mm.MasterStsDesiredReplicas() == mm.MasterStsCurrentReplicas() {
-			Complied(v1alpha1.ScaleOutType, mm.GetClusterStatus(), v1alpha1.TiFlowMasterMemberType, "master scaling out completed")
+			Completed(v1alpha1.ScaleOutType, mm.GetClusterStatus(), v1alpha1.TiFlowMasterMemberType, "master scaling out completed")
 			return true
 		}
 		return false
@@ -127,7 +127,7 @@ func (mm *masterPhaseManager) syncMasterScalePhase() bool {
 	index = findPos(v1alpha1.ScaleInType, syncTypes)
 	if index >= 0 && syncTypes[index].Status != v1alpha1.Completed {
 		if mm.MasterStsDesiredReplicas() == mm.MasterStsCurrentReplicas() {
-			Complied(v1alpha1.ScaleInType, mm.GetClusterStatus(), v1alpha1.TiFlowMasterMemberType, "master scaling in completed")
+			Completed(v1alpha1.ScaleInType, mm.GetClusterStatus(), v1alpha1.TiFlowMasterMemberType, "master scaling in completed")
 			return true
 		}
 		return false
@@ -193,6 +193,6 @@ func (mm *masterPhaseManager) syncMasterUpgradePhase() bool {
 			return false
 		}
 	}
-	Complied(v1alpha1.UpgradeType, mm.GetClusterStatus(), v1alpha1.TiFlowMasterMemberType, "master upgrading  completed")
+	Completed(v1alpha1.UpgradeType, mm.GetClusterStatus(), v1alpha1.TiFlowMasterMemberType, "master upgrading  completed")
 	return true
 }

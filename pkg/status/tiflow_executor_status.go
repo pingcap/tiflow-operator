@@ -105,7 +105,7 @@ func (em *executorPhaseManger) syncExecutorCreatePhase() bool {
 	}
 
 	if em.ExecutorStsDesiredReplicas() == em.ExecutorStsCurrentReplicas() {
-		Complied(v1alpha1.CreateType, em.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType, "executor creating completed")
+		Completed(v1alpha1.CreateType, em.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType, "executor creating completed")
 		return true
 	}
 
@@ -118,7 +118,7 @@ func (em *executorPhaseManger) syncExecutorScalePhase() bool {
 	index := findPos(v1alpha1.ScaleOutType, syncTypes)
 	if index >= 0 && syncTypes[index].Status != v1alpha1.Completed {
 		if em.ExecutorStsDesiredReplicas() == em.ExecutorStsCurrentReplicas() {
-			Complied(v1alpha1.ScaleOutType, em.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType, "executor scaling out completed")
+			Completed(v1alpha1.ScaleOutType, em.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType, "executor scaling out completed")
 			return true
 		}
 		return false
@@ -127,7 +127,7 @@ func (em *executorPhaseManger) syncExecutorScalePhase() bool {
 	index = findPos(v1alpha1.ScaleInType, syncTypes)
 	if index >= 0 && syncTypes[index].Status != v1alpha1.Completed {
 		if em.ExecutorStsDesiredReplicas() == em.ExecutorStsCurrentReplicas() {
-			Complied(v1alpha1.ScaleInType, em.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType, "executor scaling in completed")
+			Completed(v1alpha1.ScaleInType, em.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType, "executor scaling in completed")
 			return true
 		}
 		return false
@@ -194,6 +194,6 @@ func (em *executorPhaseManger) syncExecutorUpgradePhase() bool {
 		}
 	}
 
-	Complied(v1alpha1.UpgradeType, em.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType, "executor upgrading  completed")
+	Completed(v1alpha1.UpgradeType, em.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType, "executor upgrading  completed")
 	return true
 }

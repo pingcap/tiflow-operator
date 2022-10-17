@@ -41,7 +41,7 @@ func (tcm *TiflowClusterConditionManager) Sync(ctx context.Context) error {
 }
 
 func (tcm *TiflowClusterConditionManager) Apply() error {
-	tcm.GetClusterStatus().Master.ServerName = tiflowapi.GetMasterClient(tcm.cli,
+	tcm.GetClusterStatus().Master.ServerAddress = tiflowapi.GetMasterClient(tcm.cli,
 		tcm.GetNamespace(), tcm.GetName(), "", tcm.IsClusterTLSEnabled()).
 		GetURL()
 
