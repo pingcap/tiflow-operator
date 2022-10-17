@@ -532,7 +532,7 @@ type MasterStatus struct {
 	PeerMembers    map[string]MasterMember `json:"peerMembers,omitempty"`
 	FailureMembers map[string]MasterMember `json:"failureMembers,omitempty"`
 	StatefulSet    *apps.StatefulSetStatus `json:"statefulSet,omitempty"`
-	// LastUpdateTime means the time when the status of Master or executor cluster's info was updated
+	// LastUpdateTime means the time when the status of Master cluster's info was updated
 	// +required
 	LastUpdateTime metav1.Time `json:"lastUpdateTime"`
 
