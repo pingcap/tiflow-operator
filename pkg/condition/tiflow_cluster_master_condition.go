@@ -3,17 +3,16 @@ package condition
 import (
 	"context"
 	"fmt"
-	"github.com/pingcap/tiflow-operator/pkg/status"
-	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/klog/v2"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
 	"github.com/pingcap/tiflow-operator/pkg/result"
+	"github.com/pingcap/tiflow-operator/pkg/status"
 	"github.com/pingcap/tiflow-operator/pkg/tiflowapi"
+	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/klog/v2"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type masterConditionManager struct {
@@ -205,7 +204,7 @@ func (mcm *masterConditionManager) updateMembersInfo(mastersInfo tiflowapi.Maste
 }
 
 func (mcm *masterConditionManager) versionVerify() bool {
-	klog.Infof("Master: CurrentRevision: %d , UpdateRevision: %d",
+	klog.Infof("Master: CurrentRevision: %s , UpdateRevision: %s",
 		mcm.GetMasterStatus().StatefulSet.CurrentRevision,
 		mcm.GetMasterStatus().StatefulSet.UpdateRevision)
 
