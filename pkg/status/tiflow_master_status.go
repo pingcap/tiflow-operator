@@ -50,6 +50,14 @@ func InitMasterClusterSyncTypesIfNeed(masterStatus *v1alpha1.MasterStatus) {
 // This depends on our logic for updating Status
 func (mm *masterPhaseManager) SyncPhase() {
 	masterStatus := mm.GetMasterStatus()
+
+	if mm.Heterogeneous() && mm.WithoutLocalMaster() {
+		masterStatus.Phase = v1alpha1.MasterRunning
+		masterStatus.Message = "Ready..., without local tiflow-master. Enjoying..."
+		masterStatus.LastTransitionTime = metav1.Now()
+		return
+	}
+
 	InitMasterClusterSyncTypesIfNeed(masterStatus)
 
 	if !mm.syncMasterPhaseFromCluster() {
