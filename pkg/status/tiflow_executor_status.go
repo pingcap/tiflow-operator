@@ -50,6 +50,14 @@ func InitExecutorClusterSyncTypesIfNeed(executorStatus *v1alpha1.ExecutorStatus)
 // This depends on our logic for updating Status
 func (em *executorPhaseManger) SyncPhase() {
 	executorStatus := em.GetExecutorStatus()
+
+	if em.WithoutLocalExecutor() {
+		executorStatus.Phase = v1alpha1.ExecutorRunning
+		executorStatus.Message = "Ready..., without local tiflow-executor. Enjoying..."
+		executorStatus.LastTransitionTime = metav1.Now()
+		return
+	}
+
 	InitExecutorClusterSyncTypesIfNeed(executorStatus)
 
 	if !em.syncExecutorPhaseFromCluster() {

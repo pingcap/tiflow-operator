@@ -203,6 +203,10 @@ func (tc *TiflowCluster) WithoutLocalMaster() bool {
 	return tc.Spec.Master == nil
 }
 
+func (tc *TiflowCluster) WithoutLocalExecutor() bool {
+	return tc.Spec.Executor == nil
+}
+
 func (tc *TiflowCluster) MasterIsAvailable() bool {
 	return tc.Status.Master.Leader.Id != ""
 }
