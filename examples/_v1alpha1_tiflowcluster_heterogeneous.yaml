@@ -48,7 +48,6 @@ spec:
     config: |
       keepalive-ttl = "20s"
       keepalive-interval = "500ms"
-      session-ttl = 20
   cluster:
     namespace: "default"
     name: "basic"
