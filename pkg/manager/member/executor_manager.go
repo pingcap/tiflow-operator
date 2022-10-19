@@ -95,7 +95,7 @@ func (m *executorMemberManager) syncExecutorConfigMap(ctx context.Context, tc *v
 	var inUseName string
 	if sts != nil {
 		inUseName = mngerutils.FindConfigMapVolume(&sts.Spec.Template.Spec, func(name string) bool {
-			return strings.HasPrefix(name, controller.TiflowExecutorMemberName(tc.Name))
+			return strings.HasPrefix(name, controller.TiflowExecutorMemberName(tc.GetName()))
 		})
 	}
 
@@ -263,7 +263,7 @@ func (m *executorMemberManager) getExecutorConfigMap(tc *v1alpha1.TiflowCluster)
 	// TODO: add discovery or full name to make sure executor can connect to alive master
 	masterAddresses := make([]string, 0)
 	if !tc.WithoutLocalMaster() {
-		masterAddresses = append(masterAddresses, controller.TiflowMasterMemberName(tc.Name)+":10240")
+		masterAddresses = append(masterAddresses, controller.TiflowMasterMemberName(tc.GetName())+":10240")
 	}
 	if tc.Heterogeneous() {
 		masterAddresses = append(masterAddresses, controller.TiflowMasterFullHost(tc.Spec.Cluster.Name, tc.Spec.Cluster.Namespace, tc.Spec.ClusterDomain)+":10240") // use dm-master of reference cluster
@@ -290,8 +290,8 @@ func (m *executorMemberManager) getExecutorConfigMap(tc *v1alpha1.TiflowCluster)
 
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            controller.TiflowExecutorMemberName(tc.Name),
-			Namespace:       tc.Namespace,
+			Name:            controller.TiflowExecutorMemberName(tc.GetName()),
+			Namespace:       tc.GetNamespace(),
 			Labels:          executorLabel,
 			OwnerReferences: []metav1.OwnerReference{controller.GetOwnerRef(tc)},
 		},
@@ -303,8 +303,8 @@ func (m *executorMemberManager) getExecutorConfigMap(tc *v1alpha1.TiflowCluster)
 
 // getNewExecutorHeadlessService returns a new headless service of executor by tiflowCluster Spec.
 func (m *executorMemberManager) getNewExecutorHeadlessService(tc *v1alpha1.TiflowCluster) *corev1.Service {
-	ns := tc.Namespace
-	tcName := tc.Name
+	ns := tc.GetNamespace()
+	tcName := tc.GetName()
 	svcName := controller.TiflowExecutorPeerMemberName(tcName)
 	instanceName := tc.GetInstanceName()
 
@@ -345,7 +345,7 @@ func (m *executorMemberManager) getNewExecutorStatefulSet(ctx context.Context, t
 	baseExecutorSpec := component.BuildExecutorSpec(tc)
 	instanceName := tc.GetInstanceName()
 	if cfgMap == nil {
-		return nil, fmt.Errorf("config-map for tiflow-exeutor is not found, tifloeCluster [%s/%s]", tc.Namespace, tc.Name)
+		return nil, fmt.Errorf("config-map for tiflow-exeutor is not found, tifloeCluster [%s/%s]", tc.GetNamespace(), tc.GetName())
 	}
 
 	stsName := controller.TiflowExecutorMemberName(tcName)
@@ -436,8 +436,8 @@ func (m *executorMemberManager) getNewExecutorPVCTemp(tc *v1alpha1.TiflowCluster
 	rs, err := resource.ParseQuantity(storageSize)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse storage request for tiflow-executor, tiflowCluster [%s/%s], error: %v",
-			tc.Namespace,
-			tc.Name, err)
+			tc.GetNamespace(),
+			tc.GetName(), err)
 	}
 
 	storageRequest := corev1.ResourceRequirements{
@@ -518,7 +518,7 @@ func (m *executorMemberManager) getNewExecutorPodVols(tc *v1alpha1.TiflowCluster
 		vols = append(vols, corev1.Volume{
 			Name: "tiflow-executor-tls", VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: util.ClusterTLSSecretName(tc.Name, label.TiflowMasterLabelVal),
+					SecretName: util.ClusterTLSSecretName(tc.GetName(), label.TiflowMasterLabelVal),
 				},
 			},
 		})

@@ -17,7 +17,7 @@ const (
 	extractPodIDRegexStr = "(.*)-([\\d]+)\\.(.*)"
 )
 
-var extracPodIDRegex = regexp.MustCompile(extractPodIDRegexStr)
+var extractPodIDRegex = regexp.MustCompile(extractPodIDRegexStr)
 
 func masterMemberName(clusterName string) string {
 	return fmt.Sprintf("%s-tiflow-master", clusterName)
@@ -64,7 +64,7 @@ func statefulSetUpToDate(sts *appsv1.StatefulSetStatus, requireExist bool) bool 
 
 // return clusterName, ordinal, namespace
 func getOrdinalFromName(name string, memberType v1alpha1.MemberType) (string, int32, string, error) {
-	results := extracPodIDRegex.FindStringSubmatch(name)
+	results := extractPodIDRegex.FindStringSubmatch(name)
 	if len(results) < 4 {
 		return "", 0, "", perrors.Errorf("can't extract pod id from name %s", name)
 	}

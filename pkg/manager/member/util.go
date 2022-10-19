@@ -4,11 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"regexp"
-	"strconv"
-	"strings"
-
-	perrors "github.com/pingcap/errors"
 	apps "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -24,10 +19,7 @@ import (
 
 const (
 	LastAppliedConfigAnnotation = "pingcap.com/last-applied-configuration"
-	extractPodIDRegexStr        = "(.*)-([\\d]+)\\.(.*)"
 )
-
-var extracPodIDRegex = regexp.MustCompile(extractPodIDRegexStr)
 
 func getNodePort(svc *v1alpha1.ServiceSpec) int32 {
 	if svc.NodePort != nil {
@@ -35,31 +27,6 @@ func getNodePort(svc *v1alpha1.ServiceSpec) int32 {
 	}
 	return 0
 }
-
-// TODO: check whether do we need this func
-// getStsAnnotations gets annotations for statefulset of given component.
-// func getStsAnnotations(tcAnns map[string]string, component string) map[string]string {
-//	anns := map[string]string{}
-//	if tcAnns == nil {
-//		return anns
-//	}
-//
-//	// ensure the delete-slots annotation
-//	var key string
-//	switch component {
-//	case label.TiflowMasterLabelVal:
-//		key = label.AnnTiflowMasterDeleteSlots
-//	case label.TiflowExecutorLabelVal:
-//		key = label.AnnTiflowExecutorDeleteSlots
-//	default:
-//		return anns
-//	}
-//	if val, ok := tcAnns[key]; ok {
-//		anns[helper.DeleteSlotsAnn] = val
-//	}
-//
-//	return anns
-// }
 
 func annotationsMountVolume() (corev1.VolumeMount, corev1.Volume) {
 	m := corev1.VolumeMount{Name: "annotations", ReadOnly: true, MountPath: "/etc/podinfo"}
@@ -175,11 +142,6 @@ func mergeConfigMapFunc(existing, desired client.Object) error {
 	return nil
 }
 
-func getStsAnnotations(tcAnns map[string]string, component string) map[string]string {
-	// TODO implement me
-	panic("implement me")
-}
-
 // GetLastAppliedConfig get last applied config info from Statefulset's annotation and the podTemplate's annotation
 func GetLastAppliedConfig(set *apps.StatefulSet) (*apps.StatefulSetSpec, *corev1.PodSpec, error) {
 	specAppliedConfig, ok := set.Annotations[LastAppliedConfigAnnotation]
@@ -193,18 +155,4 @@ func GetLastAppliedConfig(set *apps.StatefulSet) (*apps.StatefulSetSpec, *corev1
 	}
 
 	return spec, &spec.Template.Spec, nil
-}
-
-// return clusterName, ordinal, namespace
-func getOrdinalFromName(name string, memberType v1alpha1.MemberType) (string, int32, string, error) {
-	results := extracPodIDRegex.FindStringSubmatch(name)
-	if len(results) < 4 {
-		return "", 0, "", perrors.Errorf("can't extract pod id from name %s", name)
-	}
-	ordinalStr := results[2]
-	ordinal, err := strconv.ParseInt(ordinalStr, 10, 32)
-	if err != nil {
-		return "", 0, "", perrors.Annotatef(err, "fail to parse ordinal %s", ordinalStr)
-	}
-	return strings.TrimSuffix(results[1], "-"+memberType.String()), int32(ordinal), results[3], nil
 }

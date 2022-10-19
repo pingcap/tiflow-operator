@@ -2,17 +2,28 @@ package v1alpha1
 
 import (
 	"fmt"
+	"hash/fnv"
 
 	"github.com/pingcap/tiflow-operator/api/config"
 	"github.com/pingcap/tiflow-operator/api/label"
 )
 
+const metadataLengthLimit = 24
+
 func (tc *TiflowCluster) GetInstanceName() string {
 	labels := tc.GetLabels()
 	if inst, ok := labels[label.InstanceLabelKey]; ok {
-		return inst
+		return uniqueIdentifier(inst)
 	}
-	return tc.Name
+	return uniqueIdentifier(tc.Name)
+}
+
+func (tc *TiflowCluster) GetNamespace() string {
+	return uniqueIdentifier(tc.Namespace)
+}
+
+func (tc *TiflowCluster) GetName() string {
+	return uniqueIdentifier(tc.Name)
 }
 
 func (tc *TiflowCluster) Scheme() string {
@@ -253,4 +264,18 @@ func (tc *TiflowCluster) GetExecutorPhase() ExecutorPhaseType {
 
 func (tc *TiflowCluster) GetClusterPhase() TiflowClusterPhaseType {
 	return tc.Status.ClusterPhase
+}
+
+func fnvHash(raw string) string {
+	hash := fnv.New64()
+	_, _ = hash.Write([]byte(raw))
+	return fmt.Sprintf("%x", hash.Sum64())
+}
+
+func uniqueIdentifier(raw string) string {
+	if len(raw) <= metadataLengthLimit {
+		return raw
+	}
+
+	return fnvHash(raw)
 }

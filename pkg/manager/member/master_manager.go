@@ -101,8 +101,8 @@ func getMasterConfigMap(tc *pingcapcomv1alpha1.TiflowCluster) (*corev1.ConfigMap
 	masterLabel := label.New().Instance(instanceName).TiflowMaster().Labels()
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            controller.TiflowMasterMemberName(tc.Name),
-			Namespace:       tc.Namespace,
+			Name:            controller.TiflowMasterMemberName(tc.GetName()),
+			Namespace:       tc.GetNamespace(),
 			Labels:          masterLabel,
 			OwnerReferences: []metav1.OwnerReference{controller.GetOwnerRef(tc)},
 		},
@@ -124,7 +124,7 @@ func (m *masterMemberManager) syncMasterConfigMap(ctx context.Context, tc *pingc
 	var inUseName string
 	if set != nil {
 		inUseName = mngerutils.FindConfigMapVolume(&set.Spec.Template.Spec, func(name string) bool {
-			return strings.HasPrefix(name, controller.TiflowMasterMemberName(tc.Name))
+			return strings.HasPrefix(name, controller.TiflowMasterMemberName(tc.GetName()))
 		})
 	}
 
@@ -323,12 +323,12 @@ func (m *masterMemberManager) syncMasterStatefulSetForTiflowCluster(ctx context.
 }
 
 func getNewMasterSetForTiflowCluster(tc *pingcapcomv1alpha1.TiflowCluster, cm *corev1.ConfigMap) (*apps.StatefulSet, error) {
-	ns := tc.Namespace
-	tcName := tc.Name
+	ns := tc.GetNamespace()
+	tcName := tc.GetName()
 	baseMasterSpec := component.BuildMasterSpec(tc)
 	instanceName := tc.GetInstanceName()
 	if cm == nil {
-		return nil, fmt.Errorf("config map for tiflow-master is not found, tiflow cluster %s/%s", tc.Namespace, tc.Name)
+		return nil, fmt.Errorf("config map for tiflow-master is not found, tiflow cluster %s/%s", tc.GetNamespace(), tc.GetName())
 	}
 	masterConfigMap := cm.Name
 
@@ -374,7 +374,7 @@ func getNewMasterSetForTiflowCluster(tc *pingcapcomv1alpha1.TiflowCluster, cm *c
 		vols = append(vols, corev1.Volume{
 			Name: "tiflow-master-tls", VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: util.ClusterTLSSecretName(tc.Name, label.TiflowMasterLabelVal),
+					SecretName: util.ClusterTLSSecretName(tc.GetName(), label.TiflowMasterLabelVal),
 				},
 			},
 		})
@@ -501,8 +501,8 @@ func getNewMasterSetForTiflowCluster(tc *pingcapcomv1alpha1.TiflowCluster, cm *c
 }
 
 func (m *masterMemberManager) getNewMasterServiceForTiflowCluster(tc *pingcapcomv1alpha1.TiflowCluster) *corev1.Service {
-	ns := tc.Namespace
-	tcName := tc.Name
+	ns := tc.GetNamespace()
+	tcName := tc.GetName()
 	svcName := controller.TiflowMasterMemberName(tcName)
 	instanceName := tc.GetInstanceName()
 	masterSelector := label.New().Instance(instanceName).TiflowMaster()
@@ -561,8 +561,8 @@ func (m *masterMemberManager) getNewMasterServiceForTiflowCluster(tc *pingcapcom
 }
 
 func getNewMasterHeadlessServiceForTiflowCluster(tc *pingcapcomv1alpha1.TiflowCluster) *corev1.Service {
-	ns := tc.Namespace
-	tcName := tc.Name
+	ns := tc.GetNamespace()
+	tcName := tc.GetName()
 	svcName := controller.TiflowMasterPeerMemberName(tcName)
 	instanceName := tc.GetInstanceName()
 	masterSelector := label.New().Instance(instanceName).TiflowMaster()

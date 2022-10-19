@@ -337,7 +337,7 @@ func getComponentLabelValue(c Component) string {
 func buildTiflowClusterComponentAccessor(c Component, tc *v1alpha1.TiflowCluster, componentSpec *v1alpha1.ComponentSpec) ComponentAccessor {
 	spec := &tc.Spec
 	return &componentAccessorImpl{
-		name:                      tc.Name,
+		name:                      tc.GetName(),
 		component:                 c,
 		imagePullPolicy:           spec.ImagePullPolicy,
 		imagePullSecrets:          spec.ImagePullSecrets,
