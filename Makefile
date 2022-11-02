@@ -144,3 +144,16 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
+.PHONY: e2e-test
+e2e-test: E2E_TEST_PACKAGES = ./e2e
+e2e-test: ## Run e2e tests
+	./hack/e2e.sh run
+	TEST_WORKSPACE=$(pwd) go test -cover \
+		$(foreach pkg, $(E2E_TEST_PACKAGES), $(pkg)/...) \
+		-coverprofile cover.out -covermode=atomic || ( make e2e-test-clean && exit 1 )
+	@make e2e-test-clean
+
+.PHONY: e2e-test-clean
+e2e-test-clean: ## Clean e2e tests environment
+	./hack/e2e.sh clean
