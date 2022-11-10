@@ -112,7 +112,7 @@ func (em *executorPhaseManger) syncExecutorCreatePhase() bool {
 		return false
 	}
 
-	if em.ExecutorStsDesiredReplicas() == em.ExecutorStsCurrentReplicas() {
+	if em.ExecutorStsDesiredReplicas() == em.ExecutorStsReadyReplicas() {
 		Completed(v1alpha1.CreateType, em.GetClusterStatus(), v1alpha1.TiFlowExecutorMemberType, "executor creating completed")
 		return true
 	}

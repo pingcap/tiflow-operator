@@ -878,7 +878,7 @@ spec:
                 - name
                 type: object
               clusterDomain:
-                description: 'ClusterDomain is the Kubernetes Cluster Domain of TiDB
+                description: 'ClusterDomain is the Kubernetes Cluster Domain of Tiflow
                   cluster Optional: Defaults to ""'
                 type: string
               configUpdateStrategy:
@@ -6322,7 +6322,7 @@ spec:
                   pvReclaimPolicy:
                     default: Retain
                     description: Persistent volume reclaim policy applied to the PVs
-                      that consumed by TiDB cluster
+                      that consumed by tiflow cluster
                     type: string
                   replicas:
                     description: The desired ready replicas
@@ -12493,7 +12493,7 @@ spec:
                   type: object
                 type: array
               version:
-                description: TiDB cluster version
+                description: Tiflow-cluster version
                 type: string
             type: object
           status:
