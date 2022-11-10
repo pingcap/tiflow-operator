@@ -218,7 +218,7 @@ type ServiceSpec struct {
 	// ExternalTrafficPolicy of the service
 	// Optional: Defaults to omitted
 	// +optional
-	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType `json:"externalTrafficPolicy,omitempty"` // Expose the tidb cluster mysql port to MySQLNodePort
+	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType `json:"externalTrafficPolicy,omitempty"` // Expose the tiflow cluster mysql port to MySQLNodePort
 }
 
 // +k8s:openapi-gen=true
@@ -310,7 +310,7 @@ type ExecutorSpec struct {
 	// +optional
 	TLSClientSecretNames []string `json:"tlsClientSecretNames,omitempty"`
 
-	// Persistent volume reclaim policy applied to the PVs that consumed by TiDB cluster
+	// Persistent volume reclaim policy applied to the PVs that consumed by tiflow cluster
 	// +kubebuilder:default=Retain
 	PVReclaimPolicy *corev1.PersistentVolumeReclaimPolicy `json:"pvReclaimPolicy,omitempty"`
 
@@ -360,7 +360,7 @@ type TiflowClusterSpec struct {
 	// +optional
 	Executor *ExecutorSpec `json:"executor,omitempty"`
 
-	// TiDB cluster version
+	// Tiflow-cluster version
 	// +optional
 	Version string `json:"version"`
 
@@ -424,7 +424,7 @@ type TiflowClusterSpec struct {
 	// +optional
 	DNSPolicy corev1.DNSPolicy `json:"dnsPolicy,omitempty"`
 
-	// ClusterDomain is the Kubernetes Cluster Domain of TiDB cluster
+	// ClusterDomain is the Kubernetes Cluster Domain of Tiflow cluster
 	// Optional: Defaults to ""
 	// +optional
 	ClusterDomain string `json:"clusterDomain,omitempty"`

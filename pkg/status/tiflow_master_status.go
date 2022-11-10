@@ -112,7 +112,7 @@ func (mm *masterPhaseManager) syncMasterCreatePhase() bool {
 		return false
 	}
 
-	if mm.MasterStsDesiredReplicas() == mm.MasterStsCurrentReplicas() {
+	if mm.MasterStsDesiredReplicas() == mm.MasterStsReadyReplicas() {
 		Completed(v1alpha1.CreateType, mm.GetClusterStatus(), v1alpha1.TiFlowMasterMemberType, "master creating completed")
 		return true
 	}
