@@ -3,6 +3,7 @@ package status
 import (
 	"context"
 	"fmt"
+
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -60,7 +61,8 @@ func (em *executorPhaseManger) SyncPhase() {
 
 	InitExecutorClusterSyncTypesIfNeed(executorStatus)
 
-	if !em.syncExecutorPhaseFromCluster() {
+	if conditionIsTrue(v1alpha1.ExecutorSyncChecked, em.GetClusterConditions()) &&
+		!em.syncExecutorPhaseFromCluster() {
 		return
 	}
 

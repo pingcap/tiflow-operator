@@ -2,12 +2,13 @@ package condition
 
 import (
 	"context"
-	"github.com/pingcap/tiflow-operator/pkg/tiflowapi"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/pingcap/tiflow-operator/api/v1alpha1"
+	"github.com/pingcap/tiflow-operator/pkg/tiflowapi"
 )
 
 type TiflowClusterConditionManager struct {
