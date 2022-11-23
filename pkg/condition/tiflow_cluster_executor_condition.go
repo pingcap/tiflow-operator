@@ -4,15 +4,16 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pingcap/tiflow-operator/api/v1alpha1"
-	"github.com/pingcap/tiflow-operator/pkg/result"
-	"github.com/pingcap/tiflow-operator/pkg/status"
-	"github.com/pingcap/tiflow-operator/pkg/tiflowapi"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/pingcap/tiflow-operator/api/v1alpha1"
+	"github.com/pingcap/tiflow-operator/pkg/result"
+	"github.com/pingcap/tiflow-operator/pkg/status"
+	"github.com/pingcap/tiflow-operator/pkg/tiflowapi"
 )
 
 type executorConditionManager struct {
