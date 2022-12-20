@@ -207,16 +207,11 @@ func (ecm *executorConditionManager) updateMembersInfo(executorsInfo tiflowapi.E
 	members := make(map[string]v1alpha1.ExecutorMember)
 	peerMembers := make(map[string]v1alpha1.ExecutorMember)
 	for _, e := range executorsInfo.Executors {
-		c, err := handleCapability(e.Capability)
-		if err != nil {
-			return err
-		}
-
 		member := v1alpha1.ExecutorMember{
 			Id:                 e.ID,
 			Name:               e.Name,
 			Addr:               e.Address,
-			Capability:         c,
+			Labels:             e.Labels,
 			LastTransitionTime: metav1.Now(),
 		}
 
