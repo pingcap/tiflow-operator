@@ -12543,11 +12543,12 @@ spec:
                       properties:
                         addr:
                           type: string
-                        capability:
-                          format: int64
-                          type: integer
                         id:
                           type: string
+                        labels:
+                          additionalProperties:
+                            type: string
+                          type: object
                         lastTransitionTime:
                           description: 'TODO: add cpu/memory/disk usage later Last
                             time the health transitioned from one to another.'
@@ -12576,11 +12577,12 @@ spec:
                       properties:
                         addr:
                           type: string
-                        capability:
-                          format: int64
-                          type: integer
                         id:
                           type: string
+                        labels:
+                          additionalProperties:
+                            type: string
+                          type: object
                         lastTransitionTime:
                           description: 'TODO: add cpu/memory/disk usage later Last
                             time the health transitioned from one to another.'
@@ -12600,11 +12602,12 @@ spec:
                       properties:
                         addr:
                           type: string
-                        capability:
-                          format: int64
-                          type: integer
                         id:
                           type: string
+                        labels:
+                          additionalProperties:
+                            type: string
+                          type: object
                         lastTransitionTime:
                           description: 'TODO: add cpu/memory/disk usage later Last
                             time the health transitioned from one to another.'

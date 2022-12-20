@@ -463,10 +463,10 @@ type MasterMember struct {
 
 // ExecutorMember is Tiflow-executor member status
 type ExecutorMember struct {
-	Id         string `json:"id,omitempty"`
-	Name       string `json:"name,omitempty"`
-	Addr       string `json:"addr,omitempty"`
-	Capability int64  `json:"capability,omitempty"`
+	Id     string            `json:"id,omitempty"`
+	Name   string            `json:"name,omitempty"`
+	Addr   string            `json:"addr,omitempty"`
+	Labels map[string]string `json:"labels,omitempty"`
 	// TODO: add cpu/memory/disk usage later
 	// Last time the health transitioned from one to another.
 	// +nullable

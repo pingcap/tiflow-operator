@@ -45,10 +45,10 @@ type MastersInfo struct {
 }
 
 type Executor struct {
-	ID         string `json:"id,omitempty"`
-	Name       string `json:"name,omitempty"`
-	Address    string `json:"address,omitempty"`
-	Capability string `json:"capability,omitempty"`
+	ID      string            `json:"id,omitempty"`
+	Name    string            `json:"name,omitempty"`
+	Address string            `json:"address,omitempty"`
+	Labels  map[string]string `json:"labels,omitempty"`
 }
 
 type ExecutorsInfo struct {
