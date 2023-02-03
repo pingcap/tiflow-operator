@@ -356,10 +356,6 @@ func (m *executorMemberManager) getNewExecutorStatefulSet(ctx context.Context, t
 	stsAnnotations := map[string]string{}
 
 	podTemp := m.getNewExecutorPodTemp(tc, cfgMap)
-	pvcTemp, err := m.getNewExecutorPVCTemp(tc)
-	if err != nil {
-		return nil, err
-	}
 
 	updateStrategy := appsv1.StatefulSetUpdateStrategy{}
 	if baseExecutorSpec.StatefulSetUpdateStrategy() == appsv1.OnDeleteStatefulSetStrategyType {
@@ -380,13 +376,12 @@ func (m *executorMemberManager) getNewExecutorStatefulSet(ctx context.Context, t
 			OwnerReferences: []metav1.OwnerReference{controller.GetOwnerRef(tc)},
 		},
 		Spec: appsv1.StatefulSetSpec{
-			Replicas:             pointer.Int32Ptr(tc.ExecutorStsDesiredReplicas()),
-			Selector:             stsLabels.LabelSelector(),
-			Template:             podTemp,
-			VolumeClaimTemplates: pvcTemp,
-			ServiceName:          controller.TiflowExecutorPeerMemberName(tcName),
-			PodManagementPolicy:  baseExecutorSpec.PodManagementPolicy(),
-			UpdateStrategy:       updateStrategy,
+			Replicas:            pointer.Int32Ptr(tc.ExecutorStsDesiredReplicas()),
+			Selector:            stsLabels.LabelSelector(),
+			Template:            podTemp,
+			ServiceName:         controller.TiflowExecutorPeerMemberName(tcName),
+			PodManagementPolicy: baseExecutorSpec.PodManagementPolicy(),
+			UpdateStrategy:      updateStrategy,
 		},
 	}
 
