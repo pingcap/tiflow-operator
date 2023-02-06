@@ -615,14 +615,6 @@ func (m *executorMemberManager) getNewExecutorContainerVolsMount(tc *v1alpha1.Ti
 	annoMount, _ := annotationsMountVolume()
 	volMounts = append(volMounts, annoMount)
 
-	// todo: Need to be modified soon
-	// handle pvc mount, and add it
-	pvcMount := corev1.VolumeMount{
-		Name:      DefaultStorageName,
-		MountPath: tiflowExecutorStorageVolumeMountPath,
-	}
-	volMounts = append(volMounts, pvcMount)
-
 	// handling additional mount information for executor
 	volMounts = append(volMounts, tc.Spec.Executor.AdditionalVolumeMounts...)
 
