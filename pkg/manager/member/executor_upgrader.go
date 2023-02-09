@@ -3,6 +3,8 @@ package member
 import (
 	"context"
 	"fmt"
+	"reflect"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -55,6 +57,9 @@ func (u *executorUpgrader) gracefulUpgrade(tc *v1alpha1.TiflowCluster, oldSts, n
 	}
 
 	tc.Status.Executor.Phase = v1alpha1.ExecutorUpgrading
+	if !reflect.DeepEqual(tc.Status.Executor.NodeSelector, tc.Spec.Executor.NodeSelector) {
+		tc.Status.Executor.NodeSelector = tc.Spec.Executor.NodeSelector
+	}
 	if !templateEqual(newSts, oldSts) {
 		return nil
 	}

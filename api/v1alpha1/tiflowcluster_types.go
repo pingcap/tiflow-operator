@@ -581,6 +581,8 @@ type ExecutorStatus struct {
 	// transitioned from one to another.
 	// +required
 	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
+
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 }
 
 // +k8s:openapi-gen=true

@@ -12596,6 +12596,10 @@ spec:
                   message:
                     description: (Optional) Message related to the status of the ExecutorCluster
                     type: string
+                  nodeSelector:
+                    additionalProperties:
+                      type: string
+                    type: object
                   peerMembers:
                     additionalProperties:
                       description: ExecutorMember is Tiflow-executor member status
